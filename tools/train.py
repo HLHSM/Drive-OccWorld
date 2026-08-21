@@ -17,6 +17,11 @@ from mmcv import Config, DictAction
 from mmcv.runner import get_dist_info, init_dist
 from os import path as osp
 
+# ``dow2`` uses lightweight MMCV for occupancy-only training.  Importing this
+# repository hook before MMDetection keeps unrelated generic deformable-attn
+# registrations from requiring mmcv-full at module-import time.
+import sitecustomize  # noqa: F401
+
 from mmdet import __version__ as mmdet_version
 from mmdet3d import __version__ as mmdet3d_version
 #from mmdet3d.apis import train_model
@@ -79,7 +84,10 @@ def parse_args():
         choices=['none', 'pytorch', 'slurm', 'mpi'],
         default='none',
         help='job launcher')
-    parser.add_argument('--local_rank', type=int, default=0)
+    # PyTorch <=1.x launch used ``--local_rank``; current ``torchrun`` uses
+    # ``LOCAL_RANK`` and some compatibility launchers pass ``--local-rank``.
+    parser.add_argument('--local_rank', '--local-rank', dest='local_rank',
+                        type=int, default=0)
     parser.add_argument(
         '--autoscale-lr',
         action='store_true',
@@ -222,7 +230,10 @@ def main():
         test_cfg=cfg.get('test_cfg'))
     model.init_weights()
 
-    logger.info(f'Model:\n{model}')
+    trainable_params = sum(p.numel() for p in model.parameters()
+                           if p.requires_grad)
+    logger.info('Model built: %s (%d trainable parameters)',
+                type(model).__name__, trainable_params)
     datasets = [build_dataset(cfg.data.train)]
     if len(cfg.workflow) == 2:
         val_dataset = copy.deepcopy(cfg.data.val)

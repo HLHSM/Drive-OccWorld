@@ -110,7 +110,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--data-root', type=Path, required=True)
     parser.add_argument('--output-dir', type=Path, required=True)
-    parser.add_argument('--val-ratio', type=float, default=0.2)
+    parser.add_argument('--val-ratio', type=float, default=1 / 6)
     parser.add_argument('--seed', type=int, default=20260821)
     args = parser.parse_args()
     if not 0 < args.val_ratio < 1:

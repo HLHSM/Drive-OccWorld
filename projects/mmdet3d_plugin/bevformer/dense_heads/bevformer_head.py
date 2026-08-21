@@ -8,7 +8,6 @@ from mmdet.core import (multi_apply, multi_apply, reduce_mean)
 from mmdet.models.utils.transformer import inverse_sigmoid
 from mmdet.models import HEADS
 from mmdet.models.dense_heads import DETRHead
-from mmdet3d.core.bbox.coders import build_bbox_coder
 from projects.mmdet3d_plugin.core.bbox.util import normalize_bbox
 from mmcv.runner import force_fp32, auto_fp16
 
@@ -56,11 +55,21 @@ class BEVFormerHead(DETRHead):
             self.code_weights = [1.0, 1.0, 1.0,
                                  1.0, 1.0, 1.0, 1.0, 1.0, 0.2, 0.2]
 
-        self.bbox_coder = build_bbox_coder(bbox_coder)
-        self.pc_range = self.bbox_coder.pc_range
+        # FarmSim occupancy-only mode never decodes 3D boxes.  Keeping the
+        # range directly in the config avoids importing mmdet3d's unrelated
+        # point-cloud bbox coder stack.
+        self.bbox_coder = None
+        self.pc_range = bbox_coder['pc_range']
         self.real_w = self.pc_range[3] - self.pc_range[0]
         self.real_h = self.pc_range[4] - self.pc_range[1]
         self.num_cls_fcs = num_cls_fcs - 1
+        # The occupancy-only detector removes every box cls/reg branch after
+        # construction, so DETR's 3D Hungarian assigner is unreachable.
+        # Do not instantiate its NuScenes 3D-box training configuration.
+        # ``DETRHead`` has a non-empty detection default, hence explicitly
+        # pass ``None`` instead of merely omitting these arguments.
+        kwargs['train_cfg'] = None
+        kwargs['test_cfg'] = None
         super(BEVFormerHead, self).__init__(
             *args, transformer=transformer, **kwargs)
         self.code_weights = nn.Parameter(torch.tensor(
@@ -489,6 +498,8 @@ class BEVFormerHead(DETRHead):
             list[dict]: Decoded bbox, scores and labels after nms.
         """
 
+        if self.bbox_coder is None:
+            raise RuntimeError('3D-box decoding is unavailable in occupancy-only mode.')
         preds_dicts = self.bbox_coder.decode(preds_dicts)
 
         num_samples = len(preds_dicts)

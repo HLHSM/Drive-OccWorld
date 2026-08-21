@@ -34,6 +34,10 @@ model = dict(
                      embed_dims=256),
             ]))),
     ),
+    # The base nuScenes configuration enables DCNv2 in the last ResNet
+    # stages.  FarmSim occupancy-only dow2 uses the stock PyTorch ResNet
+    # operators, so no CUDA extension/toolkit build is required.
+    img_backbone=dict(dcn=None, stage_with_dcn=(False, False, False, False)),
 )
 
 data = dict(
@@ -49,3 +53,6 @@ data = dict(
 load_from = None
 find_unused_parameters = True
 work_dir = 'work_dirs/farmsim_occ_6cam'
+# TensorBoard is optional.  Keep the minimal dow2 environment free of it and
+# retain the standard text log for loss/learning-rate monitoring.
+log_config = dict(interval=20, hooks=[dict(type='TextLoggerHook')])

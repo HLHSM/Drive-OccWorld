@@ -25,6 +25,8 @@ from .multi_scale_deformable_attn_function import MultiScaleDeformableAttnFuncti
     MultiScaleDeformableAttnFunction_fp16
 ext_module = ext_loader.load_ext(
     '_ext', ['ms_deform_attn_backward', 'ms_deform_attn_forward'])
+_USE_MMCV_DEFORMABLE_EXT = not getattr(
+    ext_module, '__farm_sim_occ_fallback__', False)
 
 
 @ATTENTION.register_module()
@@ -380,7 +382,7 @@ class MSDeformableAttention3D(BaseModule):
         #  attention_weights.shape: bs, num_query, num_heads, num_levels, num_all_points
         #
 
-        if torch.cuda.is_available() and value.is_cuda:
+        if _USE_MMCV_DEFORMABLE_EXT and torch.cuda.is_available() and value.is_cuda:
             if value.dtype == torch.float16:
                 MultiScaleDeformableAttnFunction = MultiScaleDeformableAttnFunction_fp32
             else:

@@ -7,9 +7,6 @@ import numpy as np
 import os
 import torch.nn.functional as F
 from projects.mmdet3d_plugin.models.utils.grid_mask import GridMask
-from projects.mmdet3d_plugin.bevformer.losses.plan_reg_loss_lidar import plan_reg_loss
-from projects.mmdet3d_plugin.bevformer.utils.metric_stp3 import PlanningMetric
-from projects.mmdet3d_plugin.bevformer.utils.planning_metrics import PlanningMetric_v2
 from torchvision.transforms.functional import rotate
 
 from .bevformer import BEVFormer
@@ -99,6 +96,10 @@ class Drive_OccWorld_V2(BEVFormer):
         # allowing a config to explicitly remove all trajectory supervision.
         self.turn_on_plan = turn_on_plan and predict_trajectory
         if self.turn_on_plan:
+            # These metric/loss modules belong solely to trajectory training.
+            # Delay their imports so occupancy-only dow2 setup has no such
+            # dependency or CUDA-extension side effect.
+            from projects.mmdet3d_plugin.bevformer.utils.planning_metrics import PlanningMetric_v2
             self.plan_head = builder.build_head(plan_head)
             self.plan_head_type = plan_head.type
             self.planning_metric = None
@@ -148,11 +149,11 @@ class Drive_OccWorld_V2(BEVFormer):
 
         if self.only_train_cur_frame:
             # remove useless parameters.
-            del self.future_pred_head.transformer
-            del self.future_pred_head.bev_embedding
-            del self.future_pred_head.prev_frame_embedding
-            del self.future_pred_head.can_bus_mlp
-            del self.future_pred_head.positional_encoding
+            for name in ('transformer', 'bev_embedding',
+                         'prev_frame_embedding', 'can_bus_mlp',
+                         'positional_encoding'):
+                if hasattr(self.future_pred_head, name):
+                    delattr(self.future_pred_head, name)
 
         self.supervision_type = supervision_type
         if self.turn_on_plan and supervision_type == 'only_plan':

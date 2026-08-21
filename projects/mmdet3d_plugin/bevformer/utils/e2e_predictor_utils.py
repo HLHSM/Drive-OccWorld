@@ -83,16 +83,36 @@ def get_bev_grids_3d(H, W, Z, bs=1, device='cuda', dtype=torch.float):
     return ref_3d
 
 
-# JIT
-from torch.utils.cpp_extension import load
-dvxlr = load("dvxlr", sources=[
-    "third_lib/dvxlr/dvxlr.cpp",
-    "third_lib/dvxlr/dvxlr.cu"], verbose=True)
+# The differentiable voxel-rendering extension is only used by the optional
+# future-prediction path.  Loading it at import time forces a CUDA toolkit
+# build even for FarmSim occupancy-only training, where it is never called.
+dvxlr = None
+dvxlr_v2 = None
+
+
+def _load_dvxlr(version=1):
+    """Compile the legacy renderer only when a future-rendering loss uses it."""
+    global dvxlr, dvxlr_v2
+    from torch.utils.cpp_extension import load
+    if version == 1:
+        if dvxlr is None:
+            dvxlr = load('dvxlr', sources=[
+                'third_lib/dvxlr/dvxlr.cpp', 'third_lib/dvxlr/dvxlr.cu'],
+                verbose=True)
+        return dvxlr
+    if dvxlr_v2 is None:
+        dvxlr_v2 = load('dvxlr_v2', sources=[
+            'third_lib/dvxlr/dvxlr_v2.cpp', 'third_lib/dvxlr/dvxlr_v2.cu'],
+            verbose=True)
+    return dvxlr_v2
+
+
 class DifferentiableVoxelRenderingLayer(torch.autograd.Function):
 
     @staticmethod
     def forward(ctx, sigma, origin, points, tindex):
-        pred_dist, gt_dist, dd_dsigma, indices = dvxlr.render(sigma,
+        renderer = _load_dvxlr()
+        pred_dist, gt_dist, dd_dsigma, indices = renderer.render(sigma,
                                                               origin,
                                                               points,
                                                               tindex)
@@ -107,7 +127,8 @@ class DifferentiableVoxelRenderingLayer(torch.autograd.Function):
         invalid_grad = torch.isnan(elementwise_mult)
         elementwise_mult[invalid_grad] = 0.0
 
-        grad_sigma = dvxlr.get_grad_sigma(elementwise_mult, indices, tindex, sigma_shape)[0]
+        grad_sigma = _load_dvxlr().get_grad_sigma(
+            elementwise_mult, indices, tindex, sigma_shape)[0]
 
         return grad_sigma, None, None, None
 
@@ -116,15 +137,13 @@ DifferentiableVoxelRendering = DifferentiableVoxelRenderingLayer.apply
 
 
 # differentiable volume rendering v2.
-dvxlr_v2 = load("dvxlr_v2", sources=[
-    "third_lib/dvxlr/dvxlr_v2.cpp",
-    "third_lib/dvxlr/dvxlr_v2.cu"], verbose=True)
 class DifferentiableVoxelRenderingLayerV2(torch.autograd.Function):
 
     @staticmethod
     def forward(ctx, sigma, origin, points, tindex, sigma_regul):
+        renderer = _load_dvxlr(version=2)
         (pred_dist, gt_dist, dd_dsigma, indices,
-         ray_pred, indicator) = dvxlr_v2.render_v2(
+         ray_pred, indicator) = renderer.render_v2(
             sigma, origin, points, tindex, sigma_regul)
         ctx.save_for_backward(dd_dsigma, indices, tindex, sigma, indicator)
         return pred_dist, gt_dist, ray_pred, indicator
@@ -134,7 +153,7 @@ class DifferentiableVoxelRenderingLayerV2(torch.autograd.Function):
         dd_dsigma, indices, tindex, sigma_shape, indicator = ctx.saved_tensors
         elementwise_mult = gradpred[..., None] * dd_dsigma
 
-        grad_sigma, grad_sigma_regul = dvxlr_v2.get_grad_sigma_v2(
+        grad_sigma, grad_sigma_regul = _load_dvxlr(version=2).get_grad_sigma_v2(
             elementwise_mult, indices, tindex, sigma_shape, indicator, grad_ray_pred)
 
         return grad_sigma, None, None, None, grad_sigma_regul

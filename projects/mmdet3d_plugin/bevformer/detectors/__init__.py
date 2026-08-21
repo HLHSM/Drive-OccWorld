@@ -1,6 +1,2 @@
-from .bevformer import BEVFormer
-from .bevformer_fp16 import BEVFormer_fp16
-from .bevformerV2 import BEVFormerV2
-
-from .drive_occworld import Drive_OccWorld
-from .drive_occworldV2 import Drive_OccWorld_V2
+# Concrete detectors are imported selectively by the FarmSim plugin entry
+# point, so legacy 3D detection and planning classes stay optional.

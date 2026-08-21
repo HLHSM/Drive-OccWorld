@@ -9,7 +9,6 @@ import mmcv
 import cv2 as cv
 import copy
 import warnings
-from matplotlib import pyplot as plt
 import numpy as np
 import torch
 import torch.nn as nn

@@ -16,6 +16,19 @@ RGB_CAMERAS = (
 )
 FRONT_RGB_CAMERAS = RGB_CAMERAS[:3]
 
+# Kept in the original FarmSim v9 semantic-ID order.  MMDetection reads these
+# attributes when serialising checkpoint metadata and when visualising output.
+FARMSIM_CLASSES = (
+    'free', 'crop', 'soil_ground', 'drivable', 'building', 'fence_barrier',
+    'other_vegetation', 'vehicle', 'person_animal', 'other_obstacle',
+    'tree_trunk', 'tree_foliage',
+)
+FARMSIM_PALETTE = [
+    (0, 0, 0), (91, 181, 75), (120, 72, 30), (90, 90, 90),
+    (190, 130, 90), (220, 210, 40), (55, 150, 80), (45, 85, 210),
+    (230, 90, 90), (160, 80, 190), (115, 65, 30), (25, 110, 45),
+]
+
 
 def _rpy_matrix_deg(rpy):
     """UE local-axis rotation (x forward, y right, z up)."""
@@ -59,6 +72,9 @@ class FarmSimWorldDataset(torch.utils.data.Dataset):
     bundled here rather than in the original nuScenes dataset class.
     """
 
+    CLASSES = FARMSIM_CLASSES
+    PALETTE = FARMSIM_PALETTE
+
     def __init__(self, ann_file, queue_length=2, camera_mode='surround',
                  image_size=(640, 360), front_only=False, test_mode=False,
                  pipeline=None, **kwargs):
@@ -82,6 +98,10 @@ class FarmSimWorldDataset(torch.utils.data.Dataset):
                 self.samples.append((seq_idx, frame_index))
         if not self.samples:
             raise RuntimeError('No usable FarmSim samples; check split and queue_length.')
+        # Compatibility with MMDetection's DistributedGroupSampler.  All
+        # FarmSim images share the same fixed input resolution, so one group
+        # is both sufficient and semantically correct.
+        self.flag = np.zeros(len(self.samples), dtype=np.uint8)
 
     def __len__(self):
         return len(self.samples)

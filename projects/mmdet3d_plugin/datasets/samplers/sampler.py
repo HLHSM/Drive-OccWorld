@@ -3,7 +3,6 @@
 # including a mix of clothoids, straight lines, and circles
 import numpy as np
 import torch
-from scipy.special import fresnel
 from mmcv.utils.registry import Registry, build_from_cfg
 
 SAMPLER = Registry('sampler')
@@ -31,6 +30,10 @@ def sample(v0, Kappa, T0, N0, tt, M, possibility = None):
     :param debug: whether in debug mode
     :return: the nparray of trajectory
     '''
+    # Only trajectory augmentation uses SciPy's Fresnel integral.  Import it
+    # here instead of requiring SciPy for FarmSim occupancy-only training.
+    from scipy.special import fresnel
+
     # sample accelerations
     if possibility is None:
         possibility = [0.4, 0.2, 0.4]

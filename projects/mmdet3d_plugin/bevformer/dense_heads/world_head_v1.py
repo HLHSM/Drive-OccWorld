@@ -141,6 +141,9 @@ class WorldHeadV1(WorldHeadBase):
     def loss_voxel(self, output_voxels, target_voxels, tag):
         B, C, pH, pW, pD = output_voxels.shape
         tB, tH, tW, tD = target_voxels.shape
+        # FarmSim labels use class 0 for free space.  This must be available
+        # even when the prediction grid already matches the target grid.
+        empty_idx = 0
 
         # Targets are not necessarily the fixed nuScenes 256x256x20 grid.
         H, W, D = target_voxels.shape[-3:]
@@ -153,7 +156,6 @@ class WorldHeadV1(WorldHeadBase):
         ratio = tH // H
         if ratio != 1:
             target_voxels = target_voxels.reshape(B, H, ratio, W, ratio, D, ratio).permute(0,1,3,5,2,4,6).reshape(B, H, W, D, ratio**3)
-            empty_idx = 0
             empty_mask = target_voxels.sum(-1) == empty_idx    # B,H,W,D
             target_voxels = target_voxels.to(torch.int64)
             occ_space = target_voxels[~empty_mask]

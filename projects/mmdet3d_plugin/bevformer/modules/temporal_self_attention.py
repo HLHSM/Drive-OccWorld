@@ -19,6 +19,8 @@ from mmcv.utils import (ConfigDict, build_from_cfg, deprecated_api_warning,
 from mmcv.utils import ext_loader
 ext_module = ext_loader.load_ext(
     '_ext', ['ms_deform_attn_backward', 'ms_deform_attn_forward'])
+_USE_MMCV_DEFORMABLE_EXT = not getattr(
+    ext_module, '__farm_sim_occ_fallback__', False)
 
 
 @ATTENTION.register_module()
@@ -236,7 +238,7 @@ class TemporalSelfAttention(BaseModule):
             raise ValueError(
                 f'Last dim of reference_points must be'
                 f' 2 or 4, but get {reference_points.shape[-1]} instead.')
-        if torch.cuda.is_available() and value.is_cuda:
+        if _USE_MMCV_DEFORMABLE_EXT and torch.cuda.is_available() and value.is_cuda:
 
             # using fp16 deformable attention is unstable because it performs many sum operations
             if value.dtype == torch.float16:
