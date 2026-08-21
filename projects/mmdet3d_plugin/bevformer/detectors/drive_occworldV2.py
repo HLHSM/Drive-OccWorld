@@ -17,6 +17,7 @@ from mmdet3d.models import builder
 from ..utils import e2e_predictor_utils
 from ..utils.timer import avg_sections, CallSectionsTimer 
 from contextlib import contextmanager
+from typing import Optional
 
 
 @DETECTORS.register_module()
@@ -34,6 +35,7 @@ class Drive_OccWorld_V2(BEVFormer):
 
                  # Plan Head
                  turn_on_plan=False,
+                 predict_trajectory=True,
                  plan_head=None,
                  supervision_type='none',
                  only_plan=False,
@@ -92,8 +94,11 @@ class Drive_OccWorld_V2(BEVFormer):
 
         # plan head
         self.only_plan=only_plan
-        self.turn_on_plan = turn_on_plan
-        if turn_on_plan:
+        self.predict_trajectory = predict_trajectory
+        # Keep the historical switch for backwards compatibility, while
+        # allowing a config to explicitly remove all trajectory supervision.
+        self.turn_on_plan = turn_on_plan and predict_trajectory
+        if self.turn_on_plan:
             self.plan_head = builder.build_head(plan_head)
             self.plan_head_type = plan_head.type
             self.planning_metric = None
@@ -425,6 +430,14 @@ class Drive_OccWorld_V2(BEVFormer):
         # occ loss
         losses_occupancy = self.future_pred_head.loss_occ(occ_preds, occ_gts)
         return losses_occupancy
+
+    def current_occ_prediction(self, ref_bev):
+        """Run only the semantic-occupancy heads for the current frame."""
+        num_heads = len(self.future_pred_head.bev_pred_head)
+        current_bev = ref_bev.unsqueeze(0).unsqueeze(0).repeat(
+            1, num_heads, 1, 1, 1).contiguous()
+        return dict(next_bev_preds=self.future_pred_head.forward_head(current_bev),
+                    next_bev_sem=[])
     
     def compute_sem_norm_loss(self, bev_sem_preds, occ_gts):
         # gts
@@ -572,7 +585,11 @@ class Drive_OccWorld_V2(BEVFormer):
 
         # D. Extract future BEV features.
         valid_frames = [0]
-        if not self.only_train_cur_frame:
+        if self.only_train_cur_frame:
+            # The former code only defined ret_dict inside this else branch,
+            # so a zero-future occupancy task could not be trained.
+            ret_dict = self.current_occ_prediction(ref_bev)
+        else:
             if self.supervise_all_future:
                 valid_frames.extend(list(range(1, self.future_pred_frame_num + 1)))
             else:  # randomly select one future frame for computing loss to save memory cost.

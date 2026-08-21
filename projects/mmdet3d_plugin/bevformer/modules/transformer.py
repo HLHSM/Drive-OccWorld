@@ -167,7 +167,9 @@ class PerceptionTransformer(BaseModule):
             spatial_shape = (h, w)
             feat = feat.flatten(3).permute(1, 0, 3, 2)  # Ncams,B,HW,C
             if self.use_cams_embeds:
-                feat = feat + self.cams_embeds[:, None, None, :].to(feat.dtype)
+                # A six-camera checkpoint may serve an ordered three-camera
+                # front subset by taking its corresponding embeddings.
+                feat = feat + self.cams_embeds[:num_cam, None, None, :].to(feat.dtype)
             feat = feat + self.level_embeds[None,
                                             None, lvl:lvl + 1, :].to(feat.dtype)
             spatial_shapes.append(spatial_shape)

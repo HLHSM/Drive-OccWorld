@@ -1,6 +1,6 @@
-# Prepare Dataset
+# 准备数据集
 
-**Folder structure**
+**目录结构**
 ```
 Drive-OccWorld
 ├── projects/
@@ -30,7 +30,7 @@ Drive-OccWorld
 │   ├── nuScenes-Occupancy/
 ```
 
-**1. Download nuScenes V1.0 full dataset and CAN bus expansion data [HERE](https://www.nuscenes.org/download). Prepare nuscenes data by running:**
+**1. 下载 nuScenes V1.0 完整数据集和 CAN 总线扩展数据（[下载地址](https://www.nuscenes.org/download)），然后运行以下命令准备 nuScenes 数据：**
 ```bash
 cd Drive-OccWorld
 mkdir data
@@ -38,17 +38,17 @@ ln -s /path/to/nuscenes data/nuscenes
 ln -s /path/to/nuscnens/can_bus data/can_bus
 ```
 
-**2. Prepare nuscene.pkl file**
-1) Download the pre-processed [nuscenes_infos_temporal_train_new.pkl](https://drive.google.com/file/d/1rjyqgJAnjg4Iq1MSussm5yhKDPVIlIxe/view?usp=sharing) and [nuscenes_infos_temporal_val_new.pkl](https://drive.google.com/file/d/1UsIaoX6uw2am9FWJBRA5cR40hl8AcL7p/view?usp=sharing)
-2) Move the ```.pkl``` files into the nuscenes folder:
+**2. 准备 nuscene.pkl 文件**
+1) 下载预处理后的 [nuscenes_infos_temporal_train_new.pkl](https://drive.google.com/file/d/1rjyqgJAnjg4Iq1MSussm5yhKDPVIlIxe/view?usp=sharing) 和 [nuscenes_infos_temporal_val_new.pkl](https://drive.google.com/file/d/1UsIaoX6uw2am9FWJBRA5cR40hl8AcL7p/view?usp=sharing)。
+2) 将 ```.pkl``` 文件移动到 nuscenes 文件夹中：
 ```bash
 mv nuscenes_infos_temporal_train_new.pkl /path/to/nuscenes
 mv nuscenes_infos_temporal_val_new.pkl /path/to/nuscenes
 ```
 
-**3. Generate the inflated-occupancy annotations as defined in [Cam4DOcc](https://github.com/haomo-ai/Cam4DOcc):**
+**3. 按照 [Cam4DOcc](https://github.com/haomo-ai/Cam4DOcc) 的定义生成膨胀式占用标注：**
 
-Create the dataset folders, which will automatically generate data during the first epoch of training and testing:
+创建数据集文件夹。训练和测试的第一个 epoch 期间会自动生成数据：
 ```bash
 mkdir /path/to/save_data/cam4docc   # ~650G
 cd /path/to/save_data/cam4docc
@@ -56,7 +56,7 @@ mkdir GMO GMO_lyft MMO MMO_lyft
 ln -s /path/to/save_data/cam4docc Drive-OccWorld/data
 ```
 
-**4. Download the fine-grained occupancy annotations as defined in [nuScenes-Occupancy](https://github.com/JeffWang987/OpenOccupancy/blob/main/docs/prepare_data.md). Then organize the dataset as follows:**
+**4. 下载 [nuScenes-Occupancy](https://github.com/JeffWang987/OpenOccupancy/blob/main/docs/prepare_data.md) 定义的细粒度占用标注，并按如下方式组织数据集：**
 ```bash
 mv nuScenes-Occupancy-v0.1.7z /path/to/save_data
 cd /path/to/save_data

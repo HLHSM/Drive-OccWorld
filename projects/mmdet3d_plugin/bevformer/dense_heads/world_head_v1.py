@@ -142,10 +142,8 @@ class WorldHeadV1(WorldHeadBase):
         B, C, pH, pW, pD = output_voxels.shape
         tB, tH, tW, tD = target_voxels.shape
 
-        if self.output_scale == 2:
-            H, W, D = 256, 256, 20
-        elif self.output_scale == 4:
-            H, W, D = 128, 128, 10
+        # Targets are not necessarily the fixed nuScenes 256x256x20 grid.
+        H, W, D = target_voxels.shape[-3:]
 
         # output_voxel align to H,W,D
         if pH != H:
@@ -199,10 +197,7 @@ class WorldHeadV1(WorldHeadBase):
         inter, B, C, pH, pW, pD = output_voxels.shape
         tB, tH, tW, tD = target_voxels.shape
 
-        if self.output_scale == 2:
-            H, W, D = 256, 256, 20
-        elif self.output_scale == 4:
-            H, W, D = 128, 128, 10
+        H, W, D = target_voxels.shape[-3:]
         # output_voxel align to H,W,D
         if pH != H:
             output_voxels = F.interpolate(output_voxels.flatten(0,1), size=(H, W, D), mode='trilinear', align_corners=False)

@@ -139,11 +139,12 @@ class SpatialCrossAttention(BaseModule):
             indexes.append(index_query_per_img)
         max_len = max([len(each) for each in indexes])
 
+        num_cams = key.shape[0]
         # each camera only interacts with its corresponding BEV queries. This step can  greatly save GPU memory.
         queries_rebatch = query.new_zeros(
-            [bs, self.num_cams, max_len, self.embed_dims])
+            [bs, num_cams, max_len, self.embed_dims])
         reference_points_rebatch = reference_points_cam.new_zeros(
-            [bs, self.num_cams, max_len, D, 2])
+            [bs, num_cams, max_len, D, 2])
         
         for j in range(bs):
             for i, reference_points_per_img in enumerate(reference_points_cam):   
@@ -153,14 +154,12 @@ class SpatialCrossAttention(BaseModule):
 
         num_cams, l, bs, embed_dims = key.shape
 
-        key = key.permute(2, 0, 1, 3).reshape(
-            bs * self.num_cams, l, self.embed_dims)
-        value = value.permute(2, 0, 1, 3).reshape(
-            bs * self.num_cams, l, self.embed_dims)
+        key = key.permute(2, 0, 1, 3).reshape(bs * num_cams, l, self.embed_dims)
+        value = value.permute(2, 0, 1, 3).reshape(bs * num_cams, l, self.embed_dims)
 
-        queries = self.deformable_attention(query=queries_rebatch.view(bs*self.num_cams, max_len, self.embed_dims), key=key, value=value,
-                                            reference_points=reference_points_rebatch.view(bs*self.num_cams, max_len, D, 2), spatial_shapes=spatial_shapes,
-                                            level_start_index=level_start_index).view(bs, self.num_cams, max_len, self.embed_dims)
+        queries = self.deformable_attention(query=queries_rebatch.view(bs*num_cams, max_len, self.embed_dims), key=key, value=value,
+                                            reference_points=reference_points_rebatch.view(bs*num_cams, max_len, D, 2), spatial_shapes=spatial_shapes,
+                                            level_start_index=level_start_index).view(bs, num_cams, max_len, self.embed_dims)
         for j in range(bs):
             for i, index_query_per_img in enumerate(indexes):
                 slots[j, index_query_per_img] += queries[j, i, :len(index_query_per_img)]
