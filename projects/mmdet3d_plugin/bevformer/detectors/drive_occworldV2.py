@@ -103,7 +103,9 @@ class Drive_OccWorld_V2(BEVFormer):
             self.plan_head = builder.build_head(plan_head)
             self.plan_head_type = plan_head.type
             self.planning_metric = None
-            self.n_future = 6
+            # Keep planning metrics/losses aligned with the configurable plan
+            # head output length used by FarmSim training scripts.
+            self.n_future = getattr(self.plan_head, 'planning_steps', 6)
             self.planning_metric_v2 = PlanningMetric_v2(n_future=self.n_future)
         
         # memory queue
@@ -343,6 +345,19 @@ class Drive_OccWorld_V2(BEVFormer):
 
         next_bev_feats, next_bev_sem = [ref_bev], []
 
+        # FarmSim occupancy-only evaluation has no future frames and does not
+        # provide the nuScenes-only ref_lidar_to_cur_lidar metadata.  Return
+        # the current occupancy prediction before any future alignment logic.
+        if self.training:
+            future_frame_num = self.future_pred_frame_num
+        else:
+            future_frame_num = self.test_future_frame_num
+        if future_frame_num == 0:
+            return {
+                'next_bev_preds': self.future_pred_head.forward_head(
+                    torch.stack(next_bev_feats, 0)),
+                'next_bev_sem': next_bev_sem,
+            }
 
         # D2. Align previous frames to the reference coordinates.
         ref_img_metas = [[each[num_frames-1]] for each in prev_img_metas]
@@ -352,16 +367,27 @@ class Drive_OccWorld_V2(BEVFormer):
 
 
         # D3. future decoder forward.
-        if self.training:
-            future_frame_num = self.future_pred_frame_num
-        else:
-            future_frame_num = self.test_future_frame_num
-
         for future_frame_index in range(1, future_frame_num + 1):
             if not self.turn_on_plan or (self.turn_on_plan and self.training and self.training_epoch < 12):
-                plan_traj = plan_dict['gt_traj'][:, :future_frame_index, :2]
+                # Occupancy-only FarmSim samples do not carry trajectory
+                # supervision.  The future occupancy decoder still needs a
+                # trajectory-shaped conditioning tensor, so use an identity
+                # (zero-displacement) trajectory in that mode.
+                gt_traj = plan_dict.get('gt_traj')
+                if gt_traj is None:
+                    plan_traj = prev_bev_input.new_zeros(
+                        (prev_bev_input.shape[0], future_frame_index, 2))
+                else:
+                    plan_traj = gt_traj[:, :future_frame_index, :2]
             else:
                 plan_traj = plan_dict['pred_traj'][:, :future_frame_index, :2]
+            # Occupancy and trajectory horizons are independently configurable.
+            # Pad a shorter trajectory horizon with zero displacement so a
+            # longer occupancy rollout remains well-defined.
+            if plan_traj.shape[1] < future_frame_index:
+                pad = prev_bev_input.new_zeros(
+                    (plan_traj.shape[0], future_frame_index - plan_traj.shape[1], 2))
+                plan_traj = torch.cat((plan_traj, pad), dim=1)
                 
             action_condition_dict['plan_traj'] = plan_traj
 
@@ -419,14 +445,43 @@ class Drive_OccWorld_V2(BEVFormer):
             losses_bev[f'loss_bev_lwm_{i}'] = factor * torch.nn.functional.mse_loss(next_bev_feats[:, i], future_bev)
         return losses_bev
 
+    def _format_occ_targets(self, occ_gts, select_frames, batch_size):
+        """Select occupancy targets without dropping samples from a batch.
+
+        FarmSim supplies targets as ``[B, T, X, Y, Z]``.  The legacy
+        nuScenes path indexed ``occ_gts[0]``, which happened to work for
+        batch size one but silently discarded every other sample.
+        """
+        if isinstance(occ_gts, (list, tuple)):
+            if len(occ_gts) != 1:
+                raise ValueError(f'Unexpected occupancy target container: {len(occ_gts)}')
+            occ_gts = occ_gts[0]
+        if not torch.is_tensor(occ_gts):
+            raise TypeError(f'Occupancy targets must be a tensor, got {type(occ_gts)}')
+        if occ_gts.dim() == 4:
+            # Legacy single-sample layout: [T, X, Y, Z].
+            occ_gts = occ_gts.unsqueeze(0)
+        if occ_gts.dim() != 5:
+            raise ValueError(f'Expected occupancy targets [B,T,X,Y,Z], got {tuple(occ_gts.shape)}')
+        if occ_gts.shape[0] != batch_size:
+            raise ValueError(
+                f'Occupancy target batch ({occ_gts.shape[0]}) does not match '
+                f'prediction batch ({batch_size})')
+        start = self.future_pred_head.history_queue_length
+        stop = start + select_frames
+        if occ_gts.shape[1] < stop:
+            raise ValueError(
+                f'Need {stop} occupancy time steps after collation, got {occ_gts.shape[1]}')
+        occ_gts = occ_gts[:, start:stop]
+        return occ_gts.reshape(select_frames * batch_size, *occ_gts.shape[-3:])
+
     def compute_occ_loss(self, occ_preds, occ_gts):
         # preds [Lout, inter_num, bs, bev_h * bev_w, d, num_cls]    Lout = cur + future_select
         occ_preds = occ_preds.permute(1, 0, 2, 5, 3, 4)
         inter_num, select_frames, bs, num_cls, hw, d = occ_preds.shape
         occ_preds = occ_preds.view(inter_num, select_frames*bs, num_cls, self.bev_w, self.bev_h, d).transpose(3,4) # TODO: now the feature map size is the same as the output size, not efficient!
-        # gts
-        occ_gts = occ_gts[0][self.future_pred_head.history_queue_length:]
-        occ_gts = occ_gts.view(select_frames*bs, *occ_gts.shape[-3:])
+        # gts; preserve every sample when BATCH_SIZE > 1.
+        occ_gts = self._format_occ_targets(occ_gts, select_frames, bs)
         
         # occ loss
         losses_occupancy = self.future_pred_head.loss_occ(occ_preds, occ_gts)
@@ -457,15 +512,23 @@ class Drive_OccWorld_V2(BEVFormer):
 
         losses_plan = self.plan_head.loss(pred_under_ref, gt_under_ref, sdc_planning_mask, gt_future_boxes)
         return losses_plan
+
+    @staticmethod
+    def _empty_future_boxes(boxes):
+        """Return whether a collated FarmSim target contains only ``None``."""
+        if boxes is None:
+            return True
+        if isinstance(boxes, (list, tuple)):
+            return all(Drive_OccWorld_V2._empty_future_boxes(item) for item in boxes)
+        return False
     
     def evaluate_occ(self, occ_preds, occ_gts, img_metas):
         # preds
         occ_preds = occ_preds.permute(1, 0, 2, 5, 3, 4)
         inter_num, select_frames, bs, num_cls, hw, d = occ_preds.shape
         occ_preds = occ_preds.view(inter_num, select_frames*bs, num_cls, self.bev_w, self.bev_h, d).transpose(3,4)
-        # gts
-        occ_gts = occ_gts[0][self.future_pred_head.history_queue_length:]
-        occ_gts = occ_gts.view(select_frames*bs, *occ_gts.shape[-3:])
+        # gts; preserve every sample when BATCH_SIZE > 1.
+        occ_gts = self._format_occ_targets(occ_gts, select_frames, bs)
 
         hist_for_iou = self.evaluate_occupancy_forecasting(occ_preds[-1], occ_gts, img_metas=img_metas, save_pred=self._viz_pcd_flag, save_path=self._viz_pcd_path)
         hist_for_iou_current = self.evaluate_occupancy_forecasting(occ_preds[-1][0:1], occ_gts[0:1], img_metas=img_metas, save_pred=False)
@@ -624,7 +687,11 @@ class Drive_OccWorld_V2(BEVFormer):
 
         # E3. Compute loss for plan regression.
         if self.turn_on_plan:
-            gt_future_boxes = gt_future_boxes[0]   # Lout,[boxes]  NOTE: Current Support bs=1
+            gt_future_boxes = gt_future_boxes[0]   # legacy CPU-only collation
+            if self._empty_future_boxes(gt_future_boxes):
+                # FarmSim has no 3D object boxes.  Flatten the extra batch
+                # nesting so the legacy collision loss returns zero cleanly.
+                gt_future_boxes = [None] * self.n_future
             losses_plan = self.compute_plan_loss(pose_pred, sdc_planning[:, :self.n_future], sdc_planning_mask[:, :self.n_future], gt_future_boxes[:self.n_future])
             losses.update(losses_plan)
 

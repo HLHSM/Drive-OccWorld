@@ -8,10 +8,10 @@
 
 | 划分 | sequence | 完整帧数 | 占比 |
 | --- | ---: | ---: | ---: |
-| 训练 | 273 | 34,571 | 83.33% |
-| 验证 | 55 | 6,913 | 16.67% |
+| 训练 | 248 | 32,369 | 83.29% |
+| 验证 | 50 | 6,493 | 16.71% |
 
-验证集包含全部 11 种作物，且生长阶段为 early/mature/mid = 22/21/22；时段和天气的比例也与全集接近。三个不完整 sequence 被自动排除，详见 `split_report.json`。
+用户已从数据根目录删除全部 garlic 序列；现有划分同步删除训练集 25 个、验证集 5 个 garlic 序列，其他 sequence 的训练/验证归属保持不变。当前共 10 种作物，训练/验证帧数比例为 4.99:1；生长阶段、时段和天气分布仍按原划分保持接近。三个不完整 sequence 被自动排除，详见 `split_report.json`。
 
 若 `/mnt/g/SimData` 有新增数据，重新生成可复现划分：
 
@@ -19,6 +19,13 @@
 /home/hl/miniconda3/envs/py311/bin/python tools/create_farmsim_split.py \
   --data-root /mnt/g/SimData --output-dir data/farmsim/splits \
   --val-ratio 0.16666666666666666 --seed 20260821
+```
+
+如果只是删除某一作物、希望保留其余 sequence 的原有划分，可使用：
+
+```bash
+/home/hl/miniconda3/envs/py311/bin/python tools/prune_farmsim_split.py \
+  --split-dir data/farmsim/splits --crop-type garlic
 ```
 
 ## 坐标、标签和相机
@@ -71,6 +78,28 @@ bash tools/train_farmsim_6cam.sh
 bash tools/train_farmsim_front3.sh
 ```
 
-两个脚本顶部都有 `CUDA_VISIBLE_DEVICES`、`NUM_GPUS`、`BATCH_SIZE` 和 `EPOCHS`，可直接修改。例如 `CUDA_VISIBLE_DEVICES="2,3,5"` 时必须写 `NUM_GPUS=3`。`BATCH_SIZE` 是每张卡的 batch size，总 batch size 为 `BATCH_SIZE × NUM_GPUS`；`EPOCHS` 是完整遍历训练集的次数。脚本会检查其为正整数及 GPU 配置一致性，并默认使用 `dow2` 的 Python；若 conda 位于别处，可通过 `PYTHON_BIN=/实际路径/python bash ...` 覆盖。`NUM_GPUS=1` 时直接单进程训练；多卡时才使用 PyTorch 推荐的 `torchrun --standalone`，并自动选择空闲本地端口。
+两个脚本顶部都有可直接修改的训练开关：
 
-主要实现位于 `FarmSimWorldDataset`：它直接读取 split JSON、RGB、元数据和占用二进制文件。模型改动还包括：动态支持 3/6 路相机注意力、去除轨迹头开关，以及根据真实目标尺寸计算占用损失，不再固定为 nuScenes 的 256×256×20 体素。
+- `CUDA_VISIBLE_DEVICES`、`NUM_GPUS`：可见显卡及并行进程数。例如 `CUDA_VISIBLE_DEVICES="2,3,5"` 时必须写 `NUM_GPUS=3`。
+- `BATCH_SIZE`、`EPOCHS`：每张卡的 batch size 和完整遍历训练集的次数；总 batch size 为 `BATCH_SIZE × NUM_GPUS`。该 batch size 同时写入验证/测试数据加载器（六相机脚本默认 `--no-validate`，需要每 epoch 验证时可删除该参数）。
+- `HISTORY_FRAMES`：历史图像帧数，当前帧会额外输入，因此实际时序长度为 `HISTORY_FRAMES + 1`。
+- `PREDICT_FUTURE_OCC`、`FUTURE_OCC_STEPS`：是否训练/评估未来占用，以及未来占用步数。开关为 `0` 时步数自动按 0 处理；开关为 `1` 时步数必须至少为 1。
+- `PREDICT_FUTURE_TRAJ`、`FUTURE_TRAJ_STEPS`：是否启用未来轨迹头，以及轨迹预测步数。开关为 `0` 时步数忽略；开关为 `1` 时步数必须至少为 1。FarmSim 轨迹由 UE5 位姿计算得到；数据没有 3D 目标框，因此轨迹回归可用，碰撞框损失不提供监督。两个预测步数可以不同；占用预测需要更长轨迹时，超出轨迹标签范围的条件位移按 0 补齐。
+
+脚本会将这些变量同步传给数据集、未来占用头和轨迹头，并检查数值及 GPU 配置一致性。每次运行默认写入带时间戳的新 `work_dirs` 子目录，不覆盖之前的实验；若 conda 位于别处，可通过 `PYTHON_BIN=/实际路径/python bash ...` 覆盖。`NUM_GPUS=1` 时直接单进程训练；多卡时使用 `torchrun --standalone`。
+
+主要实现位于 `FarmSimWorldDataset`：它直接读取 split JSON、RGB、元数据和占用二进制文件。相机帧支持 `.jpg`、`.jpeg` 和 `.png` 扩展名，划分脚本也会统一识别这三种格式。模型改动还包括：动态支持 3/6 路相机注意力、去除轨迹头开关，以及根据真实目标尺寸计算占用损失，不再固定为 nuScenes 的 256×256×20 体素。
+
+### 单独评估 checkpoint
+
+单卡评估已有 checkpoint 时，不需要重新训练。以前视三相机为例：
+
+```bash
+CUDA_VISIBLE_DEVICES=0 PYTHONPATH="$PWD" \
+  /home/hl/miniconda3/envs/dow2/bin/python tools/test.py \
+  projects/configs/farmsim/farmsim_occ_front3.py \
+  work_dirs/farmsim_occ_front3/epoch_1.pth \
+  --launcher none --eval occ --deterministic
+```
+
+六相机 checkpoint 将配置替换为 `projects/configs/farmsim/farmsim_occ_6cam.py`，并将 checkpoint 路径替换为对应文件。评估脚本会直接输出混淆矩阵、各类别 IoU、仅统计出现类别的 mIoU、全类别 mIoU 和 voxel accuracy；不会启动训练流程。

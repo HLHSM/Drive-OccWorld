@@ -15,6 +15,7 @@ RGB_CAMERAS = (
     'rear_left_rgb', 'rear_rgb', 'rear_right_rgb',
 )
 FRONT_RGB_CAMERAS = RGB_CAMERAS[:3]
+RGB_EXTENSIONS = ('.jpg', '.jpeg', '.png')
 
 # Kept in the original FarmSim v9 semantic-ID order.  MMDetection reads these
 # attributes when serialising checkpoint metadata and when visualising output.
@@ -77,7 +78,8 @@ class FarmSimWorldDataset(torch.utils.data.Dataset):
 
     def __init__(self, ann_file, queue_length=2, camera_mode='surround',
                  image_size=(640, 360), front_only=False, test_mode=False,
-                 pipeline=None, **kwargs):
+                 future_pred_frame_num=0, future_traj_frame_num=0,
+                 predict_trajectory=False, pipeline=None, **kwargs):
         del pipeline, kwargs
         if camera_mode not in ('surround', 'front'):
             raise ValueError("camera_mode must be 'surround' or 'front'")
@@ -86,6 +88,11 @@ class FarmSimWorldDataset(torch.utils.data.Dataset):
         self.front_only = bool(front_only)
         self.test_mode = test_mode
         self.image_size = tuple(image_size)  # width, height
+        self.future_pred_frame_num = int(future_pred_frame_num)
+        self.future_traj_frame_num = int(future_traj_frame_num) if predict_trajectory else 0
+        self.predict_trajectory = bool(predict_trajectory)
+        if self.future_pred_frame_num < 0 or self.future_traj_frame_num < 0:
+            raise ValueError('future prediction frame counts must be non-negative')
         self.camera_names = FRONT_RGB_CAMERAS if camera_mode == 'front' else RGB_CAMERAS
 
         with open(ann_file, 'r', encoding='utf-8') as f:
@@ -94,7 +101,11 @@ class FarmSimWorldDataset(torch.utils.data.Dataset):
         self.samples = []
         for seq_idx, seq in enumerate(self.sequences):
             frame_ids = seq['frame_ids']
-            for frame_index in range(self.queue_length, len(frame_ids)):
+            required_future = max(self.future_pred_frame_num,
+                                  self.future_traj_frame_num)
+            for frame_index in range(
+                    self.queue_length,
+                    len(frame_ids) - required_future):
                 self.samples.append((seq_idx, frame_index))
         if not self.samples:
             raise RuntimeError('No usable FarmSim samples; check split and queue_length.')
@@ -142,12 +153,61 @@ class FarmSimWorldDataset(torch.utils.data.Dataset):
             lidar_token=frame_id,
         ), (pos, yaw)
 
+    @staticmethod
+    def _pose_matrix(pose):
+        """World-from-vehicle homogeneous transform for (position, yaw)."""
+        pos, yaw = pose
+        c, s = np.cos(np.deg2rad(yaw)), np.sin(np.deg2rad(yaw))
+        matrix = np.eye(4, dtype=np.float32)
+        matrix[:3, :3] = np.array(
+            ((c, -s, 0), (s, c, 0), (0, 0, 1)), dtype=np.float32)
+        matrix[:3, 3] = np.asarray(pos, dtype=np.float32)
+        return matrix
+
+    def _future_transforms(self, seq, current_pose, future_ids):
+        """Return future-to-reference and reference-to-future transforms."""
+        ref_world = self._pose_matrix(current_pose)
+        future_to_ref, ref_to_future = [np.eye(4, dtype=np.float32)], [
+            np.eye(4, dtype=np.float32)]
+        for frame_id in future_ids:
+            future_pose = self._frame_meta(
+                seq, frame_id, None)[1]
+            future_world = self._pose_matrix(future_pose)
+            future2ref = np.linalg.inv(ref_world) @ future_world
+            future_to_ref.append(future2ref.astype(np.float32))
+            ref_to_future.append(np.linalg.inv(future2ref).astype(np.float32))
+        return future_to_ref, ref_to_future
+
+    def _trajectory_targets(self, seq, current_pose, future_ids):
+        """Build incremental [dx, dy, dyaw] targets in the current ego frame."""
+        current_pos, current_yaw = current_pose
+        c, s = np.cos(np.deg2rad(current_yaw)), np.sin(np.deg2rad(current_yaw))
+        relative = [np.zeros(3, dtype=np.float32)]
+        for frame_id in future_ids:
+            future_pos, future_yaw = self._frame_meta(seq, frame_id, None)[1]
+            delta = np.asarray(future_pos, dtype=np.float32) - np.asarray(current_pos, dtype=np.float32)
+            # UE/FarmSim x is forward and y is right; rotate world delta into
+            # the current vehicle frame.
+            local_xy = np.array((c * delta[0] + s * delta[1],
+                                 -s * delta[0] + c * delta[1]), dtype=np.float32)
+            yaw_delta = (future_yaw - current_yaw + 180.0) % 360.0 - 180.0
+            relative.append(np.array((local_xy[0], local_xy[1],
+                                      np.deg2rad(yaw_delta)), dtype=np.float32))
+        return np.diff(np.stack(relative, axis=0), axis=0)
+
     def _load_images(self, seq, frame_id):
         width, height = self.image_size
         sx, sy = width / 1280.0, height / 720.0
         images = []
         for name in self.camera_names:
-            path = Path(seq['path']) / name / f'{frame_id}.png'
+            camera_dir = Path(seq['path']) / name
+            path = next((camera_dir / f'{frame_id}{ext}'
+                         for ext in RGB_EXTENSIONS
+                         if (camera_dir / f'{frame_id}{ext}').is_file()), None)
+            if path is None:
+                tried = ', '.join(str(camera_dir / f'{frame_id}{ext}')
+                                  for ext in RGB_EXTENSIONS)
+                raise FileNotFoundError(f'img file does not exist; tried: {tried}')
             image = mmcv.imread(str(path), flag='color').astype(np.float32)
             image = mmcv.imresize(image, (width, height))
             # Match the project Caffe-style BGR input normalization.
@@ -174,11 +234,18 @@ class FarmSimWorldDataset(torch.utils.data.Dataset):
     def __getitem__(self, index):
         seq_idx, frame_index = self.samples[index]
         seq = self.sequences[seq_idx]
-        frame_ids = seq['frame_ids'][frame_index - self.queue_length:frame_index + 1]
-        image_queue, meta_queue, previous_pose = [], [], None
-        for frame_id in frame_ids:
+        input_frame_ids = seq['frame_ids'][frame_index - self.queue_length:frame_index + 1]
+        current_frame_id = input_frame_ids[-1]
+        future_occ_ids = seq['frame_ids'][frame_index + 1:
+                                          frame_index + 1 + self.future_pred_frame_num]
+        future_traj_ids = seq['frame_ids'][frame_index + 1:
+                                           frame_index + 1 + self.future_traj_frame_num]
+        image_queue, meta_queue, pose_queue, previous_pose = [], [], [], None
+        for frame_id in input_frame_ids:
             images, sx, sy = self._load_images(seq, frame_id)
-            frame_meta, previous_pose = self._frame_meta(seq, frame_id, previous_pose)
+            frame_meta, current_pose = self._frame_meta(seq, frame_id, previous_pose)
+            previous_pose = current_pose
+            pose_queue.append(current_pose)
             for matrix in frame_meta['lidar2img']:
                 matrix[0, :] *= sx
                 matrix[1, :] *= sy
@@ -188,10 +255,43 @@ class FarmSimWorldDataset(torch.utils.data.Dataset):
                               pad_shape=[images[0].shape] * len(images))
             meta_queue.append(frame_meta)
 
-        return dict(
+        # Relative transforms used by the optional future-occupancy decoder.
+        reference_pose = pose_queue[-1]
+        reference_world = self._pose_matrix(reference_pose)
+        for frame_meta, pose in zip(meta_queue, pose_queue):
+            frame_world = self._pose_matrix(pose)
+            frame_meta['ref_lidar_to_cur_lidar'] = (
+                np.linalg.inv(frame_world) @ reference_world).astype(np.float32)
+        future_to_ref, ref_to_future = self._future_transforms(
+            seq, reference_pose, future_occ_ids)
+        meta_queue[-1]['future2ref_lidar_transform'] = future_to_ref
+        meta_queue[-1]['ref2future_lidar_transform'] = ref_to_future
+
+        target_ids = [current_frame_id] + future_occ_ids
+        occupancy_ids = [current_frame_id] * self.queue_length + target_ids
+        segmentation = torch.stack([
+            self._load_occupancy(seq, frame_id) for frame_id in occupancy_ids
+        ], dim=0)
+
+        result = dict(
             img=DC(torch.from_numpy(np.stack(image_queue)).float(), stack=True),
             img_metas=DC(meta_queue, cpu_only=True),
             # The original detector receives a list after mmcv collation.
-            segmentation=self._load_occupancy(seq, frame_ids[-1]).unsqueeze(0).repeat(
-                self.queue_length + 1, 1, 1, 1),
+            segmentation=segmentation,
         )
+        if self.predict_trajectory:
+            trajectory = self._trajectory_targets(seq, reference_pose, future_traj_ids)
+            steps = self.future_traj_frame_num
+            result.update(
+                sdc_planning=trajectory,
+                # PlanningLoss expects the original nuScenes mask layout
+                # [batch, steps, 2]; both channels are valid for FarmSim.
+                sdc_planning_mask=np.ones((steps, 2), dtype=np.float32),
+                command=np.full(steps, 2, dtype=np.int64),  # forward
+                vel_steering=np.zeros((steps, 4), dtype=np.float32),
+                # FarmSim has no 3D object boxes; collision supervision is
+                # intentionally empty while trajectory regression remains valid.
+                gt_future_boxes=DC([None] * steps, cpu_only=True),
+                segmentation_bev=np.zeros((steps, 200, 200), dtype=np.float32),
+            )
+        return result

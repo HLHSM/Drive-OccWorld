@@ -4,9 +4,11 @@
 #  Modified by Zhiqi Li
 # ---------------------------------------------
 import argparse
+import sitecustomize  # noqa: F401  # FarmSim/dow2 MMCV compatibility shims
 import mmcv
 import os
 import torch
+import numpy as np
 import warnings
 from mmcv import Config, DictAction
 from mmcv.cnn import fuse_conv_bn
@@ -14,15 +16,40 @@ from mmcv.parallel import MMDataParallel, MMDistributedDataParallel
 from mmcv.runner import (get_dist_info, init_dist, load_checkpoint,
                          wrap_fp16_model)
 
-from mmdet3d.apis import single_gpu_test
 from mmdet3d.datasets import build_dataset
 from projects.mmdet3d_plugin.datasets.builder import build_dataloader
 from mmdet3d.models import build_model
 from mmdet.apis import set_random_seed
-from projects.mmdet3d_plugin.bevformer.apis.test import custom_multi_gpu_test
+from projects.mmdet3d_plugin.bevformer.apis.test import (
+    custom_multi_gpu_test, custom_single_gpu_test)
 from mmdet.datasets import replace_ImageToTensor
 import time
 import os.path as osp
+
+
+def _print_occupancy_metrics(outputs, classes):
+    """Print per-class IoU and mIoU from FarmSim confusion matrices."""
+    for key in ('hist_for_iou', 'hist_for_iou_current'):
+        if key not in outputs:
+            continue
+        hist = np.asarray(outputs[key])
+        if hist.ndim != 2:
+            continue
+        diagonal = np.diag(hist).astype(np.float64)
+        union = hist.sum(axis=1) + hist.sum(axis=0) - diagonal
+        valid = union > 0
+        iou = np.divide(diagonal, union, out=np.zeros_like(diagonal),
+                        where=valid)
+        names = list(classes) if len(classes) == len(iou) else [
+            f'class_{i}' for i in range(len(iou))]
+        print(f'\n{key} per-class IoU:')
+        for name, value, present in zip(names, iou, valid):
+            suffix = '' if present else ' (absent)'
+            print(f'  {name}: {value:.4f}{suffix}')
+        print(f'{key} mIoU (present classes): {iou[valid].mean():.4f} '
+              f'({valid.sum()}/{len(iou)})')
+        print(f'{key} mIoU (all classes): {iou.mean():.4f}')
+        print(f'{key} voxel accuracy: {diagonal.sum() / hist.sum():.4f}')
 
 
 def parse_args():
@@ -226,9 +253,9 @@ def main():
         model.PALETTE = dataset.PALETTE
 
     if not distributed:
-        assert False
-        # model = MMDataParallel(model, device_ids=[0])
-        # outputs = single_gpu_test(model, data_loader, args.show, args.show_dir)
+        model = MMDataParallel(model.cuda(), device_ids=[0])
+        outputs = custom_single_gpu_test(model, data_loader, args.show,
+                                         args.show_dir)
     else:
         model = MMDistributedDataParallel(
             model.cuda(),
@@ -249,7 +276,13 @@ def main():
         if args.format_only:
             dataset.format_results(outputs, **kwargs)
 
-        if args.eval:
+        if isinstance(outputs, dict):
+            print('\nFarmSim occupancy evaluation:')
+            for key, value in outputs.items():
+                if not (isinstance(value, np.ndarray) and value.ndim == 2):
+                    print(f'{key}: {value}')
+            _print_occupancy_metrics(outputs, dataset.CLASSES)
+        elif args.eval:
             eval_kwargs = cfg.get('evaluation', {}).copy()
             # hard-code way to remove EvalHook args
             for key in [

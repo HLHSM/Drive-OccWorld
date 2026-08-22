@@ -2,7 +2,24 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
-from skimage.draw import polygon
+try:
+    from skimage.draw import polygon
+except ImportError:
+    # Planning is optional in the minimal FarmSim environment. Keep the
+    # collision-cost helper usable without scikit-image.
+    import cv2
+
+    def polygon(row, col):
+        row = np.asarray(row, dtype=np.float32)
+        col = np.asarray(col, dtype=np.float32)
+        row0, col0 = np.floor(row.min()), np.floor(col.min())
+        points = np.round(np.stack((col - col0, row - row0), axis=1)).astype(np.int32)
+        height = int(np.ceil(row.max() - row0)) + 1
+        width = int(np.ceil(col.max() - col0)) + 1
+        mask = np.zeros((height, width), dtype=np.uint8)
+        cv2.fillPoly(mask, [points], 1)
+        rr, cc = np.nonzero(mask)
+        return rr + int(row0), cc + int(col0)
 
 def gen_dx_bx(xbound, ybound, zbound):
     dx = torch.Tensor([row[2] for row in [xbound, ybound, zbound]])

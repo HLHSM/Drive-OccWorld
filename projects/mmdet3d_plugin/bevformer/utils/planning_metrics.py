@@ -7,8 +7,46 @@
 import torch
 import torch.nn as nn
 import numpy as np
-from skimage.draw import polygon
-from pytorch_lightning.metrics.metric import Metric
+try:
+    from skimage.draw import polygon
+except ImportError:
+    # Small OpenCV-backed replacement for the planning-only collision mask.
+    import cv2
+
+    def polygon(row, col):
+        row = np.asarray(row, dtype=np.float32)
+        col = np.asarray(col, dtype=np.float32)
+        row0, col0 = np.floor(row.min()), np.floor(col.min())
+        points = np.round(np.stack((col - col0, row - row0), axis=1)).astype(np.int32)
+        height = int(np.ceil(row.max() - row0)) + 1
+        width = int(np.ceil(col.max() - col0)) + 1
+        mask = np.zeros((height, width), dtype=np.uint8)
+        cv2.fillPoly(mask, [points], 1)
+        rr, cc = np.nonzero(mask)
+        return rr + int(row0), cc + int(col0)
+
+try:
+    from pytorch_lightning.metrics.metric import Metric
+except ImportError:
+    class Metric(nn.Module):
+        """Minimal stateful metric fallback for the optional trajectory branch."""
+        def __init__(self, *args, **kwargs):
+            super().__init__()
+            self._metric_state_names = []
+
+        def add_state(self, name, default, dist_reduce_fx=None):
+            del dist_reduce_fx
+            self.register_buffer(name, default.clone())
+            self._metric_state_names.append(name)
+
+        def forward(self, *args, **kwargs):
+            self.update(*args, **kwargs)
+            return self.compute()
+
+        def reset(self):
+            for name in self._metric_state_names:
+                value = getattr(self, name)
+                value.zero_()
 
 
 class PlanningMetric_v2(Metric):

@@ -13,7 +13,6 @@ from mmcv.cnn import xavier_init
 from torch.nn.init import normal_
 from einops import rearrange
 import copy
-from projects.mmdet3d_plugin.bevformer.modules.collision_optimization import CollisionNonlinearOptimizer
 from projects.mmdet3d_plugin.bevformer.utils.cost import Cost_Function
 
 def calculate_birds_eye_view_parameters(x_bounds, y_bounds, z_bounds):

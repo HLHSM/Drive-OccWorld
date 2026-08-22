@@ -17,13 +17,22 @@ REQUIRED_DIRS = (
     'rear_left_rgb', 'rear_rgb', 'rear_right_rgb',
     'meta', 'occupancy', 'occupancy_valid',
 )
+RGB_DIRS = set(REQUIRED_DIRS[:6])
+RGB_EXTENSIONS = ('.jpg', '.jpeg', '.png')
 
 
 def common_frame_ids(seq):
     sets = []
     for name in REQUIRED_DIRS:
-        suffix = '.json' if name == 'meta' else ('.bin' if name.startswith('occupancy') else '.png')
-        sets.append({p.stem for p in (seq / name).glob('*' + suffix)})
+        if name in RGB_DIRS:
+            stems = {
+                p.stem for ext in RGB_EXTENSIONS
+                for p in (seq / name).glob('*' + ext)
+            }
+        else:
+            suffix = '.json' if name == 'meta' else '.bin'
+            stems = {p.stem for p in (seq / name).glob('*' + suffix)}
+        sets.append(stems)
     return sorted(set.intersection(*sets))
 
 

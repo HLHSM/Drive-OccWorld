@@ -157,8 +157,8 @@ def custom_train_detector(model,
         # Support batch_size > 1 in validation
         val_samples_per_gpu = cfg.data.val.pop('samples_per_gpu', 1)
         if val_samples_per_gpu > 1:
-            assert False
-            # Replace 'ImageToTensor' to 'DefaultFormatBundle'
+            # FarmSim uses a tensor-only custom dataset, so no pipeline
+            # replacement is needed. Keep this branch for legacy configs.
             cfg.data.val.pipeline = replace_ImageToTensor(
                 cfg.data.val.pipeline)
         val_dataset = custom_build_dataset(cfg.data.val, dict(test_mode=True))

@@ -115,6 +115,28 @@ def custom_encode_mask_results(mask_results):
 #     return {'bbox_results': bbox_results, 'mask_results': mask_results}
 
 
+def custom_single_gpu_test(model, data_loader, show=False, out_dir=None):
+    """Evaluate FarmSim occupancy on one GPU without distributed collectives."""
+    model.eval()
+    metrics = {}
+    prog_bar = mmcv.ProgressBar(len(data_loader.dataset))
+    with torch.no_grad():
+        for data in data_loader:
+            result = model(return_loss=False, rescale=True, **data)
+            for key in ('hist_for_iou', 'hist_for_iou_current',
+                        'hist_for_iou_future',
+                        'hist_for_iou_future_time_weighting'):
+                if key in result:
+                    metrics[key] = metrics.get(key, 0) + result[key]
+            if 'plan_metric' in result:
+                metrics.setdefault('plan_metric', {})
+                for key, value in result['plan_metric'].items():
+                    metrics['plan_metric'][key] = (
+                        metrics['plan_metric'].get(key, 0) + value)
+            prog_bar.update(1)
+    return metrics
+
+
 def custom_multi_gpu_test(model, data_loader, tmpdir=None, gpu_collect=False, show=False, out_dir=None):
     """Test model with multiple gpus.
     This method tests model with multiple gpus and collects the results

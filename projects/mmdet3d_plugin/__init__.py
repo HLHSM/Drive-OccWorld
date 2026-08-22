@@ -21,5 +21,9 @@ from .bevformer.modules.world_transformer import PredictionTransformer
 from .bevformer.dense_heads.bevformer_head import BEVFormerHead
 from .bevformer.dense_heads.world_bevformer_head import WorldBEVFormerHead
 from .bevformer.dense_heads.world_head_v1 import WorldHeadV1
+# These are only loaded when the trajectory switch is enabled, but keeping
+# registration available makes the shell-level trajectory option functional.
+from .bevformer.dense_heads.plan_head import PlanHead_v2
+from .bevformer.losses.planning_loss import PlanningLoss, CollisionLoss
 from .bevformer.detectors.bevformer import BEVFormer
 from .bevformer.detectors.drive_occworldV2 import Drive_OccWorld_V2
