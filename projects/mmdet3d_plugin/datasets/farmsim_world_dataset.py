@@ -79,7 +79,8 @@ class FarmSimWorldDataset(torch.utils.data.Dataset):
     def __init__(self, ann_file, queue_length=2, camera_mode='surround',
                  image_size=(640, 360), front_only=False, test_mode=False,
                  future_pred_frame_num=0, future_traj_frame_num=0,
-                 predict_trajectory=False, pipeline=None, **kwargs):
+                 predict_trajectory=False, max_samples=None, pipeline=None,
+                 **kwargs):
         del pipeline, kwargs
         if camera_mode not in ('surround', 'front'):
             raise ValueError("camera_mode must be 'surround' or 'front'")
@@ -91,6 +92,9 @@ class FarmSimWorldDataset(torch.utils.data.Dataset):
         self.future_pred_frame_num = int(future_pred_frame_num)
         self.future_traj_frame_num = int(future_traj_frame_num) if predict_trajectory else 0
         self.predict_trajectory = bool(predict_trajectory)
+        self.max_samples = None if max_samples is None else int(max_samples)
+        if self.max_samples is not None and self.max_samples < 1:
+            raise ValueError('max_samples must be positive when specified')
         if self.future_pred_frame_num < 0 or self.future_traj_frame_num < 0:
             raise ValueError('future prediction frame counts must be non-negative')
         self.camera_names = FRONT_RGB_CAMERAS if camera_mode == 'front' else RGB_CAMERAS
@@ -107,6 +111,8 @@ class FarmSimWorldDataset(torch.utils.data.Dataset):
                     self.queue_length,
                     len(frame_ids) - required_future):
                 self.samples.append((seq_idx, frame_index))
+        if self.max_samples is not None:
+            self.samples = self.samples[:self.max_samples]
         if not self.samples:
             raise RuntimeError('No usable FarmSim samples; check split and queue_length.')
         # Compatibility with MMDetection's DistributedGroupSampler.  All

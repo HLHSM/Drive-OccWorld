@@ -473,6 +473,10 @@ class Drive_OccWorld_V2(BEVFormer):
             raise ValueError(
                 f'Need {stop} occupancy time steps after collation, got {occ_gts.shape[1]}')
         occ_gts = occ_gts[:, start:stop]
+        # Match the prediction layout [time, batch, ...].  Flattening the
+        # original [batch, time, ...] tensor directly makes sample 2 appear
+        # to be a future frame when BATCH_SIZE > 1.
+        occ_gts = occ_gts.permute(1, 0, 2, 3, 4).contiguous()
         return occ_gts.reshape(select_frames * batch_size, *occ_gts.shape[-3:])
 
     def compute_occ_loss(self, occ_preds, occ_gts):
@@ -526,14 +530,27 @@ class Drive_OccWorld_V2(BEVFormer):
         # preds
         occ_preds = occ_preds.permute(1, 0, 2, 5, 3, 4)
         inter_num, select_frames, bs, num_cls, hw, d = occ_preds.shape
-        occ_preds = occ_preds.view(inter_num, select_frames*bs, num_cls, self.bev_w, self.bev_h, d).transpose(3,4)
+        occ_preds = occ_preds.view(
+            inter_num, select_frames * bs, num_cls, self.bev_w, self.bev_h, d
+        ).transpose(3, 4)
         # gts; preserve every sample when BATCH_SIZE > 1.
         occ_gts = self._format_occ_targets(occ_gts, select_frames, bs)
 
         hist_for_iou = self.evaluate_occupancy_forecasting(occ_preds[-1], occ_gts, img_metas=img_metas, save_pred=self._viz_pcd_flag, save_path=self._viz_pcd_path)
-        hist_for_iou_current = self.evaluate_occupancy_forecasting(occ_preds[-1][0:1], occ_gts[0:1], img_metas=img_metas, save_pred=False)
-        hist_for_iou_future = self.evaluate_occupancy_forecasting(occ_preds[-1][1:], occ_gts[1:], img_metas=img_metas, save_pred=False)
-        hist_for_iout_future_time_weighting = self.evaluate_occupancy_forecasting(occ_preds[-1][1:], occ_gts[1:], img_metas=img_metas, time_weighting=True)
+        current_pred = occ_preds[-1][:bs]
+        current_gt = occ_gts[:bs]
+        hist_for_iou_current = self.evaluate_occupancy_forecasting(
+            current_pred, current_gt, img_metas=img_metas, save_pred=False)
+        if select_frames > 1:
+            future_pred = occ_preds[-1][bs:]
+            future_gt = occ_gts[bs:]
+            hist_for_iou_future = self.evaluate_occupancy_forecasting(
+                future_pred, future_gt, img_metas=img_metas, save_pred=False)
+            hist_for_iout_future_time_weighting = self.evaluate_occupancy_forecasting(
+                future_pred, future_gt, img_metas=img_metas, time_weighting=True)
+        else:
+            hist_for_iou_future = 0
+            hist_for_iout_future_time_weighting = 0
         return hist_for_iou, hist_for_iou_current, hist_for_iou_future, hist_for_iout_future_time_weighting
 
     def evaluate_plan(self, next_pose_preds, sdc_planning, sdc_planning_mask, segmentation_bev, img_metas):

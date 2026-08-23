@@ -23,7 +23,8 @@ from mmdet.utils import get_root_logger
 import time
 import os.path as osp
 from projects.mmdet3d_plugin.datasets.builder import build_dataloader
-from projects.mmdet3d_plugin.core.evaluation.eval_hooks import CustomDistEvalHook
+from projects.mmdet3d_plugin.core.evaluation.eval_hooks import (
+    CustomDistEvalHook, CustomEvalHook)
 from projects.mmdet3d_plugin.datasets import custom_build_dataset
 def custom_train_detector(model,
                    dataset,
@@ -175,7 +176,14 @@ def custom_train_detector(model,
         eval_cfg = cfg.get('evaluation', {})
         eval_cfg['by_epoch'] = cfg.runner['type'] != 'IterBasedRunner'
         eval_cfg['jsonfile_prefix'] = osp.join('val', cfg.work_dir, time.ctime().replace(' ','_').replace(':','_'))
-        eval_hook = CustomDistEvalHook if distributed else EvalHook
+        # FarmSim model outputs are occupancy metric dictionaries rather than
+        # detection-result lists.  Keep the stock detection hook for the
+        # repository's original nuScenes/3D-detection configurations.
+        is_farmsim = cfg.data.val.get('type') == 'FarmSimWorldDataset'
+        if is_farmsim:
+            eval_hook = CustomDistEvalHook if distributed else CustomEvalHook
+        else:
+            eval_hook = EvalHook
         runner.register_hook(eval_hook(val_dataloader, **eval_cfg))
 
     # user-defined hooks

@@ -103,3 +103,18 @@ CUDA_VISIBLE_DEVICES=0 PYTHONPATH="$PWD" \
 ```
 
 六相机 checkpoint 将配置替换为 `projects/configs/farmsim/farmsim_occ_6cam.py`，并将 checkpoint 路径替换为对应文件。评估脚本会直接输出混淆矩阵、各类别 IoU、仅统计出现类别的 mIoU、全类别 mIoU 和 voxel accuracy；不会启动训练流程。
+
+如果只想快速验证 checkpoint 和验证流程是否正常，可限制验证样本数，例如只跑 2 个样本：
+
+```bash
+CUDA_VISIBLE_DEVICES=0 PYTHONPATH="$PWD" \
+  /home/hl/miniconda3/envs/dow2/bin/python tools/test.py \
+  projects/configs/farmsim/farmsim_occ_front3.py \
+  work_dirs/front3_YYYYMMDD_HHMMSS/epoch_1.pth \
+  --launcher none --eval occ --deterministic \
+  --cfg-options data.test.max_samples=2 data.test.samples_per_gpu=1
+```
+
+这会执行完整的模型 `forward_test`、占用统计和自定义单卡评估路径，但不会遍历全部 6,393 个验证样本。若 checkpoint 使用了未来占用或轨迹开关，还需把训练时的 `model.test_future_frame_num`、`model.turn_on_plan`、`model.predict_trajectory` 等配置通过 `--cfg-options` 原样补上。
+
+训练过程中的每 epoch 验证会在 `Epoch(val)` 日志中先输出各类 mIoU 和 voxel accuracy，再输出原始混淆矩阵；这些内容同时写入对应的 `.log` 和 `.log.json` 文件。

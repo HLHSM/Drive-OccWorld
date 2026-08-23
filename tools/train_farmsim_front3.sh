@@ -7,7 +7,7 @@ NUM_GPUS=1
 # Per-GPU batch size. Total batch size is BATCH_SIZE * NUM_GPUS.
 BATCH_SIZE=2
 # Number of complete passes over the training set.
-EPOCHS=1
+EPOCHS=2
 # Number of historical images in each sample (plus the current image).
 HISTORY_FRAMES=2
 # Set to 1 to train/evaluate future occupancy; FUTURE_OCC_STEPS is ignored when 0.

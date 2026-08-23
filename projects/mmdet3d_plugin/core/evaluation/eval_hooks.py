@@ -7,11 +7,83 @@ import bisect
 import os.path as osp
 
 import mmcv
+import numpy as np
 import torch.distributed as dist
 from mmcv.runner import DistEvalHook as BaseDistEvalHook
 from mmcv.runner import EvalHook as BaseEvalHook
 from torch.nn.modules.batchnorm import _BatchNorm
 from mmdet.core.evaluation.eval_hooks import DistEvalHook
+
+
+def _with_occupancy_summaries(results):
+    """Place scalar occupancy metrics before the raw confusion matrices."""
+    if not isinstance(results, dict):
+        return results, []
+
+    ordered = {}
+    raw_results = {}
+    summary = []
+    for key, value in results.items():
+        if key.startswith('hist_for_iou'):
+            hist = np.asarray(value)
+            # Distributed collection may leave one outer result-list axis.
+            if hist.ndim == 3 and hist.shape[0] == 1:
+                hist = hist[0]
+            if hist.ndim == 2 and hist.shape[0] == hist.shape[1]:
+                diagonal = np.diag(hist).astype(np.float64)
+                union = hist.sum(axis=1) + hist.sum(axis=0) - diagonal
+                valid = union > 0
+                iou = np.divide(
+                    diagonal, union, out=np.zeros_like(diagonal), where=valid)
+                present_miou = float(iou[valid].mean()) if valid.any() else 0.0
+                all_miou = float(iou.mean()) if len(iou) else 0.0
+                total = float(hist.sum())
+                voxel_acc = float(diagonal.sum() / total) if total else 0.0
+                metrics = (
+                    (f'{key}_mIoU_present', present_miou),
+                    (f'{key}_mIoU_all', all_miou),
+                    (f'{key}_voxel_acc', voxel_acc),
+                )
+                for metric_key, metric_value in metrics:
+                    ordered[metric_key] = metric_value
+                summary.extend(
+                    f'{metric_key}={metric_value:.4f}'
+                    for metric_key, metric_value in metrics)
+        raw_results[key] = value
+    # Keep every scalar summary before any large confusion-matrix payload.
+    ordered.update(raw_results)
+    return ordered, summary
+
+
+class CustomEvalHook(BaseEvalHook):
+    """Non-distributed FarmSim evaluation hook.
+
+    The stock MMDetection hook calls ``mmdet.apis.single_gpu_test`` and
+    assumes each model output is a detection-result list.  FarmSim's model
+    returns occupancy confusion matrices in a dictionary, so use the
+    repository's custom tester and write those metrics directly to the runner
+    log buffer.
+    """
+
+    def _do_evaluate(self, runner):
+        if not self._should_evaluate(runner):
+            return
+
+        from projects.mmdet3d_plugin.bevformer.apis.test import custom_single_gpu_test
+        results = custom_single_gpu_test(runner.model, self.dataloader, show=False)
+        runner.log_buffer.output['eval_iter_num'] = len(self.dataloader)
+        if isinstance(results, dict):
+            results, summary = _with_occupancy_summaries(results)
+            if summary:
+                runner.logger.info('FarmSim validation metrics: ' + ', '.join(summary))
+            for name, value in results.items():
+                runner.log_buffer.output[name] = value
+            runner.log_buffer.ready = True
+            return
+
+        key_score = self.evaluate(runner, results)
+        if self.save_best and key_score is not None:
+            self._save_ckpt(runner, key_score)
 
 
 def _calc_dynamic_intervals(start_interval, dynamic_interval_list):
@@ -88,4 +160,16 @@ class CustomDistEvalHook(BaseDistEvalHook):
 
             if self.save_best:
                 self._save_ckpt(runner, key_score)
+
+    def evaluate(self, runner, results):
+        """Log FarmSim's already-aggregated dictionary metrics directly."""
+        if isinstance(results, dict):
+            results, summary = _with_occupancy_summaries(results)
+            if summary:
+                runner.logger.info('FarmSim validation metrics: ' + ', '.join(summary))
+            for name, value in results.items():
+                runner.log_buffer.output[name] = value
+            runner.log_buffer.ready = True
+            return None
+        return super().evaluate(runner, results)
   
