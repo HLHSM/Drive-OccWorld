@@ -42,11 +42,11 @@ model = dict(
 
 data = dict(
     samples_per_gpu=1, workers_per_gpu=4,
-    train=dict(type='FarmSimWorldDataset', ann_file='data/farmsim/splits/train.json',
+    train=dict(type='FarmSimWorldDataset', ann_file='data/farmsim/splits/train.json', data_root=None,
                queue_length=2, camera_mode='surround', front_only=False, image_size=(640, 360), pipeline=[]),
-    val=dict(type='FarmSimWorldDataset', ann_file='data/farmsim/splits/val.json',
+    val=dict(type='FarmSimWorldDataset', ann_file='data/farmsim/splits/val.json', data_root=None,
              queue_length=2, camera_mode='surround', front_only=False, image_size=(640, 360), pipeline=[], test_mode=True),
-    test=dict(type='FarmSimWorldDataset', ann_file='data/farmsim/splits/val.json',
+    test=dict(type='FarmSimWorldDataset', ann_file='data/farmsim/splits/val.json', data_root=None,
               queue_length=2, camera_mode='surround', front_only=False, image_size=(640, 360), pipeline=[], test_mode=True),
 )
 

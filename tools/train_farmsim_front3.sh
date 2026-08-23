@@ -1,9 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Edit only these two values for the desired visible GPU IDs and process count.
+# Edit these values for the dataset root, visible GPU IDs, and process count.
 CUDA_VISIBLE_DEVICES="0"
 NUM_GPUS=1
+# Root directory containing the crop/sequence folders referenced by the split JSONs.
+DATA_ROOT="${DATA_ROOT:-/mnt/g/SimData}"
 # Per-GPU batch size. Total batch size is BATCH_SIZE * NUM_GPUS.
 BATCH_SIZE=2
 # Number of complete passes over the training set.
@@ -29,6 +31,10 @@ if ! [[ "${BATCH_SIZE}" =~ ^[1-9][0-9]*$ && "${EPOCHS}" =~ ^[1-9][0-9]*$ && \
   echo "BATCH_SIZE/EPOCHS/HISTORY_FRAMES must be positive; future occupancy/trajectory steps may be zero; prediction switches must be 0 or 1." >&2
   exit 2
 fi
+if [[ ! -d "${DATA_ROOT}" ]]; then
+  echo "FarmSim DATA_ROOT does not exist: ${DATA_ROOT}" >&2
+  exit 2
+fi
 if [[ "${PREDICT_FUTURE_OCC}" -eq 1 ]]; then OCC_STEPS="${FUTURE_OCC_STEPS}"; else OCC_STEPS=0; fi
 if [[ "${PREDICT_FUTURE_TRAJ}" -eq 1 ]]; then TRAJ_ENABLED=True; else TRAJ_ENABLED=False; fi
 if [[ "${OCC_STEPS}" -lt 1 && "${PREDICT_FUTURE_OCC}" -eq 1 ]]; then
@@ -40,6 +46,7 @@ if [[ "${FUTURE_TRAJ_STEPS}" -lt 1 && "${PREDICT_FUTURE_TRAJ}" -eq 1 ]]; then
   exit 2
 fi
 CFG_OPTIONS=("data.samples_per_gpu=${BATCH_SIZE}" "data.val.samples_per_gpu=${BATCH_SIZE}" "data.test.samples_per_gpu=${BATCH_SIZE}" \
+  "data.train.data_root=${DATA_ROOT}" "data.val.data_root=${DATA_ROOT}" "data.test.data_root=${DATA_ROOT}" \
   "total_epochs=${EPOCHS}" "runner.max_epochs=${EPOCHS}" \
   "data.train.queue_length=${HISTORY_FRAMES}" "data.val.queue_length=${HISTORY_FRAMES}" \
   "data.test.queue_length=${HISTORY_FRAMES}" \

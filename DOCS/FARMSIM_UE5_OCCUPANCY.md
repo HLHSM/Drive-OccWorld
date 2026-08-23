@@ -1,10 +1,10 @@
 # UE5 农业机器人 3D 语义占用训练
 
-本适配以 `/mnt/g/SimData` 的 FarmSim UE5 数据为输入，不再依赖 nuScenes、CAN bus 或轨迹标签。模型训练目标是当前时刻的 3D 语义占用；配置中的 `predict_trajectory=False` 会屏蔽规划/未来轨迹头，`future_pred_frame_num=0` 表示不进行未来占用预测。
+本适配以 FarmSim UE5 数据为输入，不再依赖 nuScenes、CAN bus 或轨迹标签。模型训练目标是当前时刻的 3D 语义占用；配置中的 `predict_trajectory=False` 会屏蔽规划/未来轨迹头，`future_pred_frame_num=0` 表示不进行未来占用预测。
 
 ## 已生成的数据划分
 
-划分文件位于 `data/farmsim/splits/`：`train.json`、`val.json` 和 `split_report.json`。以完整 sequence 为最小单元，绝不将同一 sequence 的不同帧拆到训练和验证中。使用固定 seed `20260821`，按作物种类、生长阶段、时段、天气以及帧数进行约束分层，验证集目标比例为 1/6：
+划分文件位于 `data/farmsim/splits/`：`train.json`、`val.json` 和 `split_report.json`。JSON 中的 `sequences[*].path` 是相对于数据集根目录的路径，`source_root` 为 `.`；实际根目录由训练脚本中的 `DATA_ROOT` 指定。以完整 sequence 为最小单元，绝不将同一 sequence 的不同帧拆到训练和验证中。使用固定 seed `20260821`，按作物种类、生长阶段、时段、天气以及帧数进行约束分层，验证集目标比例为 1/6：
 
 | 划分 | sequence | 完整帧数 | 占比 |
 | --- | ---: | ---: | ---: |
@@ -70,16 +70,17 @@ cd ~/Drive-OccWorld
 
 ### 训练命令
 
-然后直接执行：
+然后直接执行（先在脚本顶部修改 `DATA_ROOT`，或在命令前通过环境变量覆盖）：
 
 ```bash
 bash tools/train_farmsim_6cam.sh
 # 或
-bash tools/train_farmsim_front3.sh
+DATA_ROOT=/data/FarmSim bash tools/train_farmsim_front3.sh
 ```
 
 两个脚本顶部都有可直接修改的训练开关：
 
+- `DATA_ROOT`：数据集根目录，目录下应直接包含各个作物目录。例如 `DATA_ROOT=/data/FarmSim bash tools/train_farmsim_front3.sh`。
 - `CUDA_VISIBLE_DEVICES`、`NUM_GPUS`：可见显卡及并行进程数。例如 `CUDA_VISIBLE_DEVICES="2,3,5"` 时必须写 `NUM_GPUS=3`。
 - `BATCH_SIZE`、`EPOCHS`：每张卡的 batch size 和完整遍历训练集的次数；总 batch size 为 `BATCH_SIZE × NUM_GPUS`。该 batch size 同时写入验证/测试数据加载器（六相机脚本默认 `--no-validate`，需要每 epoch 验证时可删除该参数）。
 - `HISTORY_FRAMES`：历史图像帧数，当前帧会额外输入，因此实际时序长度为 `HISTORY_FRAMES + 1`。
@@ -99,7 +100,8 @@ CUDA_VISIBLE_DEVICES=0 PYTHONPATH="$PWD" \
   /home/hl/miniconda3/envs/dow2/bin/python tools/test.py \
   projects/configs/farmsim/farmsim_occ_front3.py \
   work_dirs/farmsim_occ_front3/epoch_1.pth \
-  --launcher none --eval occ --deterministic
+  --launcher none --eval occ --deterministic \
+  --cfg-options data.test.data_root=/mnt/g/SimData
 ```
 
 六相机 checkpoint 将配置替换为 `projects/configs/farmsim/farmsim_occ_6cam.py`，并将 checkpoint 路径替换为对应文件。评估脚本会直接输出混淆矩阵、各类别 IoU、仅统计出现类别的 mIoU、全类别 mIoU 和 voxel accuracy；不会启动训练流程。
@@ -112,7 +114,8 @@ CUDA_VISIBLE_DEVICES=0 PYTHONPATH="$PWD" \
   projects/configs/farmsim/farmsim_occ_front3.py \
   work_dirs/front3_YYYYMMDD_HHMMSS/epoch_1.pth \
   --launcher none --eval occ --deterministic \
-  --cfg-options data.test.max_samples=2 data.test.samples_per_gpu=1
+  --cfg-options data.test.data_root=/mnt/g/SimData \
+                data.test.max_samples=2 data.test.samples_per_gpu=1
 ```
 
 这会执行完整的模型 `forward_test`、占用统计和自定义单卡评估路径，但不会遍历全部 6,393 个验证样本。若 checkpoint 使用了未来占用或轨迹开关，还需把训练时的 `model.test_future_frame_num`、`model.turn_on_plan`、`model.predict_trajectory` 等配置通过 `--cfg-options` 原样补上。

@@ -37,19 +37,20 @@ def common_frame_ids(seq):
 
 
 def load_sequences(root):
+    root = root.resolve()
     valid, excluded = [], []
     for seq in sorted(root.glob('*/sequence_*')):
         manifest_path = seq / 'scenario_manifest.json'
         if not manifest_path.is_file() or any(not (seq / x).is_dir() for x in REQUIRED_DIRS):
-            excluded.append({'path': str(seq), 'reason': 'missing manifest or required directory'})
+            excluded.append({'path': str(seq.relative_to(root)), 'reason': 'missing manifest or required directory'})
             continue
         with manifest_path.open(encoding='utf-8') as f:
             meta = json.load(f)
         frames = common_frame_ids(seq)
         if len(frames) < 3:
-            excluded.append({'path': str(seq), 'reason': 'fewer than 3 complete multi-view frames'})
+            excluded.append({'path': str(seq.relative_to(root)), 'reason': 'fewer than 3 complete multi-view frames'})
             continue
-        valid.append(dict(path=str(seq), frame_ids=frames,
+        valid.append(dict(path=str(seq.relative_to(root)), frame_ids=frames,
                           scenario_id=meta['scenario_id'], crop_type=meta['crop_type'],
                           growth_stage=meta['growth_stage'], time_of_day=meta['time_of_day'],
                           weather=meta['weather'], frame_count=len(frames)))
@@ -127,7 +128,9 @@ def main():
     sequences, excluded = load_sequences(args.data_root)
     train, val = allocate(sequences, args.val_ratio, args.seed)
     args.output_dir.mkdir(parents=True, exist_ok=True)
-    common = dict(source_root=str(args.data_root), val_ratio=args.val_ratio, seed=args.seed)
+    # Paths in the manifests are portable and are resolved by the dataset
+    # relative to its explicit ``data_root`` setting.
+    common = dict(source_root='.', val_ratio=args.val_ratio, seed=args.seed)
     for name, rows in (('train', train), ('val', val)):
         with (args.output_dir / f'{name}.json').open('w', encoding='utf-8') as f:
             json.dump(dict(**common, split=name, sequences=rows), f, ensure_ascii=False, indent=2)

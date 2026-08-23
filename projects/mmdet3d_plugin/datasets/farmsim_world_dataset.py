@@ -76,7 +76,7 @@ class FarmSimWorldDataset(torch.utils.data.Dataset):
     CLASSES = FARMSIM_CLASSES
     PALETTE = FARMSIM_PALETTE
 
-    def __init__(self, ann_file, queue_length=2, camera_mode='surround',
+    def __init__(self, ann_file, data_root=None, queue_length=2, camera_mode='surround',
                  image_size=(640, 360), front_only=False, test_mode=False,
                  future_pred_frame_num=0, future_traj_frame_num=0,
                  predict_trajectory=False, max_samples=None, pipeline=None,
@@ -99,8 +99,17 @@ class FarmSimWorldDataset(torch.utils.data.Dataset):
             raise ValueError('future prediction frame counts must be non-negative')
         self.camera_names = FRONT_RGB_CAMERAS if camera_mode == 'front' else RGB_CAMERAS
 
-        with open(ann_file, 'r', encoding='utf-8') as f:
+        ann_file = Path(ann_file).expanduser()
+        with ann_file.open('r', encoding='utf-8') as f:
             manifest = json.load(f)
+        # Split manifests contain paths relative to the dataset root.  Keep
+        # absolute paths working for old manifests and for users migrating
+        # incrementally.  ``data_root`` is intentionally explicit in the
+        # training scripts so the same split files work on another machine.
+        manifest_root = manifest.get('source_root', '.')
+        self.data_root = Path(data_root if data_root is not None else manifest_root).expanduser()
+        if not self.data_root.is_absolute():
+            self.data_root = (Path.cwd() / self.data_root).resolve()
         self.sequences = manifest['sequences']
         self.samples = []
         for seq_idx, seq in enumerate(self.sequences):
@@ -123,8 +132,12 @@ class FarmSimWorldDataset(torch.utils.data.Dataset):
     def __len__(self):
         return len(self.samples)
 
+    def _sequence_path(self, seq):
+        path = Path(seq['path']).expanduser()
+        return path if path.is_absolute() else self.data_root / path
+
     def _meta(self, seq, frame_id):
-        path = Path(seq['path']) / 'meta' / f'{frame_id}.json'
+        path = self._sequence_path(seq) / 'meta' / f'{frame_id}.json'
         with path.open('r', encoding='utf-8') as f:
             return json.load(f)
 
@@ -206,7 +219,7 @@ class FarmSimWorldDataset(torch.utils.data.Dataset):
         sx, sy = width / 1280.0, height / 720.0
         images = []
         for name in self.camera_names:
-            camera_dir = Path(seq['path']) / name
+            camera_dir = self._sequence_path(seq) / name
             path = next((camera_dir / f'{frame_id}{ext}'
                          for ext in RGB_EXTENSIONS
                          if (camera_dir / f'{frame_id}{ext}').is_file()), None)
@@ -223,7 +236,7 @@ class FarmSimWorldDataset(torch.utils.data.Dataset):
         return images, sx, sy
 
     def _load_occupancy(self, seq, frame_id):
-        seq_path = Path(seq['path'])
+        seq_path = self._sequence_path(seq)
         raw = np.fromfile(seq_path / 'occupancy' / f'{frame_id}.bin', dtype=np.uint8)
         valid = np.fromfile(seq_path / 'occupancy_valid' / f'{frame_id}.bin', dtype=np.uint8)
         expected = 25 * 100 * 200
