@@ -14,17 +14,17 @@ model = dict(
     point_cloud_range=point_cloud_range,
     bev_h=bev_h_, bev_w=bev_w_,
     future_pred_head=dict(
-        num_classes=12,
+        num_classes=6,
         history_queue_length=2,
         num_pred_height=25,
         use_plan_traj=False,
         bev_h=bev_h_, bev_w=bev_w_, pc_range=point_cloud_range,
         positional_encoding=dict(row_num_embed=bev_h_, col_num_embed=bev_w_),
-        prev_render_neck=dict(sem_norm=False, pred_height=25, num_cls=12),
+        prev_render_neck=dict(sem_norm=False, pred_height=25, num_cls=6),
     ),
     pts_bbox_head=dict(
-        bev_h=bev_h_, bev_w=bev_w_, num_classes=12,
-        bbox_coder=dict(pc_range=point_cloud_range, num_classes=12),
+        bev_h=bev_h_, bev_w=bev_w_, num_classes=6,
+        bbox_coder=dict(pc_range=point_cloud_range, num_classes=6),
         positional_encoding=dict(row_num_embed=bev_h_, col_num_embed=bev_w_),
         transformer=dict(use_can_bus=False, encoder=dict(pc_range=point_cloud_range,
             transformerlayers=dict(attn_cfgs=[

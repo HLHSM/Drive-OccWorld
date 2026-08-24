@@ -17,18 +17,26 @@ RGB_CAMERAS = (
 FRONT_RGB_CAMERAS = RGB_CAMERAS[:3]
 RGB_EXTENSIONS = ('.jpg', '.jpeg', '.png')
 
-# Kept in the original FarmSim v9 semantic-ID order.  MMDetection reads these
-# attributes when serialising checkpoint metadata and when visualising output.
+# Training/evaluation taxonomy after aggregating sparse FarmSim v9 classes.
+# The source occupancy files still use their original IDs; ``_load_occupancy``
+# applies ``FARMSIM_LABEL_REMAP`` before a sample reaches the model.
 FARMSIM_CLASSES = (
-    'free', 'crop', 'soil_ground', 'drivable', 'building', 'fence_barrier',
-    'other_vegetation', 'vehicle', 'person_animal', 'other_obstacle',
-    'tree_trunk', 'tree_foliage',
+    'free', 'crop', 'soil_ground', 'drivable', 'other_vegetation',
+    'other_obstacle',
 )
 FARMSIM_PALETTE = [
     (0, 0, 0), (91, 181, 75), (120, 72, 30), (90, 90, 90),
-    (190, 130, 90), (220, 210, 40), (55, 150, 80), (45, 85, 210),
-    (230, 90, 90), (160, 80, 190), (115, 65, 30), (25, 110, 45),
+    (55, 150, 80), (160, 80, 190),
 ]
+
+# Original IDs: 0 free, 1 crop, 2 soil, 3 drivable, 4 building, 5 fence,
+# 6 other vegetation, 7 vehicle, 8 person/animal, 9 other obstacle,
+# 10 tree trunk, 11 tree foliage.  Unmapped labels (including 8 and 255)
+# are ignored by all occupancy losses and metrics.
+FARMSIM_LABEL_REMAP = np.full(256, 255, dtype=np.uint8)
+FARMSIM_LABEL_REMAP[[0, 1, 2, 3]] = [0, 1, 2, 3]
+FARMSIM_LABEL_REMAP[[6, 11]] = 4
+FARMSIM_LABEL_REMAP[[4, 5, 7, 9, 10]] = 5
 
 
 def _rpy_matrix_deg(rpy):
@@ -79,7 +87,8 @@ class FarmSimWorldDataset(torch.utils.data.Dataset):
     def __init__(self, ann_file, data_root=None, queue_length=2, camera_mode='surround',
                  image_size=(640, 360), front_only=False, test_mode=False,
                  future_pred_frame_num=0, future_traj_frame_num=0,
-                 predict_trajectory=False, max_samples=None, pipeline=None,
+                 predict_trajectory=False, return_ground_height=False,
+                 max_samples=None, pipeline=None,
                  **kwargs):
         del pipeline, kwargs
         if camera_mode not in ('surround', 'front'):
@@ -92,6 +101,7 @@ class FarmSimWorldDataset(torch.utils.data.Dataset):
         self.future_pred_frame_num = int(future_pred_frame_num)
         self.future_traj_frame_num = int(future_traj_frame_num) if predict_trajectory else 0
         self.predict_trajectory = bool(predict_trajectory)
+        self.return_ground_height = bool(return_ground_height)
         self.max_samples = None if max_samples is None else int(max_samples)
         if self.max_samples is not None and self.max_samples < 1:
             raise ValueError('max_samples must be positive when specified')
@@ -246,9 +256,37 @@ class FarmSimWorldDataset(torch.utils.data.Dataset):
         raw = raw.reshape(25, 100, 200).transpose(2, 1, 0)
         valid = valid.reshape(25, 100, 200).transpose(2, 1, 0)
         raw[valid == 0] = 255
+        raw = FARMSIM_LABEL_REMAP[raw]
         if self.front_only:
             raw = raw[100:, :, :]
         return torch.from_numpy(raw.astype(np.int64, copy=False))
+
+    def _load_ground_height(self, seq, frame_id):
+        """Load explicit UE terrain height as [x, y] meters plus validity."""
+        meta = self._meta(seq, frame_id)
+        occupancy = meta['semantic_occupancy']
+        surface = occupancy['ground_surface']
+        seq_path = self._sequence_path(seq)
+        index = np.fromfile(seq_path / surface['index_file'], dtype='<u2')
+        valid = np.fromfile(seq_path / surface['valid_mask_file'], dtype=np.uint8)
+        x_size, y_size, _ = occupancy['dimensions_xyz']
+        expected = x_size * y_size
+        if index.size != expected or valid.size != expected:
+            raise RuntimeError(
+                f'{seq_path}: unexpected ground-surface size for frame {frame_id}')
+        # Source layout is [y, x], x-fastest; model uses [x, y].
+        index = index.reshape(y_size, x_size).transpose(1, 0)
+        valid = valid.reshape(y_size, x_size).transpose(1, 0).astype(bool)
+        min_z = float(occupancy['min_m_xyz'][2])
+        voxel_size = float(occupancy['voxel_size_m'])
+        # ``index`` is the first valid layer.  Supervise its voxel center so
+        # height targets and decoder z centers use the same convention.
+        ground_height = min_z + (index.astype(np.float32) + 0.5) * voxel_size
+        if self.front_only:
+            ground_height = ground_height[100:, :]
+            valid = valid[100:, :]
+        return (torch.from_numpy(ground_height),
+                torch.from_numpy(valid))
 
     def __getitem__(self, index):
         seq_idx, frame_index = self.samples[index]
@@ -295,9 +333,22 @@ class FarmSimWorldDataset(torch.utils.data.Dataset):
         result = dict(
             img=DC(torch.from_numpy(np.stack(image_queue)).float(), stack=True),
             img_metas=DC(meta_queue, cpu_only=True),
+            # Stable dataset index used to limit and name saved predictions
+            # consistently across single- and multi-GPU evaluation.
+            sample_idx=torch.tensor(index, dtype=torch.long),
             # The original detector receives a list after mmcv collation.
             segmentation=segmentation,
         )
+        # ``getattr`` also keeps worker processes created from a pre-TGHD
+        # dataset instance compatible when source code is updated in place.
+        # Fresh instances always define the attribute in ``__init__`` above.
+        if getattr(self, 'return_ground_height', False):
+            ground_targets = [self._load_ground_height(seq, frame_id)
+                              for frame_id in occupancy_ids]
+            result['ground_height'] = torch.stack(
+                [item[0] for item in ground_targets], dim=0)
+            result['ground_valid'] = torch.stack(
+                [item[1] for item in ground_targets], dim=0)
         if self.predict_trajectory:
             trajectory = self._trajectory_targets(seq, reference_pose, future_traj_ids)
             steps = self.future_traj_frame_num
