@@ -5,6 +5,7 @@
 #  Modified by Zhiqi Li
 # ---------------------------------------------
 import os.path as osp
+import re
 import pickle
 import shutil
 import tempfile
@@ -14,6 +15,7 @@ import mmcv
 import torch
 import torch.distributed as dist
 from mmcv.image import tensor2imgs
+from mmcv.parallel import DataContainer
 from mmcv.runner import get_dist_info
 
 from mmdet.core import encode_mask_results
@@ -22,6 +24,54 @@ from mmdet.core import encode_mask_results
 import mmcv
 import numpy as np
 import pycocotools.mask as mask_util
+
+
+def _prepare_distributed_eval_batch(data, device):
+    """Unwrap MMCV collation output for a direct DDP forward call.
+
+    ``MMDistributedDataParallel.train_step`` scatters ``DataContainer``
+    objects itself, which is why training accepts the raw dataloader output.
+    The custom occupancy evaluator calls ``model(...)`` directly, however,
+    and modern PyTorch DDP no longer invokes MMCV's legacy scatter hook for
+    that path.  FarmSim evaluation therefore needs to unwrap the one local
+    collate chunk and move its tensor payloads explicitly.
+    """
+
+    def move_to_device(value):
+        if isinstance(value, torch.Tensor):
+            return value.to(device, non_blocking=device.type == 'cuda')
+        if isinstance(value, dict):
+            return {key: move_to_device(item) for key, item in value.items()}
+        if isinstance(value, list):
+            return [move_to_device(item) for item in value]
+        if isinstance(value, tuple):
+            return tuple(move_to_device(item) for item in value)
+        return value
+
+    prepared = {}
+    for key, value in data.items():
+        if isinstance(value, DataContainer):
+            value = value.data
+            # One DDP process receives exactly one local collate chunk.
+            if isinstance(value, (list, tuple)) and len(value) == 1:
+                value = value[0]
+        prepared[key] = move_to_device(value)
+    return prepared
+
+
+def _save_prediction_artifacts(result, prediction_dir, prediction_limit):
+    """Write optional per-sample FarmSim prediction artifacts as NPZ files."""
+    if prediction_dir is None:
+        return
+    for artifact in result.get('prediction_artifacts', []):
+        sample_index = int(artifact['sample_index'])
+        if prediction_limit >= 0 and sample_index >= prediction_limit:
+            continue
+        scene = re.sub(r'[^A-Za-z0-9_.-]+', '_', artifact.pop('scene_token'))
+        frame = re.sub(r'[^A-Za-z0-9_.-]+', '_', artifact.pop('lidar_token'))
+        output_path = osp.join(prediction_dir,
+                               f'{sample_index:06d}_{scene}_{frame}.npz')
+        np.savez_compressed(output_path, **artifact)
 
 def custom_encode_mask_results(mask_results):
     """Encode bitmap mask to RLE code. Semantic Masks only
@@ -115,7 +165,8 @@ def custom_encode_mask_results(mask_results):
 #     return {'bbox_results': bbox_results, 'mask_results': mask_results}
 
 
-def custom_single_gpu_test(model, data_loader, show=False, out_dir=None):
+def custom_single_gpu_test(model, data_loader, show=False, out_dir=None,
+                           prediction_dir=None, prediction_limit=-1):
     """Evaluate FarmSim occupancy on one GPU without distributed collectives."""
     model.eval()
     metrics = {}
@@ -123,6 +174,7 @@ def custom_single_gpu_test(model, data_loader, show=False, out_dir=None):
     with torch.no_grad():
         for data in data_loader:
             result = model(return_loss=False, rescale=True, **data)
+            _save_prediction_artifacts(result, prediction_dir, prediction_limit)
             for key in ('hist_for_iou', 'hist_for_iou_current',
                         'hist_for_iou_future',
                         'hist_for_iou_future_time_weighting'):
@@ -137,7 +189,8 @@ def custom_single_gpu_test(model, data_loader, show=False, out_dir=None):
     return metrics
 
 
-def custom_multi_gpu_test(model, data_loader, tmpdir=None, gpu_collect=False, show=False, out_dir=None):
+def custom_multi_gpu_test(model, data_loader, tmpdir=None, gpu_collect=False, show=False, out_dir=None,
+                          prediction_dir=None, prediction_limit=-1):
     """Test model with multiple gpus.
     This method tests model with multiple gpus and collects the results
     under two different modes: gpu and cpu modes. By setting 'gpu_collect=True'
@@ -192,8 +245,10 @@ def custom_multi_gpu_test(model, data_loader, tmpdir=None, gpu_collect=False, sh
     for i, data in enumerate(data_loader):
 
         with torch.no_grad():
-
+            device = next(model.parameters()).device
+            data = _prepare_distributed_eval_batch(data, device)
             result = model(return_loss=False, rescale=True, **data)
+            _save_prediction_artifacts(result, prediction_dir, prediction_limit)
 
             if 'hist_for_iou' in result.keys():
                 iou_metric.append(result['hist_for_iou'])
@@ -207,7 +262,7 @@ def custom_multi_gpu_test(model, data_loader, tmpdir=None, gpu_collect=False, sh
                 for key in plan_metric.keys():
                     plan_metric[key].append(result['plan_metric'][key])
 
-            batch_size = 1
+            batch_size = data['img'].size(0)
                 
         if rank == 0:
             for _ in range(batch_size * world_size):
@@ -216,30 +271,43 @@ def custom_multi_gpu_test(model, data_loader, tmpdir=None, gpu_collect=False, sh
     # collect lists from multi-GPUs
     res = {}
 
+    # Each metric needs its own directory.  ``collect_results_cpu`` removes its
+    # directory on rank 0; reusing EvalHook's single ``.eval_hook`` path lets
+    # rank 0 remove it while another rank has already started writing the next
+    # metric's part file.
+    def collect_metric(metric, name):
+        metric_tmpdir = osp.join(tmpdir, name) if tmpdir is not None else None
+        return collect_results_cpu(metric, len(dataset), metric_tmpdir)
+
     if 'hist_for_iou' in result.keys():
         iou_metric = [sum(iou_metric)]
-        iou_metric = collect_results_cpu(iou_metric, len(dataset), tmpdir)
+        iou_metric = collect_metric(iou_metric, 'hist_for_iou')
         res['hist_for_iou'] = iou_metric
 
     if 'hist_for_iou_current' in result.keys():
         iou_current_metric = [sum(iou_current_metric)]
-        iou_current_metric = collect_results_cpu(iou_current_metric, len(dataset), tmpdir)
+        iou_current_metric = collect_metric(iou_current_metric,
+                                            'hist_for_iou_current')
         res['hist_for_iou_current'] = iou_current_metric
 
     if 'hist_for_iou_future' in result.keys():
         iou_future_metric = [sum(iou_future_metric)]
-        iou_future_metric = collect_results_cpu(iou_future_metric, len(dataset), tmpdir)
+        iou_future_metric = collect_metric(iou_future_metric,
+                                           'hist_for_iou_future')
         res['hist_for_iou_future'] = iou_future_metric
 
     if 'hist_for_iou_future_time_weighting' in result.keys():
         iou_future_time_weighting_metric = [sum(iou_future_time_weighting_metric)]
-        iou_future_time_weighting_metric = collect_results_cpu(iou_future_time_weighting_metric, len(dataset), tmpdir)
+        iou_future_time_weighting_metric = collect_metric(
+            iou_future_time_weighting_metric,
+            'hist_for_iou_future_time_weighting')
         res['hist_for_iou_future_time_weighting'] = iou_future_time_weighting_metric
 
     if 'plan_metric' in result.keys():
         res['data_len'] = len(dataset)
         plan_metric = {key:[sum(plan_metric[key])] for key in plan_metric.keys()}
-        plan_metric = {key:collect_results_cpu(plan_metric[key], len(dataset), tmpdir) for key in plan_metric.keys()}
+        plan_metric = {key: collect_metric(plan_metric[key], f'plan_{key}')
+                       for key in plan_metric.keys()}
         res['plan_metric'] = plan_metric
 
     # v2

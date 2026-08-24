@@ -15,43 +15,86 @@ from torch.nn.modules.batchnorm import _BatchNorm
 from mmdet.core.evaluation.eval_hooks import DistEvalHook
 
 
-def _with_occupancy_summaries(results):
-    """Place scalar occupancy metrics before the raw confusion matrices."""
+_OCCUPANCY_METRIC_PREFIXES = {
+    'hist_for_iou': 'occ_all',
+    'hist_for_iou_current': 'occ_current',
+    'hist_for_iou_future': 'occ_future',
+    'hist_for_iou_future_time_weighting': 'occ_future_time_weighted',
+}
+
+
+def _occupancy_class_names(class_names, num_classes):
+    """Return stable, log-safe class names matching a confusion matrix."""
+    if class_names is None or len(class_names) != num_classes:
+        return tuple(f'class_{index}' for index in range(num_classes))
+    return tuple(str(name).replace('/', '_').replace(' ', '_')
+                 for name in class_names)
+
+
+def _as_aggregated_confusion_matrix(value):
+    """Collapse per-rank confusion matrices to one ``[C, C]`` matrix.
+
+    ``collect_results_cpu`` returns one already-summed matrix for each rank.
+    It therefore produces ``[world_size, C, C]`` in distributed validation,
+    rather than the historical single ``[1, C, C]`` special case.
+    """
+    hist = np.asarray(value)
+    if hist.ndim < 2 or hist.shape[-1] != hist.shape[-2]:
+        return None
+    if hist.ndim == 2:
+        return hist
+    return hist.reshape(-1, hist.shape[-2], hist.shape[-1]).sum(axis=0)
+
+
+def _with_occupancy_summaries(results, class_names=None):
+    """Convert occupancy confusion matrices into compact scalar log metrics."""
     if not isinstance(results, dict):
         return results, []
 
     ordered = {}
-    raw_results = {}
     summary = []
     for key, value in results.items():
-        if key.startswith('hist_for_iou'):
-            hist = np.asarray(value)
-            # Distributed collection may leave one outer result-list axis.
-            if hist.ndim == 3 and hist.shape[0] == 1:
-                hist = hist[0]
-            if hist.ndim == 2 and hist.shape[0] == hist.shape[1]:
-                diagonal = np.diag(hist).astype(np.float64)
-                union = hist.sum(axis=1) + hist.sum(axis=0) - diagonal
-                valid = union > 0
-                iou = np.divide(
-                    diagonal, union, out=np.zeros_like(diagonal), where=valid)
-                present_miou = float(iou[valid].mean()) if valid.any() else 0.0
-                all_miou = float(iou.mean()) if len(iou) else 0.0
-                total = float(hist.sum())
-                voxel_acc = float(diagonal.sum() / total) if total else 0.0
-                metrics = (
-                    (f'{key}_mIoU_present', present_miou),
-                    (f'{key}_mIoU_all', all_miou),
-                    (f'{key}_voxel_acc', voxel_acc),
-                )
-                for metric_key, metric_value in metrics:
-                    ordered[metric_key] = metric_value
-                summary.extend(
-                    f'{metric_key}={metric_value:.4f}'
-                    for metric_key, metric_value in metrics)
-        raw_results[key] = value
-    # Keep every scalar summary before any large confusion-matrix payload.
-    ordered.update(raw_results)
+        prefix = _OCCUPANCY_METRIC_PREFIXES.get(key)
+        if prefix is None:
+            # Preserve non-occupancy results (e.g. planning metrics).
+            ordered[key] = value
+            continue
+
+        hist = _as_aggregated_confusion_matrix(value)
+        if hist is None:
+            # Future occupancy is disabled in current-only experiments.  Make
+            # that explicit instead of logging a misleading zero mIoU.
+            ordered[f'{prefix}_available'] = 0.0
+            if prefix.startswith('occ_future'):
+                summary.append(f'{prefix}: unavailable')
+            continue
+
+        hist = hist.astype(np.float64, copy=False)
+        diagonal = np.diag(hist)
+        union = hist.sum(axis=1) + hist.sum(axis=0) - diagonal
+        present = union > 0
+        iou = np.divide(diagonal, union, out=np.zeros_like(diagonal),
+                        where=present)
+        names = _occupancy_class_names(class_names, len(iou))
+
+        ordered[f'{prefix}_available'] = 1.0
+        ordered[f'{prefix}_mIoU'] = (
+            float(iou[present].mean()) if present.any() else 0.0)
+        ordered[f'{prefix}_mIoU_all'] = float(iou.mean()) if len(iou) else 0.0
+        total = float(hist.sum())
+        ordered[f'{prefix}_voxel_acc'] = (
+            float(diagonal.sum() / total) if total else 0.0)
+        for class_name, class_iou in zip(names, iou):
+            ordered[f'{prefix}_IoU_{class_name}'] = float(class_iou)
+
+        per_class = ', '.join(
+            f'{class_name}={class_iou:.4f}'
+            for class_name, class_iou in zip(names, iou))
+        summary.append(
+            f'{prefix}: mIoU={ordered[f"{prefix}_mIoU"]:.4f}, '
+            f'mIoU_all={ordered[f"{prefix}_mIoU_all"]:.4f}, '
+            f'voxel_acc={ordered[f"{prefix}_voxel_acc"]:.4f}; '
+            f'IoU[{per_class}]')
     return ordered, summary
 
 
@@ -73,7 +116,9 @@ class CustomEvalHook(BaseEvalHook):
         results = custom_single_gpu_test(runner.model, self.dataloader, show=False)
         runner.log_buffer.output['eval_iter_num'] = len(self.dataloader)
         if isinstance(results, dict):
-            results, summary = _with_occupancy_summaries(results)
+            results, summary = _with_occupancy_summaries(
+                results, class_names=getattr(self.dataloader.dataset,
+                                              'CLASSES', None))
             if summary:
                 runner.logger.info('FarmSim validation metrics: ' + ', '.join(summary))
             for name, value in results.items():
@@ -164,7 +209,9 @@ class CustomDistEvalHook(BaseDistEvalHook):
     def evaluate(self, runner, results):
         """Log FarmSim's already-aggregated dictionary metrics directly."""
         if isinstance(results, dict):
-            results, summary = _with_occupancy_summaries(results)
+            results, summary = _with_occupancy_summaries(
+                results, class_names=getattr(self.dataloader.dataset,
+                                              'CLASSES', None))
             if summary:
                 runner.logger.info('FarmSim validation metrics: ' + ', '.join(summary))
             for name, value in results.items():

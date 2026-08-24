@@ -57,6 +57,12 @@ def parse_args():
         description='MMDet test (and eval) a model')
     parser.add_argument('config', help='test config file path')
     parser.add_argument('checkpoint', help='checkpoint file')
+    parser.add_argument('--batch-size', type=int,
+                        help='per-GPU evaluation batch size; overrides data.test.samples_per_gpu')
+    parser.add_argument('--save-predictions', metavar='DIR',
+                        help='save per-sample FarmSim occupancy predictions as compressed NPZ files')
+    parser.add_argument('--save-prediction-count', type=int, default=-1,
+                        help='number of leading dataset samples to save; -1 saves all (default)')
     parser.add_argument('--out', help='output result file in pickle format')
     parser.add_argument(
         '--fuse-conv-bn',
@@ -138,7 +144,7 @@ def main():
     args = parse_args()
 
     assert args.out or args.eval or args.format_only or args.show \
-        or args.show_dir, \
+        or args.show_dir or args.save_predictions, \
         ('Please specify at least one operation (save/eval/format/show the '
          'results / save the results) with the argument "--out", "--eval"'
          ', "--format-only", "--show" or "--show-dir"')
@@ -148,10 +154,22 @@ def main():
 
     if args.out is not None and not args.out.endswith(('.pkl', '.pickle')):
         raise ValueError('The output file must be a pkl file.')
+    if args.batch_size is not None and args.batch_size < 1:
+        raise ValueError('--batch-size must be positive')
+    if args.save_prediction_count < -1:
+        raise ValueError('--save-prediction-count must be -1 or non-negative')
 
     cfg = Config.fromfile(args.config)
     if args.cfg_options is not None:
         cfg.merge_from_dict(args.cfg_options)
+    if args.batch_size is not None:
+        if isinstance(cfg.data.test, dict):
+            cfg.data.test.samples_per_gpu = args.batch_size
+        else:
+            for test_cfg in cfg.data.test:
+                test_cfg.samples_per_gpu = args.batch_size
+    if args.save_predictions:
+        os.makedirs(args.save_predictions, exist_ok=True)
     # import modules from string list.
     if cfg.get('custom_imports', None):
         from mmcv.utils import import_modules_from_strings
@@ -233,6 +251,7 @@ def main():
     # build the model and load checkpoint
     cfg.model.train_cfg = None
     model = build_model(cfg.model, test_cfg=cfg.get('test_cfg'))
+    model._return_prediction_artifacts = bool(args.save_predictions)
     fp16_cfg = cfg.get('fp16', None)
     if fp16_cfg is not None:
         wrap_fp16_model(model)
@@ -255,14 +274,17 @@ def main():
     if not distributed:
         model = MMDataParallel(model.cuda(), device_ids=[0])
         outputs = custom_single_gpu_test(model, data_loader, args.show,
-                                         args.show_dir)
+                                         args.show_dir, args.save_predictions,
+                                         args.save_prediction_count)
     else:
         model = MMDistributedDataParallel(
             model.cuda(),
             device_ids=[torch.cuda.current_device()],
             broadcast_buffers=False)
         outputs = custom_multi_gpu_test(model, data_loader, args.tmpdir,
-                                        args.gpu_collect)
+                                        args.gpu_collect,
+                                        prediction_dir=args.save_predictions,
+                                        prediction_limit=args.save_prediction_count)
 
     rank, _ = get_dist_info()
     if rank == 0:
