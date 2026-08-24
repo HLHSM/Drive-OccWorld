@@ -142,6 +142,8 @@ class Drive_OccWorld_V2(BEVFormer):
 
         self._viz_pcd_flag = _viz_pcd_flag
         self._viz_pcd_path = _viz_pcd_path
+        # Set by tools/test.py only when prediction artifacts were requested.
+        self._return_prediction_artifacts = False
 
         # remove the useless modules in pts_bbox_head
         #  * box/cls prediction head; decoder transformer.
@@ -479,16 +481,38 @@ class Drive_OccWorld_V2(BEVFormer):
         occ_gts = occ_gts.permute(1, 0, 2, 3, 4).contiguous()
         return occ_gts.reshape(select_frames * batch_size, *occ_gts.shape[-3:])
 
-    def compute_occ_loss(self, occ_preds, occ_gts):
+    def _format_ground_targets(self, ground_height, ground_valid,
+                               select_frames, batch_size):
+        if ground_height is None or ground_valid is None:
+            return None, None
+        start = self.future_pred_head.history_queue_length
+        stop = start + select_frames
+        if ground_height.shape[:2] != ground_valid.shape[:2]:
+            raise ValueError('ground_height and ground_valid time dimensions differ')
+        if ground_height.shape[0] != batch_size or ground_height.shape[1] < stop:
+            raise ValueError('ground targets do not match occupancy prediction batch/time')
+        ground_height = ground_height[:, start:stop].permute(1, 0, 2, 3)
+        ground_valid = ground_valid[:, start:stop].permute(1, 0, 2, 3)
+        return (ground_height.reshape(select_frames * batch_size,
+                                      *ground_height.shape[-2:]),
+                ground_valid.reshape(select_frames * batch_size,
+                                     *ground_valid.shape[-2:]))
+
+    def compute_occ_loss(self, occ_preds, occ_gts, ground_height=None,
+                         ground_valid=None):
         # preds [Lout, inter_num, bs, bev_h * bev_w, d, num_cls]    Lout = cur + future_select
         occ_preds = occ_preds.permute(1, 0, 2, 5, 3, 4)
         inter_num, select_frames, bs, num_cls, hw, d = occ_preds.shape
         occ_preds = occ_preds.view(inter_num, select_frames*bs, num_cls, self.bev_w, self.bev_h, d).transpose(3,4) # TODO: now the feature map size is the same as the output size, not efficient!
         # gts; preserve every sample when BATCH_SIZE > 1.
         occ_gts = self._format_occ_targets(occ_gts, select_frames, bs)
+        ground_height, ground_valid = self._format_ground_targets(
+            ground_height, ground_valid, select_frames, bs)
         
         # occ loss
         losses_occupancy = self.future_pred_head.loss_occ(occ_preds, occ_gts)
+        losses_occupancy.update(self.future_pred_head.loss_tghd(
+            occ_gts, ground_height=ground_height, ground_valid=ground_valid))
         return losses_occupancy
 
     def current_occ_prediction(self, ref_bev):
@@ -578,7 +602,9 @@ class Drive_OccWorld_V2(BEVFormer):
                       img=None,
                       # occ_flow
                       segmentation=None,
-                      instance=None, 
+                      ground_height=None,
+                      ground_valid=None,
+                      instance=None,
                       flow=None,
                       # sdc-plan
                       sdc_planning=None,
@@ -697,7 +723,9 @@ class Drive_OccWorld_V2(BEVFormer):
         # E. Compute Loss
         losses = dict()
         # E1. Compute loss for occ predictions.
-        losses_occupancy = self.compute_occ_loss(ret_dict['next_bev_preds'], segmentation)
+        losses_occupancy = self.compute_occ_loss(
+            ret_dict['next_bev_preds'], segmentation, ground_height,
+            ground_valid)
         losses.update(losses_occupancy)
         if self.use_lwm:
             losses.update(ret_dict['loss_bev'])
@@ -718,6 +746,54 @@ class Drive_OccWorld_V2(BEVFormer):
             losses.update(losses_bev_render)
 
         return losses
+
+    def _build_prediction_artifacts(self, occ_preds, segmentation, img_metas,
+                                    sample_idx, pose_pred=None,
+                                    sdc_planning=None):
+        """Convert occupancy logits into compact per-sample CPU artifacts."""
+        # [Lout, inter, B, HW, Z, C] -> final decoder [T*B, C, X, Y, Z].
+        occ_preds = occ_preds.permute(1, 0, 2, 5, 3, 4)
+        _, num_frames, batch_size, num_classes, _, depth = occ_preds.shape
+        logits = occ_preds[-1].reshape(
+            num_frames * batch_size, num_classes, self.bev_w, self.bev_h,
+            depth).transpose(2, 3)
+        targets = self._format_occ_targets(segmentation, num_frames,
+                                            batch_size)
+        if logits.shape[-3:] != targets.shape[-3:]:
+            logits = F.interpolate(logits, size=targets.shape[-3:],
+                                   mode='trilinear', align_corners=False)
+        pred_labels = torch.argmax(logits, dim=1).reshape(
+            num_frames, batch_size, *targets.shape[-3:])
+        target_labels = targets.reshape(num_frames, batch_size,
+                                        *targets.shape[-3:])
+        if sample_idx is None:
+            sample_indices = list(range(batch_size))
+        else:
+            sample_indices = torch.as_tensor(sample_idx).reshape(-1).tolist()
+
+        artifacts = []
+        for batch_index in range(batch_size):
+            meta = img_metas[batch_index]
+            artifact = dict(
+                sample_index=int(sample_indices[batch_index]),
+                scene_token=str(meta.get('scene_token', 'scene')),
+                lidar_token=str(meta.get('lidar_token', batch_index)),
+                current_pred=pred_labels[0, batch_index].cpu().numpy().astype(np.uint8),
+                current_gt=target_labels[0, batch_index].cpu().numpy().astype(np.uint8),
+                point_cloud_range=np.asarray(self.point_cloud_range, dtype=np.float32),
+                num_classes=int(self.future_pred_head.num_classes),
+            )
+            if num_frames > 1:
+                artifact['future_pred'] = pred_labels[1:, batch_index].cpu().numpy().astype(np.uint8)
+                artifact['future_gt'] = target_labels[1:, batch_index].cpu().numpy().astype(np.uint8)
+            if pose_pred is not None:
+                artifact['trajectory_pred'] = torch.cumsum(
+                    pose_pred[batch_index, :, :2], dim=0).cpu().numpy()
+                if sdc_planning is not None:
+                    artifact['trajectory_gt'] = sdc_planning[
+                        batch_index, :pose_pred.shape[1], :2].cpu().numpy()
+            artifacts.append(artifact)
+        return artifacts
 
     @avg_sections(name="test", unit="ms", warmup=2, sync=torch.cuda.synchronize)
     def forward_test(self, 
@@ -789,8 +865,14 @@ class Drive_OccWorld_V2(BEVFormer):
         test_output = {}
         # evaluate occ
         occ_iou, occ_iou_current, occ_iou_future, occ_iou_future_time_weighting = self.evaluate_occ(ret_dict['next_bev_preds'], segmentation, img_metas)
-        test_output.update(hist_for_iou=occ_iou, hist_for_iou_current=occ_iou_current, 
+        test_output.update(hist_for_iou=occ_iou, hist_for_iou_current=occ_iou_current,
                            hist_for_iou_future=occ_iou_future, hist_for_iou_future_time_weighting=occ_iou_future_time_weighting)
+
+        if self._return_prediction_artifacts:
+            test_output['prediction_artifacts'] = self._build_prediction_artifacts(
+                ret_dict['next_bev_preds'], segmentation, img_metas,
+                kwargs.get('sample_idx'), pose_pred=pose_pred,
+                sdc_planning=sdc_planning)
 
         # evluate plan
         if self.turn_on_plan:

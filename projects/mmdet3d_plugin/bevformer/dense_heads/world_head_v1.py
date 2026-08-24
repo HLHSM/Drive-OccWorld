@@ -19,6 +19,11 @@ class WorldHeadV1(WorldHeadBase):
                  soft_weight,
                  loss_weight_cfg=None,
                  output_scale=2,
+                 use_tghd=False,
+                 tghd_channels=16,
+                 tghd_ground_classes=(2, 3),
+                 tghd_ground_loss_weight=1.0,
+                 tghd_geometry_loss_weight=1.0,
 
                  *args,
                  **kwargs):
@@ -26,6 +31,11 @@ class WorldHeadV1(WorldHeadBase):
 
         self.history_queue_length = history_queue_length    # 2
         self.output_scale=output_scale
+        self.use_tghd = use_tghd
+        self.tghd_ground_classes = tuple(tghd_ground_classes)
+        self.tghd_ground_loss_weight = tghd_ground_loss_weight
+        self.tghd_geometry_loss_weight = tghd_geometry_loss_weight
+        self._tghd_aux = None
 
         self.class_weights = np.ones((self.num_classes,))
         self.class_weights[1:] = 5
@@ -44,6 +54,30 @@ class WorldHeadV1(WorldHeadBase):
 
         self.soft_weight = soft_weight
         self._init_bev_pred_layers()
+
+        if self.use_tghd:
+            # Terrain-Normalized Geometry-Semantic Height Decoder (TGHD).
+            # Keep the 3D fusion width deliberately small: applying a full
+            # BEV-width Conv3D to all auxiliary decoder outputs is needlessly
+            # expensive for a 100x100x25 FarmSim volume.
+            self.tghd_bev_proj = nn.Linear(self.embed_dims, tghd_channels)
+            self.tghd_ground_head = nn.Linear(self.embed_dims, 1)
+            self.tghd_geometry_head = nn.Linear(self.embed_dims,
+                                                 self.num_pred_height)
+            self.tghd_height_embed = nn.Sequential(
+                nn.Linear(1, tghd_channels), nn.ReLU(inplace=True),
+                nn.Linear(tghd_channels, tghd_channels))
+            self.tghd_geometry_embed = nn.Linear(1, tghd_channels)
+            self.tghd_semantic = nn.Sequential(
+                nn.Conv3d(tghd_channels * 3, tghd_channels, 3, padding=1),
+                nn.ReLU(inplace=True),
+                nn.Conv3d(tghd_channels, self.num_classes, 1))
+            z_centers = torch.linspace(
+                self.pc_range[2] + (self.pc_range[5] - self.pc_range[2]) /
+                (2 * self.num_pred_height),
+                self.pc_range[5] - (self.pc_range[5] - self.pc_range[2]) /
+                (2 * self.num_pred_height), self.num_pred_height)
+            self.register_buffer('tghd_z_centers', z_centers, persistent=False)
 
         self.num_points_sampling_feat = self.transformer.decoder.num_layers
         if self.soft_weight:
@@ -133,10 +167,103 @@ class WorldHeadV1(WorldHeadBase):
         return next_bev_preds
     
     def forward_head(self, next_bev_feats):
+        if self.use_tghd:
+            return self.forward_head_tghd(next_bev_feats)
         if self.soft_weight:
             return self.forward_head_soft(next_bev_feats)   # multi-decoder_layers soft_weight_sum
         else:
             return self.forward_head_layers(next_bev_feats) # multi-decoder_layers
+
+    def forward_head_tghd(self, next_bev_feats):
+        """Decode semantic occupancy in terrain-relative height coordinates.
+
+        The ground branch estimates h(x,y); the geometry branch predicts
+        occupied/free logits; the semantic branch receives BEV features,
+        geometry features and an MLP embedding of z - h(x,y).
+        """
+        frames, inter, batch, hw, channels = next_bev_feats.shape
+        if hw != self.bev_h * self.bev_w:
+            raise ValueError(f'TGHD expected {self.bev_h * self.bev_w} BEV cells, got {hw}.')
+        feat = next_bev_feats.reshape(frames, inter, batch, self.bev_h,
+                                      self.bev_w, channels)
+        ground = self.tghd_ground_head(feat).squeeze(-1)
+        geo_logits = self.tghd_geometry_head(feat)
+        rel_height = (self.tghd_z_centers.to(feat.dtype).view(1, 1, 1, 1, 1, -1)
+                      - ground.unsqueeze(-1))
+        bev_features = self.tghd_bev_proj(feat).unsqueeze(-2).expand(
+            -1, -1, -1, -1, -1, self.num_pred_height, -1)
+        height_features = self.tghd_height_embed(rel_height.unsqueeze(-1))
+        geometry_features = self.tghd_geometry_embed(geo_logits.unsqueeze(-1))
+        fused = torch.cat((bev_features, height_features, geometry_features), dim=-1)
+        fused = fused.permute(0, 1, 2, 5, 6, 3, 4).reshape(
+            frames * inter * batch, fused.shape[-1], self.num_pred_height,
+            self.bev_h, self.bev_w)
+        logits = self.tghd_semantic(fused).reshape(
+            frames, inter, batch, self.num_classes, self.num_pred_height,
+            self.bev_h, self.bev_w).permute(0, 1, 2, 5, 6, 4, 3)
+        self._tghd_aux = (ground, geo_logits)
+        return logits.contiguous()
+
+    def loss_tghd(self, target_voxels, ground_height=None, ground_valid=None):
+        """Ground SmoothL1 and occupied/free BCE supervision for TGHD."""
+        if not self.use_tghd or self._tghd_aux is None:
+            return {}
+        ground_pred, geo_logits = self._tghd_aux
+        # Train the auxiliary branches from the final decoder layer only.
+        ground_pred = ground_pred[:, -1].reshape(-1, *ground_pred.shape[-2:])
+        geo_logits = geo_logits[:, -1].reshape(
+            -1, *geo_logits.shape[-3:])
+        target_voxels = target_voxels.reshape(
+            -1, *target_voxels.shape[-3:]).long()
+        target_h, target_w, target_d = target_voxels.shape[-3:]
+        if ground_pred.shape[-2:] != (target_h, target_w):
+            ground_pred = F.interpolate(ground_pred.unsqueeze(1),
+                                        size=(target_h, target_w),
+                                        mode='bilinear', align_corners=False).squeeze(1)
+        if geo_logits.shape[-3:] != (target_h, target_w, target_d):
+            geo_logits = F.interpolate(geo_logits.unsqueeze(1),
+                                       size=(target_h, target_w, target_d),
+                                       mode='trilinear', align_corners=False).squeeze(1)
+
+        known = target_voxels != 255
+        geometry_target = ((target_voxels != 0) & known).to(geo_logits.dtype)
+        if known.any():
+            geometry_loss = F.binary_cross_entropy_with_logits(
+                geo_logits[known], geometry_target[known])
+        else:
+            geometry_loss = geo_logits.sum() * 0
+        losses = {'loss_tghd_geometry': self.tghd_geometry_loss_weight *
+                  geometry_loss}
+        if ground_height is not None and ground_valid is not None:
+            ground_height = ground_height.reshape(-1, *ground_height.shape[-2:])
+            ground_valid = ground_valid.reshape(-1, *ground_valid.shape[-2:]).bool()
+            if ground_height.shape[-2:] != (target_h, target_w):
+                ground_height = F.interpolate(ground_height.unsqueeze(1),
+                                              size=(target_h, target_w),
+                                              mode='bilinear',
+                                              align_corners=False).squeeze(1)
+                ground_valid = F.interpolate(ground_valid.unsqueeze(1).float(),
+                                             size=(target_h, target_w),
+                                             mode='nearest').squeeze(1).bool()
+            z_gt = ground_height.to(ground_pred.dtype)
+        else:
+            # Compatibility fallback for datasets without explicit UE terrain
+            # GT: infer a surface from ground semantic labels.
+            ground_mask = torch.zeros_like(known)
+            for ground_class in self.tghd_ground_classes:
+                ground_mask |= target_voxels == ground_class
+            ground_valid = ground_mask.any(dim=-1)
+            reverse_index = torch.argmax(
+                ground_mask.flip(-1).to(torch.int64), dim=-1)
+            z_index = target_d - 1 - reverse_index
+            z_gt = self.pc_range[2] + (z_index.to(ground_pred.dtype) + .5) * (
+                self.pc_range[5] - self.pc_range[2]) / target_d
+        if ground_valid.any():
+            losses['loss_tghd_ground'] = self.tghd_ground_loss_weight * F.smooth_l1_loss(
+                ground_pred[ground_valid], z_gt[ground_valid])
+        else:
+            losses['loss_tghd_ground'] = ground_pred.sum() * 0
+        return losses
 
     def loss_voxel(self, output_voxels, target_voxels, tag):
         B, C, pH, pW, pD = output_voxels.shape

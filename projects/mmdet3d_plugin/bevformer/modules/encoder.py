@@ -172,6 +172,7 @@ class BEVFormerEncoder(TransformerLayerSequence):
                 valid_ratios=None,
                 prev_bev=None,
                 shift=0.,
+                coarse_img_feats=None,
                 **kwargs):
         """Forward function for `TransformerDecoder`.
         Args:
@@ -191,6 +192,19 @@ class BEVFormerEncoder(TransformerLayerSequence):
                 return_intermediate is `False`, otherwise it has shape
                 [num_layers, num_query, bs, embed_dims].
         """
+
+        if getattr(self, 'use_acfs_bev', False):
+            if coarse_img_feats is None:
+                raise ValueError('ACFS-BEV requires coarse_img_feats from the image neck.')
+            # ``img_metas`` is consumed explicitly by the sparse-query path
+            # for projection.  Remove it from kwargs so it is not passed a
+            # second time through ``**kwargs``.
+            acfs_kwargs = dict(kwargs)
+            img_metas = acfs_kwargs.pop('img_metas')
+            return self._forward_acfs(
+                bev_query, key, value, bev_h, bev_w, bev_pos, spatial_shapes,
+                level_start_index, prev_bev, shift, img_metas,
+                coarse_img_feats, *args, **acfs_kwargs)
 
         output = bev_query  # HW,B,C
         intermediate = []

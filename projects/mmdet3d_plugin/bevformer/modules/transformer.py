@@ -197,6 +197,7 @@ class PerceptionTransformer(BaseModule):
             level_start_index=level_start_index,
             prev_bev=prev_bev,  # HW,B,C
             shift=shift,        # bs, xy    bev平面下的delta_xy
+            coarse_img_feats=mlvl_feats,
             **kwargs
         )
 
