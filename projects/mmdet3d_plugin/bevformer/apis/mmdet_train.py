@@ -11,8 +11,9 @@ import torch
 import torch.distributed as dist
 from mmcv.parallel import MMDataParallel, MMDistributedDataParallel
 from mmcv.runner import (HOOKS, DistSamplerSeedHook, EpochBasedRunner,
-                         Fp16OptimizerHook, OptimizerHook, build_optimizer,
-                         build_runner, get_dist_info)
+                         Fp16OptimizerHook,
+                         GradientCumulativeFp16OptimizerHook, OptimizerHook,
+                         build_optimizer, build_runner, get_dist_info)
 from mmcv.utils import build_from_cfg
 
 from mmdet.core import EvalHook
@@ -132,8 +133,21 @@ def custom_train_detector(model,
     # fp16 setting
     fp16_cfg = cfg.get('fp16', None)
     if fp16_cfg is not None:
-        optimizer_config = Fp16OptimizerHook(
-            **cfg.optimizer_config, **fp16_cfg, distributed=distributed)
+        optimizer_cfg = cfg.optimizer_config.copy()
+        optimizer_type = optimizer_cfg.pop('type', None)
+        optimizer_cfg.update(fp16_cfg)
+        if optimizer_type in (None, 'Fp16OptimizerHook'):
+            optimizer_hook = Fp16OptimizerHook
+        elif optimizer_type in ('GradientCumulativeOptimizerHook',
+                                'GradientCumulativeFp16OptimizerHook'):
+            optimizer_hook = GradientCumulativeFp16OptimizerHook
+        else:
+            raise ValueError(
+                'FP16 training supports Fp16OptimizerHook or '
+                'GradientCumulativeOptimizerHook, but got '
+                f'{optimizer_type!r}.')
+        optimizer_config = optimizer_hook(
+            **optimizer_cfg, distributed=distributed)
     elif distributed and 'type' not in cfg.optimizer_config:
         optimizer_config = OptimizerHook(**cfg.optimizer_config)
     else:
