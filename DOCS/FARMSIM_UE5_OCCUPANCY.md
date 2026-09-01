@@ -91,6 +91,13 @@ bash tools/train_farmsim_front3.sh
 - `USE_TGHD`：`1` 时启用 Terrain-Normalized Geometry-Semantic Height Decoder；默认 `0`，保持原始高效 channel-to-height occupancy head。TGHD 预测地表高度 `h(x,y)`、occupied/free 几何体积，并将相对高度 `z-h(x,y)` 的嵌入与 BEV/几何特征送入轻量 Conv3D 语义分支。训练时数据集读取每帧 `occupancy_ground_index`（`uint16`，首个有效 Z 层）和 `occupancy_ground_valid`，将源 `[y,x]` 转为模型 `[x,y]`，并以 `min_z + (index + 0.5) × voxel_size_m` 的体素中心高度监督地表分支；无效列不参与 ground loss。开启后会增加 `loss_tghd_ground` 与 `loss_tghd_geometry`，并因 3D 融合增加显存，建议从每卡较小 batch 开始测试。
 - `USE_ACFS_BEV`：`1` 时启用 Agriculture-aware Coarse-to-Fine Sparse BEV（ACFS-BEV）；默认 `0`，保留原 dense BEVFormer encoder。该模块从最低层 FPN 的多相机视觉证据生成 coarse occupied、uncertainty 和 boundary 分数，按 `S=P_occ+U+B` 选择全 batch 共享的 Top-K BEV query。只有 active query 经过每层完整 temporal/spatial attention，其他 query 用可学习的轻量 MLP 更新，再 scatter 回原 `100×100` dense BEV 网格，因此 occupancy decoder 的输入形状保持不变。
 - `ACFS_ACTIVE_RATIO`：完整 attention 的 query 比例，范围 `(0,1]`，默认 `0.5`。在前视配置的 `100×100` BEV 中，`0.5` 表示 `5,000 / 10,000` 个 query 进入完整 attention。建议从 `0.5` 开始，对比 `1.0`（等价于不裁剪 attention，但仍使用 ACFS coarse/easy 分支）、`0.7` 与 `0.3` 的速度、显存和 mIoU；较低比例不一定更好。
+- `USE_CROP_GAP_REFINEMENT`：`1` 时启用 Crop-Gap-Aware Boundary Refinement。模型从现有 occupancy 标签在线生成 crop/free 3D 边界，并对距离 crop 较近的 free voxel 加权；最终 decoder 的边界置信度仅门控一个零初始化的占用残差。`CROP_GAP_BOUNDARY_LOSS_WEIGHT`、`CROP_GAP_FREE_LOSS_WEIGHT` 控制两项附加损失，`CROP_GAP_ALPHA`、`CROP_GAP_SIGMA`、`CROP_GAP_RADIUS` 控制 free-gap 距离权重。
+- `USE_SELECTIVE_C2F`：`1` 时启用 Selective Coarse-to-Fine Plant Occupancy Refinement。它按 coarse logits 的 crop/free 不确定性挑选 `C2F_ACTIVE_RATIO` 的 BEV cell，仅为这些 cell 解码四个 2×2 子查询，再将子查询残差聚合回原 `100×100` 输出；因此不改变数据标签、评估接口或全局 BEV query 数。`C2F_CHANNELS` 控制子查询解码宽度。
+- `USE_DUAL_HARDNESS_REFINEMENT`：`1` 时启用 Agricultural Dual-Hardness Refinement（HASSC 的农业化改写）。最终 occupancy logits 按类别间概率间隔选择全局困难 voxel，同时为 crop/free 边界与近 crop free gap 保留 `DUAL_HARDNESS_GAP_RATIO` 配额；GT 六邻域语义差异形成局部各向异性权重。训练期仅对选中 voxel 的 BEV+Z MLP refinement 施加 `loss_dual_hard_refine`，并由 EMA refinement teacher 提供 `loss_dual_hard_distill`；推理不增加分支。`DUAL_HARDNESS_ACTIVE_RATIO` 默认 `0.04`，即每帧约 10,000 个 `100×100×25` voxel。
+- `USE_FIXED_GROUP_DECODER`：`1` 时启用 COTR 启发的固定语义分组解码器。组定义固定为 `free`、`crop`、`other_occupied`，由现有六类 GT 自动映射并产生 `loss_fixed_group`；组先验与零初始化语义残差共同细化最终六类 logits。它不是无标签动态原型，因此与已移除的 PPQR 机制不同。`GROUP_DECODER_LOSS_WEIGHT` 和 `GROUP_DECODER_PRIOR_SCALE` 分别控制组监督和组先验强度。
+- `USE_GAP_RESIDUAL_REFINER`：`1` 时启用端到端 Gap-Aware BEV Residual Refiner。最终 decoder 的完整 logits、压缩后的 `ref_bev`、crop/free 歧义和熵进入轻量各向异性 depthwise Conv3D；网络预测边界门控和零初始化残差，得到 `L_refined=L_coarse+M×ΔL`。除低权重的 coarse 深监督外，训练同时使用边界门控、近 crop free 的 `loss_gap_refiner_free` 和近 free crop 的对称 `loss_gap_refiner_crop`，以免仅保留空隙时侵蚀小作物。默认权重依次为 coarse `0.15`、boundary `0.25`、free gap `0.5`、crop preservation `0.5`；`GAP_REFINER_*` 可覆盖。
+- `tools/train_farmsim_gapref_diagnostics.sh`：新版图像 GapRef 的二阶段消融脚本。三组实验都从同一 H=0/current-occupancy base checkpoint 开始，冻结 R101、FPN、BEV encoder、world decoder 与 coarse occupancy head，只训练 GapRef 和其图像证据分支：A 所有 GapRef 附加损失均为 0；B 使用 boundary=`0.10`、free-gap=`0.05`；C 在 B 的基础上增加 crop=`0.05`。每个 epoch 都保留训练框架的常规验证，无须先重复评估 base checkpoint。
+- `GAP_REFINER_USE_IMAGE_FEATURES`：`1` 时，新版 GapRef 会按 crop/free 歧义和 crop 覆盖率选取 `GAP_REFINER_IMAGE_ACTIVE_RATIO` 的当前 BEV cell，把其 25 个高度查询利用已有 `lidar2img` 标定投影到当前相机的最高 `GAP_REFINER_IMAGE_LEVELS` 个 FPN 层。可见视角由 BEV-query 条件的 attention 融合，并以零初始化残差注入原 3D GapRef；因此初始时与旧 GapRef 完全一致。`GAP_REFINER_IMAGE_CROP_RATIO` 控制所选 cell 中 crop 区域的比例，余下为边界歧义区域，输出仍是 `100×100×25×6`。
 - `USE_EFFICIENT_BASELINE`：`1` 时启用 Efficient baseline；默认 `0`，保留原版 R101。该开关将 backbone 切为 R50，FPN 从 4 个输出改为高分辨率 C3/C4 两个输出，将 BEV encoder 从 6 层改为 4 层，并把 `MSDeformableAttention3D.num_points` 从 8 改为 4；对应的 transformer `num_feature_levels` 与 deformable attention `num_levels` 都同步为 2。BEV 网格、occupancy decoder、损失和数据划分保持不变。Efficient 模式会强制启用项目现有的 AMP FP16；当前 MMCV 1.x 训练入口未配置 BF16 optimizer hook，因此这里的实际精度为 FP16，而非 BF16。
 - `TOTAL_BATCH_SIZE`：目标有效全局 batch，包含所有 GPU 和梯度累积。`tools/train.py` 自动计算 `GRAD_ACCUM_STEPS = TOTAL_BATCH_SIZE / (BATCH_SIZE × NUM_GPUS)`；必须整除，否则会在启动前报错，避免实际 batch 与设定不一致。例如两卡、每卡 2、总 batch 为 8 时自动累积 2 步；总 batch 为 4 时自动累积 1 步。训练脚本不再定义 `GRAD_ACCUM_STEPS`。
 - `HISTORY_FRAMES`：历史图像帧数，当前帧会额外输入，因此实际时序长度为 `HISTORY_FRAMES + 1`。
@@ -183,31 +190,37 @@ CUDA_VISIBLE_DEVICES=0 PYTHONPATH="$PWD" \
 
 训练过程中的每 epoch 验证会在 `Epoch(val)` 日志中先输出各类 mIoU 和 voxel accuracy，再输出原始混淆矩阵；这些内容同时写入对应的 `.log` 和 `.log.json` 文件。
 
-### 保存推理结果并生成 3D HTML 对比
+### 保存推理结果并在浏览器中逐条预览
 
-`tools/test.py` 的测试 batch 默认每卡为 1（配置没有设置 `data.test.samples_per_gpu` 时）；可通过 `--batch-size N` 覆盖。保存选项会对每个样本输出压缩 `.npz`：包含当前占用预测与标签；模型实际输出未来占用时也保存 `future_pred/future_gt`，输出轨迹时也保存预测/GT 轨迹。`--save-prediction-count` 按完整验证集的样本索引限制保存数量，`-1` 为默认值，表示全部。
+`tools/test.py` 的测试 batch 默认每卡为 1（配置没有设置 `data.test.samples_per_gpu` 时）；可通过 `--batch-size N` 覆盖。保存选项会对每个样本输出压缩 `.npz`：包含当前占用预测与标签；模型实际输出未来占用时也保存 `future_pred/future_gt`，输出轨迹时也保存预测/GT 轨迹。
 
-下面的示例以每卡 2 个样本评估、保存前 100 个结果为例：
+下面的示例按 `front3_base_nohis_ep8_20260828_043722/epoch_8.pth`
+训练时的无历史帧、`512×288` 输入和每卡 6 个样本设置评估，并从每个验证序列等间隔保存，总计 1000 个结果：
 
 ```bash
 CUDA_VISIBLE_DEVICES=0 PYTHONPATH="$PWD" \
   /home/HL/.conda/envs/dow2/bin/python tools/test.py \
   projects/configs/farmsim/farmsim_occ_front3.py \
-  work_dirs/front3_YYYYMMDD_HHMMSS/epoch_1.pth \
-  --launcher none --eval occ --deterministic --batch-size 2 \
-  --save-predictions work_dirs/front3_eval/predictions \
+  work_dirs/front3_base_nohis_ep8_20260828_043722/epoch_8.pth \
+  --launcher none --eval occ --deterministic --batch-size 6 \
+  --save-predictions work_dirs/front3_base_nohis_ep8_20260828_043722/predictions \
   --save-prediction-count 100 \
-  --cfg-options data.test.data_root=/mnt/g/SimData
+  --save-prediction-sampling per-sequence \
+  --cfg-options \
+    data.test.data_root=/data/HL/SimData-Occ/SimData \
+    data.test.queue_length=0 \
+    data.test.image_size='[512,288]' \
+    model.future_pred_head.history_queue_length=0
 ```
 
-保存全部结果时删除 `--save-prediction-count 100`，或显式传入 `--save-prediction-count -1`。多卡评估同样支持该选项；每个输出文件以稳定的全局样本索引命名，因此不会因进程分片而超过指定数量。
+`--save-prediction-sampling per-sequence` 会在每个验证序列中等间隔抽取，序列间保存数量最多相差 1，总数为 `--save-prediction-count` 指定值；默认 `leading` 保持旧行为，即保存验证集前 N 个样本。保存全部结果时传入 `--save-prediction-count -1`。多卡评估同样支持这两种策略；每个输出文件以稳定的全局样本索引命名，因此不会因进程分片而重复或超过指定数量。请使用空目录（示例中的 `predictions_per_sequence_1000`），以免与旧的保存结果混合。
 
-生成并在浏览器中打开 3D 对比页：
+启动本地预览服务：
 
 ```bash
 /home/HL/.conda/envs/dow2/bin/python \
   tools/visualize_farmsim_predictions.py \
-  work_dirs/front3_eval/predictions
+  work_dirs/front3_base_nohis_ep8_20260828_043722/predictions
 ```
 
-该命令生成 `work_dirs/front3_eval/predictions/index.html`。页面左右并列显示标签和预测体素，可选择样本；存在未来占用时可切换未来时间步，存在轨迹时会自动叠加 GT 与预测轨迹。为控制页面大小和浏览器性能，每侧默认最多显示 30,000 个非 free、非 ignore 体素；可通过 `--max-points 50000` 调大。HTML 使用 Plotly CDN，浏览器首次打开时需要可访问该 CDN。
+命令会先预加载全部 `.npz` 并显示进度，随后输出类似 `http://127.0.0.1:8000/` 的地址；在浏览器打开它后，可通过样本下拉框或 `Previous`/`Next` 逐条查看保存的结果。浏览器也会在后台预取全部样本，因此预加载完成后切换样本无需再等待 NPZ 读取或体素转换；代价是启动会变慢且服务端、浏览器会占用更多内存。页面左侧固定显示标签（GT），右侧固定显示预测结果；预测会使用同一帧 GT 的有效区域（非 ignore）掩码，避免未标注区域占用绘制点数，状态栏会显示两侧有效非 free 体素数。底部图例标明 6 类 FarmSim taxonomy 的颜色，其中 crop 为黄绿色、drivable 为天蓝色。存在未来占用时可切换未来时间步，存在轨迹时会自动叠加 GT 与预测轨迹。为控制浏览器性能，每侧默认最多显示 30,000 个有效非 free 体素；可通过 `--max-points 50000` 调大。需要自动打开浏览器时添加 `--open-browser`；默认仅本机可访问，需让局域网其他机器访问时可添加 `--host 0.0.0.0`。按 `Ctrl-C` 停止服务。页面仍使用 Plotly CDN，浏览器首次打开时需要可访问该 CDN。

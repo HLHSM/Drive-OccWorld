@@ -49,10 +49,16 @@ git clone https://github.com/yuyang-cloud/Drive-OccWorld.git
 cd Drive-OccWorld
 git checkout ir-wm
 
-mkdir pretrained
-cd pretrained & wget https://github.com/zhiqi-li/storage/releases/download/v1.0/r101_dcn_fcos3d_pretrain.pth
+mkdir -p pretrained
+wget -c https://github.com/zhiqi-li/storage/releases/download/v1.0/r101_dcn_fcos3d_pretrain.pth \
+  -O pretrained/r101_dcn_fcos3d_pretrain.pth
 
-# 安装 DCNv3
-cd ../projects/mmdet3d_plugin/bevformer/backbones/ops_dcnv3
+# 仅使用 InternImage 主干时才需要安装 DCNv3。
+# FarmSim 默认的 ResNet-101 主干不使用 DCNv3，无需执行下面两行。
+cd projects/mmdet3d_plugin/bevformer/backbones/ops_dcnv3
 python setup.py install
 ```
+
+`r101_dcn_fcos3d_pretrain.pth` 是训练时加载的初始化权重，不是需要通过
+`setup.py` 安装的软件包。FarmSim 训练脚本通过 `PRETRAINED_FROM` 指向该文件；
+从已有训练断点继续时，应清空 `PRETRAINED_FROM` 并设置 `RESUME_FROM`。
