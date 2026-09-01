@@ -33,6 +33,11 @@ def _print_occupancy_metrics(outputs, classes):
         if key not in outputs:
             continue
         hist = np.asarray(outputs[key])
+        # ``custom_multi_gpu_test`` returns one accumulated matrix from each
+        # rank.  Aggregate those matrices here so the standalone evaluator
+        # prints the same metrics as the epoch-end evaluation hook.
+        if hist.ndim == 3:
+            hist = hist.sum(axis=0)
         if hist.ndim != 2:
             continue
         diagonal = np.diag(hist).astype(np.float64)
@@ -52,6 +57,47 @@ def _print_occupancy_metrics(outputs, classes):
         print(f'{key} voxel accuracy: {diagonal.sum() / hist.sum():.4f}')
 
 
+def _select_per_sequence_prediction_indices(dataset, count):
+    """Return an exact, evenly distributed set of FarmSim sample indices."""
+    if not hasattr(dataset, 'samples') or not hasattr(dataset, 'sequences'):
+        raise TypeError(
+            '--save-prediction-sampling per-sequence requires a FarmSim '
+            'dataset with samples and sequences attributes.')
+    grouped = {}
+    for sample_index, sample in enumerate(dataset.samples):
+        grouped.setdefault(int(sample[0]), []).append(sample_index)
+    if not grouped:
+        return frozenset()
+
+    total = min(count, len(dataset.samples))
+    sequence_indices = sorted(grouped)
+    quotas = {sequence_index: 0 for sequence_index in sequence_indices}
+    remaining = total
+    # Round-robin allocation keeps sequence quotas within one sample whenever
+    # every sequence has enough frames, while handling short sequences safely.
+    while remaining:
+        made_progress = False
+        for sequence_index in sequence_indices:
+            if remaining == 0:
+                break
+            if quotas[sequence_index] < len(grouped[sequence_index]):
+                quotas[sequence_index] += 1
+                remaining -= 1
+                made_progress = True
+        if not made_progress:
+            break
+
+    selected = []
+    for sequence_index in sequence_indices:
+        candidates = grouped[sequence_index]
+        quota = quotas[sequence_index]
+        if quota:
+            positions = np.linspace(0, len(candidates) - 1, quota,
+                                    dtype=np.int64)
+            selected.extend(candidates[position] for position in positions)
+    return frozenset(selected)
+
+
 def parse_args():
     parser = argparse.ArgumentParser(
         description='MMDet test (and eval) a model')
@@ -59,10 +105,16 @@ def parse_args():
     parser.add_argument('checkpoint', help='checkpoint file')
     parser.add_argument('--batch-size', type=int,
                         help='per-GPU evaluation batch size; overrides data.test.samples_per_gpu')
+    parser.add_argument('--profile-inference', action='store_true',
+                        help='print synchronized per-stage inference timings; slows evaluation')
     parser.add_argument('--save-predictions', metavar='DIR',
                         help='save per-sample FarmSim occupancy predictions as compressed NPZ files')
     parser.add_argument('--save-prediction-count', type=int, default=-1,
-                        help='number of leading dataset samples to save; -1 saves all (default)')
+                        help='total number of dataset samples to save; -1 saves all (default)')
+    parser.add_argument('--save-prediction-sampling',
+                        choices=('leading', 'per-sequence'), default='leading',
+                        help='selection strategy for a non-negative prediction count: '
+                             'leading (default) or evenly sampled per FarmSim sequence')
     parser.add_argument('--out', help='output result file in pickle format')
     parser.add_argument(
         '--fuse-conv-bn',
@@ -247,11 +299,23 @@ def main():
         shuffle=False,
         nonshuffler_sampler=cfg.data.nonshuffler_sampler,
     )
+    prediction_indices = None
+    if (args.save_predictions and args.save_prediction_count >= 0 and
+            args.save_prediction_sampling == 'per-sequence'):
+        prediction_indices = _select_per_sequence_prediction_indices(
+            dataset, args.save_prediction_count)
+        print(f'Saving {len(prediction_indices)} predictions sampled evenly '
+              f'across {len(dataset.sequences)} validation sequences.')
 
     # build the model and load checkpoint
     cfg.model.train_cfg = None
     model = build_model(cfg.model, test_cfg=cfg.get('test_cfg'))
     model._return_prediction_artifacts = bool(args.save_predictions)
+    # Let the model skip the costly argmax/CPU conversion for batches whose
+    # stable dataset indices will not be written by --save-prediction-count.
+    model._prediction_artifact_limit = args.save_prediction_count
+    model._prediction_artifact_indices = prediction_indices
+    model._profile_test = args.profile_inference
     fp16_cfg = cfg.get('fp16', None)
     if fp16_cfg is not None:
         wrap_fp16_model(model)
@@ -275,7 +339,8 @@ def main():
         model = MMDataParallel(model.cuda(), device_ids=[0])
         outputs = custom_single_gpu_test(model, data_loader, args.show,
                                          args.show_dir, args.save_predictions,
-                                         args.save_prediction_count)
+                                         args.save_prediction_count,
+                                         prediction_indices=prediction_indices)
     else:
         model = MMDistributedDataParallel(
             model.cuda(),
@@ -284,7 +349,8 @@ def main():
         outputs = custom_multi_gpu_test(model, data_loader, args.tmpdir,
                                         args.gpu_collect,
                                         prediction_dir=args.save_predictions,
-                                        prediction_limit=args.save_prediction_count)
+                                        prediction_limit=args.save_prediction_count,
+                                        prediction_indices=prediction_indices)
 
     rank, _ = get_dist_info()
     if rank == 0:

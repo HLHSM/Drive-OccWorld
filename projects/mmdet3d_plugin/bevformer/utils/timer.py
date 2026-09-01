@@ -64,7 +64,8 @@ class SimpleAverager:
 
 def avg_sections(name: Optional[str] = None, unit: str = "ms", warmup: int = 0,
                         printer: Callable[[str], None] = print,
-                        sync: Optional[Callable[[], None]] = None):
+                        sync: Optional[Callable[[], None]] = None,
+                        enabled_attr: Optional[str] = None):
     """
     Minimal decorator for instance methods.
     It sets self._current_timer during the call so you can write: with self.t("stage"):
@@ -75,6 +76,8 @@ def avg_sections(name: Optional[str] = None, unit: str = "ms", warmup: int = 0,
 
         @wraps(func)
         def wrapper(self, *args, **kwargs):
+            if enabled_attr is not None and not getattr(self, enabled_attr, False):
+                return func(self, *args, **kwargs)
             prev = getattr(self, "_current_timer", None)  # support simple nesting
             t = CallSectionsTimer(sync=sync)
             setattr(self, "_current_timer", t)

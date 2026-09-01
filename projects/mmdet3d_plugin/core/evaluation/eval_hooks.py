@@ -98,6 +98,29 @@ def _with_occupancy_summaries(results, class_names=None):
     return ordered, summary
 
 
+def _with_planning_summaries(results):
+    """Flatten stateful trajectory metrics into JSON-safe epoch scalars."""
+    if not isinstance(results, dict):
+        return results, []
+
+    results = dict(results)
+    planning_results = results.pop('planning_results_computed', None)
+    if not planning_results:
+        return results, []
+
+    summary = []
+    for metric_name, values in planning_results.items():
+        if hasattr(values, 'detach'):
+            values = values.detach().cpu().tolist()
+        for index, value in enumerate(values):
+            horizon = (index + 1) * 0.5
+            key = f'planning_{metric_name}_{horizon:.1f}s'
+            results[key] = float(value)
+            if metric_name == 'L2':
+                summary.append(f'{key}={float(value):.4f}')
+    return results, summary
+
+
 class CustomEvalHook(BaseEvalHook):
     """Non-distributed FarmSim evaluation hook.
 
@@ -119,6 +142,8 @@ class CustomEvalHook(BaseEvalHook):
             results, summary = _with_occupancy_summaries(
                 results, class_names=getattr(self.dataloader.dataset,
                                               'CLASSES', None))
+            results, planning_summary = _with_planning_summaries(results)
+            summary.extend(planning_summary)
             if summary:
                 runner.logger.info('FarmSim validation metrics: ' + ', '.join(summary))
             for name, value in results.items():
@@ -212,6 +237,8 @@ class CustomDistEvalHook(BaseDistEvalHook):
             results, summary = _with_occupancy_summaries(
                 results, class_names=getattr(self.dataloader.dataset,
                                               'CLASSES', None))
+            results, planning_summary = _with_planning_summaries(results)
+            summary.extend(planning_summary)
             if summary:
                 runner.logger.info('FarmSim validation metrics: ' + ', '.join(summary))
             for name, value in results.items():

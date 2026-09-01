@@ -59,19 +59,36 @@ def _prepare_distributed_eval_batch(data, device):
     return prepared
 
 
-def _save_prediction_artifacts(result, prediction_dir, prediction_limit):
+def _save_prediction_artifacts(result, prediction_dir, prediction_limit,
+                               prediction_indices=None):
     """Write optional per-sample FarmSim prediction artifacts as NPZ files."""
     if prediction_dir is None:
         return
     for artifact in result.get('prediction_artifacts', []):
         sample_index = int(artifact['sample_index'])
-        if prediction_limit >= 0 and sample_index >= prediction_limit:
+        if (prediction_indices is not None and
+                sample_index not in prediction_indices):
+            continue
+        if (prediction_indices is None and prediction_limit >= 0 and
+                sample_index >= prediction_limit):
             continue
         scene = re.sub(r'[^A-Za-z0-9_.-]+', '_', artifact.pop('scene_token'))
         frame = re.sub(r'[^A-Za-z0-9_.-]+', '_', artifact.pop('lidar_token'))
         output_path = osp.join(prediction_dir,
                                f'{sample_index:06d}_{scene}_{frame}.npz')
         np.savez_compressed(output_path, **artifact)
+
+
+def _batch_size_from_data(data):
+    """Extract the collated FarmSim batch size for an accurate progress bar."""
+    value = data['img']
+    if isinstance(value, DataContainer):
+        value = value.data
+    while isinstance(value, (list, tuple)) and len(value) == 1:
+        value = value[0]
+    if not isinstance(value, torch.Tensor):
+        raise TypeError(f'Cannot infer batch size from image payload {type(value)}')
+    return int(value.shape[0])
 
 def custom_encode_mask_results(mask_results):
     """Encode bitmap mask to RLE code. Semantic Masks only
@@ -166,7 +183,8 @@ def custom_encode_mask_results(mask_results):
 
 
 def custom_single_gpu_test(model, data_loader, show=False, out_dir=None,
-                           prediction_dir=None, prediction_limit=-1):
+                           prediction_dir=None, prediction_limit=-1,
+                           prediction_indices=None):
     """Evaluate FarmSim occupancy on one GPU without distributed collectives."""
     model.eval()
     metrics = {}
@@ -174,7 +192,8 @@ def custom_single_gpu_test(model, data_loader, show=False, out_dir=None,
     with torch.no_grad():
         for data in data_loader:
             result = model(return_loss=False, rescale=True, **data)
-            _save_prediction_artifacts(result, prediction_dir, prediction_limit)
+            _save_prediction_artifacts(result, prediction_dir, prediction_limit,
+                                       prediction_indices)
             for key in ('hist_for_iou', 'hist_for_iou_current',
                         'hist_for_iou_future',
                         'hist_for_iou_future_time_weighting'):
@@ -185,12 +204,13 @@ def custom_single_gpu_test(model, data_loader, show=False, out_dir=None,
                 for key, value in result['plan_metric'].items():
                     metrics['plan_metric'][key] = (
                         metrics['plan_metric'].get(key, 0) + value)
-            prog_bar.update(1)
+            prog_bar.update(_batch_size_from_data(data))
     return metrics
 
 
 def custom_multi_gpu_test(model, data_loader, tmpdir=None, gpu_collect=False, show=False, out_dir=None,
-                          prediction_dir=None, prediction_limit=-1):
+                          prediction_dir=None, prediction_limit=-1,
+                          prediction_indices=None):
     """Test model with multiple gpus.
     This method tests model with multiple gpus and collects the results
     under two different modes: gpu and cpu modes. By setting 'gpu_collect=True'
@@ -248,7 +268,8 @@ def custom_multi_gpu_test(model, data_loader, tmpdir=None, gpu_collect=False, sh
             device = next(model.parameters()).device
             data = _prepare_distributed_eval_batch(data, device)
             result = model(return_loss=False, rescale=True, **data)
-            _save_prediction_artifacts(result, prediction_dir, prediction_limit)
+            _save_prediction_artifacts(result, prediction_dir, prediction_limit,
+                                       prediction_indices)
 
             if 'hist_for_iou' in result.keys():
                 iou_metric.append(result['hist_for_iou'])
@@ -312,8 +333,27 @@ def custom_multi_gpu_test(model, data_loader, tmpdir=None, gpu_collect=False, sh
 
     # v2
     if model.module.turn_on_plan:
-        planning_result = model.module.planning_metric_v2.compute()
-        model.module.planning_metric_v2.reset()
+        # PlanningMetric_v2 is stateful and each DDP rank updates only its
+        # local validation shard.  Reduce the raw sums before dividing so the
+        # epoch-end trajectory metrics cover the same full split as occupancy.
+        planning_metric_v2 = model.module.planning_metric_v2
+        planning_total = planning_metric_v2.total.detach().clone()
+        planning_l2 = planning_metric_v2.L2.detach().clone()
+        planning_obj_col = planning_metric_v2.obj_col.detach().clone()
+        planning_obj_box_col = planning_metric_v2.obj_box_col.detach().clone()
+        if dist.is_available() and dist.is_initialized():
+            for value in (planning_total, planning_l2,
+                          planning_obj_col, planning_obj_box_col):
+                dist.all_reduce(value, op=dist.ReduceOp.SUM)
+        if planning_total.item() > 0:
+            planning_result = {
+                'obj_col': planning_obj_col / planning_total,
+                'obj_box_col': planning_obj_box_col / planning_total,
+                'L2': planning_l2 / planning_total,
+            }
+        else:
+            planning_result = {}
+        planning_metric_v2.reset()
         res['planning_results_computed'] = planning_result
 
     return res
