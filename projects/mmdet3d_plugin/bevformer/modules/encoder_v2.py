@@ -35,6 +35,9 @@ class CustomBEVFormerEncoder(BEVFormerEncoder):
                  acfs_occ_weight=1.0,
                  acfs_uncertainty_weight=1.0,
                  acfs_boundary_weight=1.0,
+                 use_nearfar_bev=False,
+                 nearfar_near_ratio=0.6,
+                 nearfar_far_stride=2,
                  *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -45,6 +48,15 @@ class CustomBEVFormerEncoder(BEVFormerEncoder):
         self.acfs_occ_weight = float(acfs_occ_weight)
         self.acfs_uncertainty_weight = float(acfs_uncertainty_weight)
         self.acfs_boundary_weight = float(acfs_boundary_weight)
+        self.use_nearfar_bev = bool(use_nearfar_bev)
+        self.nearfar_near_ratio = float(nearfar_near_ratio)
+        self.nearfar_far_stride = int(nearfar_far_stride)
+        if not 0.0 < self.nearfar_near_ratio <= 1.0:
+            raise ValueError('nearfar_near_ratio must be in (0, 1].')
+        if self.nearfar_far_stride < 2:
+            raise ValueError('nearfar_far_stride must be at least 2.')
+        if self.use_acfs_bev and self.use_nearfar_bev:
+            raise ValueError('ACFS-BEV and near-far BEV are mutually exclusive.')
         if self.use_acfs_bev:
             self.acfs_coarse_trunk = nn.Sequential(
                 nn.Conv2d(1, acfs_coarse_channels, 3, padding=1),
@@ -57,6 +69,9 @@ class CustomBEVFormerEncoder(BEVFormerEncoder):
             self.acfs_easy_update = nn.Sequential(
                 nn.Linear(embed_dims, embed_dims), nn.ReLU(inplace=True),
                 nn.Linear(embed_dims, embed_dims))
+        if self.use_nearfar_bev:
+            if len(self.layers) < 2:
+                raise ValueError('Near-far BEV requires at least two encoder layers.')
 
         self.keep_idx = keep_idx
         # remove latent rendering in previous layers.
@@ -151,6 +166,162 @@ class CustomBEVFormerEncoder(BEVFormerEncoder):
             1, active_indices.view(1, -1, 1).expand(batch_size, -1,
                                                       easy.size(-1)),
             output)
+
+    def _nearfar_layout(self, bev_h, bev_w, device):
+        """Return forward-x sparse queries and bilinear restore metadata.
+
+        BEVFormer stores y along H and x along W.  FarmSim's x axis is
+        forward, so the near/far boundary must split columns, not rows.  The
+        near columns retain all queries; far columns retain a regular 2D grid.
+        Missing far queries are bilinearly restored from their four adjacent
+        active tokens before an image-conditioned dense refinement layer.
+        """
+        near_cols = min(bev_w, max(1, int(round(
+            bev_w * self.nearfar_near_ratio))))
+        ids = torch.arange(bev_h * bev_w, device=device).reshape(bev_h, bev_w)
+        active_mask = torch.zeros((bev_h, bev_w), dtype=torch.bool,
+                                  device=device)
+        active_mask[:, :near_cols] = True
+        if near_cols < bev_w:
+            active_mask[::self.nearfar_far_stride,
+                        near_cols::self.nearfar_far_stride] = True
+        active_indices = ids[active_mask]
+        active_positions = torch.full((bev_h * bev_w,), -1, dtype=torch.long,
+                                      device=device)
+        active_positions[active_indices] = torch.arange(
+            active_indices.numel(), device=device)
+        if near_cols == bev_w:
+            restore_positions = active_positions[ids].reshape(-1, 1).expand(
+                -1, 4)
+            restore_weights = torch.zeros((bev_h * bev_w, 4), device=device)
+            restore_weights[:, 0] = 1
+            return active_indices, restore_positions, restore_weights
+
+        row_ids = torch.arange(bev_h, device=device).view(-1, 1).expand(
+            bev_h, bev_w)
+        col_ids = torch.arange(bev_w, device=device).view(1, -1).expand(
+            bev_h, bev_w)
+        stride = self.nearfar_far_stride
+        max_active_row = ((bev_h - 1) // stride) * stride
+        max_active_col = near_cols + ((bev_w - 1 - near_cols) // stride) * stride
+        row_floor = (row_ids // stride) * stride
+        row_ceil = (row_floor + stride).clamp(max=max_active_row)
+        col_floor = near_cols + ((col_ids - near_cols).clamp_min(0) // stride) * stride
+        col_ceil = (col_floor + stride).clamp(max=max_active_col)
+        corner_ids = torch.stack((
+            row_floor * bev_w + col_floor,
+            row_floor * bev_w + col_ceil,
+            row_ceil * bev_w + col_floor,
+            row_ceil * bev_w + col_ceil,
+        ), dim=-1)
+        restore_positions = active_positions[corner_ids.reshape(-1)].reshape(
+            bev_h, bev_w, 4)
+        row_fraction = ((row_ids - row_floor).to(torch.float32) / stride)
+        col_fraction = ((col_ids - col_floor).to(torch.float32) / stride)
+        restore_weights = torch.stack((
+            (1 - row_fraction) * (1 - col_fraction),
+            (1 - row_fraction) * col_fraction,
+            row_fraction * (1 - col_fraction),
+            row_fraction * col_fraction,
+        ), dim=-1)
+        near_mask = col_ids < near_cols
+        identity_positions = active_positions[ids]
+        restore_positions = torch.where(
+            near_mask.unsqueeze(-1),
+            identity_positions.unsqueeze(-1).expand_as(restore_positions),
+            restore_positions)
+        restore_weights = torch.where(
+            near_mask.unsqueeze(-1),
+            torch.tensor((1., 0., 0., 0.), device=device).view(1, 1, 4),
+            restore_weights)
+        restore_positions = restore_positions.reshape(-1, 4)
+        restore_weights = restore_weights.reshape(-1, 4)
+        if (restore_positions < 0).any():
+            raise RuntimeError('Near-far BEV layout has an unassigned restore cell.')
+        return active_indices, restore_positions, restore_weights
+
+    def _forward_nearfar(self, bev_query, key, value, bev_h, bev_w, bev_pos,
+                         spatial_shapes, level_start_index, prev_bev, shift,
+                         img_metas, *args, **kwargs):
+        """Apply full image attention near-field and on a far-field grid."""
+        dense_query = bev_query.permute(1, 0, 2)
+        dense_pos = bev_pos.permute(1, 0, 2)
+        dense_prev_bev = prev_bev
+        active_indices, restore_positions, restore_weights = self._nearfar_layout(
+            bev_h, bev_w, bev_query.device)
+        active_query = dense_query.index_select(1, active_indices)
+        active_pos = dense_pos.index_select(1, active_indices)
+        batch_size, active_count, _ = active_query.shape
+        ref_3d = self.get_reference_points(
+            bev_h, bev_w, self.pc_range[5] - self.pc_range[2],
+            self.num_points_in_pillar, dim='3d', bs=batch_size,
+            device=bev_query.device, dtype=bev_query.dtype).index_select(
+                2, active_indices)
+        ref_2d = self.get_reference_points(
+            bev_h, bev_w, dim='2d', bs=batch_size, device=bev_query.device,
+            dtype=bev_query.dtype).index_select(1, active_indices)
+        reference_points_cam, bev_mask = self.point_sampling(
+            ref_3d, self.pc_range, img_metas)
+        shifted_ref_2d = ref_2d.clone()
+        shifted_ref_2d += shift[:, None, None, :]
+        if dense_prev_bev is not None:
+            sparse_prev_bev = dense_prev_bev.index_select(
+                0, active_indices).permute(1, 0, 2)
+            sparse_prev_bev = torch.stack([sparse_prev_bev, active_query], 1).reshape(
+                batch_size * 2, active_count, -1)
+            hybrid_ref_2d = torch.stack([shifted_ref_2d, ref_2d], 1).reshape(
+                batch_size * 2, active_count, 1, 2)
+        else:
+            sparse_prev_bev = None
+            hybrid_ref_2d = torch.stack([ref_2d, ref_2d], 1).reshape(
+                batch_size * 2, active_count, 1, 2)
+
+        output = active_query
+        # Most layers operate on the geometry-selected tokens.  The final
+        # dense layer restores direct image cross-attention to every BEV cell,
+        # avoiding the old query-only completion of far-field semantics.
+        for layer in self.layers[:-1]:
+            output = layer(
+                output, key, value, *args, bev_pos=active_pos,
+                ref_2d=hybrid_ref_2d, ref_3d=ref_3d,
+                bev_h=active_count, bev_w=1, spatial_shapes=spatial_shapes,
+                level_start_index=level_start_index,
+                reference_points_cam=reference_points_cam, bev_mask=bev_mask,
+                prev_bev=sparse_prev_bev, **kwargs)
+        restored = output[:, restore_positions]
+        restored = (restored * restore_weights.to(output.dtype).view(
+            1, -1, 4, 1)).sum(dim=2)
+
+        dense_ref_3d = self.get_reference_points(
+            bev_h, bev_w, self.pc_range[5] - self.pc_range[2],
+            self.num_points_in_pillar, dim='3d', bs=batch_size,
+            device=bev_query.device, dtype=bev_query.dtype)
+        dense_ref_2d = self.get_reference_points(
+            bev_h, bev_w, dim='2d', bs=batch_size, device=bev_query.device,
+            dtype=bev_query.dtype)
+        dense_reference_points_cam, dense_bev_mask = self.point_sampling(
+            dense_ref_3d, self.pc_range, img_metas)
+        dense_shifted_ref_2d = dense_ref_2d.clone()
+        dense_shifted_ref_2d += shift[:, None, None, :]
+        if dense_prev_bev is not None:
+            dense_prev = dense_prev_bev.permute(1, 0, 2)
+            dense_prev = torch.stack([dense_prev, restored], 1).reshape(
+                batch_size * 2, bev_h * bev_w, -1)
+            dense_hybrid_ref_2d = torch.stack(
+                [dense_shifted_ref_2d, dense_ref_2d], 1).reshape(
+                    batch_size * 2, bev_h * bev_w, 1, 2)
+        else:
+            dense_prev = None
+            dense_hybrid_ref_2d = torch.stack(
+                [dense_ref_2d, dense_ref_2d], 1).reshape(
+                    batch_size * 2, bev_h * bev_w, 1, 2)
+        return self.layers[-1](
+            restored, key, value, *args, bev_pos=dense_pos,
+            ref_2d=dense_hybrid_ref_2d, ref_3d=dense_ref_3d,
+            bev_h=bev_h, bev_w=bev_w, spatial_shapes=spatial_shapes,
+            level_start_index=level_start_index,
+            reference_points_cam=dense_reference_points_cam,
+            bev_mask=dense_bev_mask, prev_bev=dense_prev, **kwargs)
 
 
 @TRANSFORMER_LAYER.register_module()

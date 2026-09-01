@@ -728,7 +728,6 @@ class Drive_OccWorld(BEVFormer):
             ret_dict = self.future_pred(prev_bev_list, action_condition_dict, cond_norm_dict, plan_dict,
                                                                     valid_frames, img_metas, prev_img_metas, num_frames)
 
-        return {}
         # E. Evaluate
         test_output = {}
         # evaluate occ

@@ -444,12 +444,22 @@ class PlanTransformerLayer(MyCustomBaseTransformerLayer):
         return query
 
 
-from mmcv.utils import ConfigDict, build_from_cfg, deprecated_api_warning, to_2tuple
+from mmcv.utils import ConfigDict, build_from_cfg, deprecated_api_warning, ext_loader, to_2tuple
 from mmcv.runner.base_module import BaseModule, ModuleList, Sequential
 from mmcv.cnn import xavier_init, constant_init
 from .multi_scale_deformable_attn_function import MultiScaleDeformableAttnFunction_fp32, \
     MultiScaleDeformableAttnFunction_fp16
 from mmcv.ops.multi_scale_deform_attn import multi_scale_deformable_attn_pytorch
+
+# The FarmSim occupancy-only environment deliberately provides a placeholder
+# ``mmcv._ext``.  Keep future prediction trainable there by using MMCV's
+# differentiable PyTorch implementation whenever the compiled CUDA operator is
+# unavailable (the same policy as spatial_cross_attention.py).
+ext_module = ext_loader.load_ext(
+    '_ext', ['ms_deform_attn_backward', 'ms_deform_attn_forward'])
+_USE_MMCV_DEFORMABLE_EXT = not getattr(
+    ext_module, '__farm_sim_occ_fallback__', False)
+
 @ATTENTION.register_module()
 class PredictionMSDeformableAttention(BaseModule):
     """An attention module used in Deformable-Detr.
@@ -658,7 +668,7 @@ class PredictionMSDeformableAttention(BaseModule):
         #       0-1 position at the value map scale.
         #   * attention_weights: The weight of sampled points with shape as
         #       [bs ,num_queries, num_heads, num_levels, num_points].
-        if torch.cuda.is_available() and value.is_cuda:
+        if _USE_MMCV_DEFORMABLE_EXT and torch.cuda.is_available() and value.is_cuda:
 
             # using fp16 deformable attention is unstable because it performs many sum operations
             if value.dtype == torch.float16:

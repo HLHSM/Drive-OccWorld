@@ -40,6 +40,8 @@ def parse_args():
     parser.add_argument('config', help='train config file path')
     parser.add_argument('--work-dir', help='the dir to save logs and models')
     parser.add_argument(
+        '--load-from', help='checkpoint used to initialize model weights')
+    parser.add_argument(
         '--resume-from', help='the checkpoint file to resume from')
     parser.add_argument(
         '--no-validate',
@@ -78,6 +80,97 @@ def parse_args():
                          help='enable Agriculture-aware Coarse-to-Fine Sparse BEV')
     farmsim.add_argument('--acfs-active-ratio', type=float, default=0.5,
                          help='fraction of BEV queries receiving full attention')
+    farmsim.add_argument('--use-row-topology', type=int, choices=(0, 1),
+                         help='enable crop-row directional topology refinement')
+    farmsim.add_argument('--row-topology-loss-weight', type=float, default=0.1,
+                         help='weight of the crop-row adjacency supervision')
+    farmsim.add_argument('--use-crop-gap-refinement', type=int, choices=(0, 1),
+                         help='enable crop/free boundary and gap refinement')
+    farmsim.add_argument('--crop-gap-boundary-loss-weight', type=float,
+                         default=0.5,
+                         help='weight of crop/free 3D boundary supervision')
+    farmsim.add_argument('--crop-gap-free-loss-weight', type=float,
+                         default=0.25,
+                         help='weight of near-crop free-gap supervision')
+    farmsim.add_argument('--crop-gap-alpha', type=float, default=3.0,
+                         help='maximum near-crop free-gap loss multiplier')
+    farmsim.add_argument('--crop-gap-sigma', type=float, default=1.5,
+                         help='decay distance in voxels for free-gap weighting')
+    farmsim.add_argument('--crop-gap-radius', type=int, default=4,
+                         help='maximum voxel distance considered a crop gap')
+    farmsim.add_argument('--use-selective-c2f', type=int, choices=(0, 1),
+                         help='enable selective 2x2 BEV subquery refinement')
+    farmsim.add_argument('--c2f-active-ratio', type=float, default=0.25,
+                         help='fraction of uncertain crop/free BEV cells refined')
+    farmsim.add_argument('--c2f-channels', type=int, default=128,
+                         help='hidden width of the selective C2F subquery decoder')
+    farmsim.add_argument('--use-dual-hardness-refinement', type=int,
+                         choices=(0, 1),
+                         help='enable training-only agricultural dual-hardness mining')
+    farmsim.add_argument('--dual-hardness-active-ratio', type=float, default=0.04,
+                         help='fraction of voxel positions selected for refinement')
+    farmsim.add_argument('--dual-hardness-gap-ratio', type=float, default=0.5,
+                         help='selected-voxel quota reserved for crop/free gaps')
+    farmsim.add_argument('--dual-hardness-channels', type=int, default=128,
+                         help='hidden width of the dual-hardness voxel refiner')
+    farmsim.add_argument('--dual-hardness-local-scale', type=float, default=0.25,
+                         help='local GT anisotropy weighting scale')
+    farmsim.add_argument('--dual-hardness-gap-boost', type=float, default=0.5,
+                         help='additional crop/free gap weight for selected voxels')
+    farmsim.add_argument('--dual-hardness-loss-weight', type=float, default=0.5,
+                         help='selected-voxel refinement loss weight')
+    farmsim.add_argument('--dual-hardness-distill-weight', type=float, default=0.1,
+                         help='EMA refinement-teacher distillation loss weight')
+    farmsim.add_argument('--dual-hardness-ema-decay', type=float, default=0.99,
+                         help='EMA decay for the training-only refinement teacher')
+    farmsim.add_argument('--use-fixed-group-decoder', type=int, choices=(0, 1),
+                         help='enable fixed free/crop/other semantic group decoder')
+    farmsim.add_argument('--group-decoder-loss-weight', type=float, default=0.3,
+                         help='fixed semantic group supervision weight')
+    farmsim.add_argument('--group-decoder-prior-scale', type=float, default=1.0,
+                         help='strength of group prior added to semantic logits')
+    farmsim.add_argument('--use-gap-residual-refiner', type=int, choices=(0, 1),
+                         help='enable end-to-end BEV/logit gap residual refiner')
+    farmsim.add_argument('--gap-refiner-channels', type=int, default=24,
+                         help='hidden width of the anisotropic 3D gap refiner')
+    farmsim.add_argument('--gap-refiner-blocks', type=int, default=3,
+                         help='number of anisotropic depthwise 3D refiner blocks')
+    farmsim.add_argument('--gap-refiner-coarse-loss-weight', type=float,
+                         default=0.15,
+                         help='deep-supervision weight for pre-refinement logits')
+    farmsim.add_argument('--gap-refiner-boundary-loss-weight', type=float,
+                         default=0.25,
+                         help='crop/free boundary-gate supervision weight')
+    farmsim.add_argument('--gap-refiner-gap-loss-weight', type=float,
+                         default=0.5,
+                         help='near-crop free-gap preservation loss weight')
+    farmsim.add_argument('--gap-refiner-crop-loss-weight', type=float,
+                         default=0.5,
+                         help='near-free crop-preservation loss weight')
+    farmsim.add_argument('--gap-refiner-use-bev-feature', type=int,
+                         choices=(0, 1), default=1,
+                         help='use ref_bev in GapRef; set 0 for logits-only diagnosis')
+    farmsim.add_argument('--gap-refiner-use-image-features', type=int,
+                         choices=(0, 1), default=0,
+                         help='inject sparse current-image FPN evidence into GapRef')
+    farmsim.add_argument('--gap-refiner-image-active-ratio', type=float,
+                         default=0.08,
+                         help='fraction of BEV cells selected for image evidence')
+    farmsim.add_argument('--gap-refiner-image-channels', type=int, default=24,
+                         help='projected FPN width of the GapRef image branch')
+    farmsim.add_argument('--gap-refiner-image-levels', type=int, default=2,
+                         help='number of highest-resolution FPN levels sampled')
+    farmsim.add_argument('--gap-refiner-image-crop-ratio', type=float,
+                         default=0.5,
+                         help='selected-cell quota for confident crop regions')
+    farmsim.add_argument('--freeze-gap-refiner-base', action='store_true',
+                         help='freeze every non-GapRef parameter for diagnostic training')
+    farmsim.add_argument('--use-nearfar-bev', type=int, choices=(0, 1),
+                         help='enable deterministic near-far sparse BEV encoding')
+    farmsim.add_argument('--nearfar-near-ratio', type=float, default=0.6,
+                         help='full-attention fraction along the near BEV axis')
+    farmsim.add_argument('--nearfar-far-stride', type=int, default=2,
+                         help='regular far-field BEV sampling stride')
     farmsim.add_argument('--use-efficient-baseline', type=int, choices=(0, 1),
                          help='use the 2-level FPN / 4-layer / 4-point BEV baseline')
     farmsim.add_argument(
@@ -164,12 +257,87 @@ def apply_farmsim_options(cfg, args):
         '--grad-accum-steps': args.grad_accum_steps,
     }
     for name, value in values.items():
-        if value is not None and value < 1:
-            raise ValueError(f'{name} must be positive, got {value}.')
+        minimum = 0 if name == '--history-frames' else 1
+        if value is not None and value < minimum:
+            qualifier = 'non-negative' if minimum == 0 else 'positive'
+            raise ValueError(f'{name} must be {qualifier}, got {value}.')
     if args.future_occ_steps < 0 or args.future_traj_steps < 0:
         raise ValueError('future occupancy and trajectory step counts cannot be negative.')
     if not 0.0 < args.acfs_active_ratio <= 1.0:
         raise ValueError('--acfs-active-ratio must be in (0, 1].')
+    if args.row_topology_loss_weight < 0:
+        raise ValueError('--row-topology-loss-weight must be non-negative.')
+    if args.crop_gap_boundary_loss_weight < 0:
+        raise ValueError('--crop-gap-boundary-loss-weight must be non-negative.')
+    if args.crop_gap_free_loss_weight < 0:
+        raise ValueError('--crop-gap-free-loss-weight must be non-negative.')
+    if args.crop_gap_alpha < 0:
+        raise ValueError('--crop-gap-alpha must be non-negative.')
+    if args.crop_gap_sigma <= 0:
+        raise ValueError('--crop-gap-sigma must be positive.')
+    if args.crop_gap_radius < 1:
+        raise ValueError('--crop-gap-radius must be at least 1.')
+    if not 0.0 < args.c2f_active_ratio <= 1.0:
+        raise ValueError('--c2f-active-ratio must be in (0, 1].')
+    if args.c2f_channels < 8:
+        raise ValueError('--c2f-channels must be at least 8.')
+    if not 0.0 < args.dual_hardness_active_ratio <= 1.0:
+        raise ValueError('--dual-hardness-active-ratio must be in (0, 1].')
+    if not 0.0 <= args.dual_hardness_gap_ratio <= 1.0:
+        raise ValueError('--dual-hardness-gap-ratio must be in [0, 1].')
+    if args.dual_hardness_channels < 8:
+        raise ValueError('--dual-hardness-channels must be at least 8.')
+    if args.gap_refiner_channels < 8:
+        raise ValueError('--gap-refiner-channels must be at least 8.')
+    if args.gap_refiner_blocks < 1:
+        raise ValueError('--gap-refiner-blocks must be at least 1.')
+    if not 0.0 < args.gap_refiner_image_active_ratio <= 1.0:
+        raise ValueError('--gap-refiner-image-active-ratio must be in (0, 1].')
+    if args.gap_refiner_image_channels < 8:
+        raise ValueError('--gap-refiner-image-channels must be at least 8.')
+    if args.gap_refiner_image_levels < 1:
+        raise ValueError('--gap-refiner-image-levels must be at least 1.')
+    if not 0.0 <= args.gap_refiner_image_crop_ratio <= 1.0:
+        raise ValueError('--gap-refiner-image-crop-ratio must be in [0, 1].')
+    for name, value in (
+            ('--dual-hardness-local-scale', args.dual_hardness_local_scale),
+            ('--dual-hardness-gap-boost', args.dual_hardness_gap_boost),
+            ('--dual-hardness-loss-weight', args.dual_hardness_loss_weight),
+            ('--dual-hardness-distill-weight', args.dual_hardness_distill_weight),
+            ('--group-decoder-loss-weight', args.group_decoder_loss_weight),
+            ('--group-decoder-prior-scale', args.group_decoder_prior_scale),
+            ('--gap-refiner-coarse-loss-weight', args.gap_refiner_coarse_loss_weight),
+            ('--gap-refiner-boundary-loss-weight', args.gap_refiner_boundary_loss_weight),
+            ('--gap-refiner-gap-loss-weight', args.gap_refiner_gap_loss_weight),
+            ('--gap-refiner-crop-loss-weight', args.gap_refiner_crop_loss_weight)):
+        if value < 0:
+            raise ValueError(f'{name} must be non-negative.')
+    if not 0.0 <= args.dual_hardness_ema_decay < 1.0:
+        raise ValueError('--dual-hardness-ema-decay must be in [0, 1).')
+    if not 0.0 < args.nearfar_near_ratio <= 1.0:
+        raise ValueError('--nearfar-near-ratio must be in (0, 1].')
+    if args.nearfar_far_stride < 2:
+        raise ValueError('--nearfar-far-stride must be at least 2.')
+    if args.use_acfs_bev == 1 and args.use_nearfar_bev == 1:
+        raise ValueError('--use-acfs-bev and --use-nearfar-bev are mutually exclusive.')
+    if args.use_tghd == 1 and args.use_row_topology == 1:
+        raise ValueError('--use-tghd and --use-row-topology cannot be combined: '
+                         'the row-topology head refines the direct 2D decoder.')
+    if args.use_tghd == 1 and args.use_crop_gap_refinement == 1:
+        raise ValueError('--use-tghd and --use-crop-gap-refinement cannot be '
+                         'combined: the refinement uses the direct 2D decoder.')
+    if args.use_tghd == 1 and args.use_selective_c2f == 1:
+        raise ValueError('--use-tghd and --use-selective-c2f cannot be '
+                         'combined: the refinement uses the direct 2D decoder.')
+    if args.use_tghd == 1 and args.use_dual_hardness_refinement == 1:
+        raise ValueError('--use-tghd and --use-dual-hardness-refinement cannot '
+                         'be combined: the refinement uses direct 2D BEV features.')
+    if args.use_tghd == 1 and args.use_fixed_group_decoder == 1:
+        raise ValueError('--use-tghd and --use-fixed-group-decoder cannot be '
+                         'combined: the group decoder uses direct 2D BEV features.')
+    if args.use_tghd == 1 and args.use_gap_residual_refiner == 1:
+        raise ValueError('--use-tghd and --use-gap-residual-refiner cannot be '
+                         'combined: the refiner uses direct 2D BEV features.')
     if args.data_root is not None and not osp.isdir(args.data_root):
         raise FileNotFoundError(
             f'FarmSim --data-root does not exist: {args.data_root}')
@@ -217,7 +385,12 @@ def apply_farmsim_options(cfg, args):
         args.data_root, args.batch_size, args.image_width, args.image_height,
         args.epochs, args.history_frames, args.predict_future_occ,
         args.predict_future_traj, args.use_fp16, args.use_tghd,
-        args.use_acfs_bev, args.use_efficient_baseline,
+        args.use_acfs_bev, args.use_row_topology, args.use_crop_gap_refinement,
+        args.use_selective_c2f, args.use_dual_hardness_refinement,
+        args.use_fixed_group_decoder,
+        args.use_gap_residual_refiner,
+        args.use_nearfar_bev,
+        args.use_efficient_baseline,
         args.num_gpus, args.train_ann_file, args.val_ann_file,
         args.workers_per_gpu, args.total_batch_size, args.grad_accum_steps))
     if not has_farmsim_option:
@@ -316,6 +489,84 @@ def apply_farmsim_options(cfg, args):
             args.use_acfs_bev)
         cfg.model.pts_bbox_head.transformer.encoder.acfs_active_ratio = (
             args.acfs_active_ratio)
+    if args.use_row_topology is not None:
+        cfg.model.future_pred_head.use_row_topology = bool(
+            args.use_row_topology)
+        cfg.model.future_pred_head.row_topology_loss_weight = (
+            args.row_topology_loss_weight)
+    if args.use_crop_gap_refinement is not None:
+        cfg.model.future_pred_head.use_crop_gap_refinement = bool(
+            args.use_crop_gap_refinement)
+        cfg.model.future_pred_head.crop_gap_boundary_loss_weight = (
+            args.crop_gap_boundary_loss_weight)
+        cfg.model.future_pred_head.crop_gap_free_loss_weight = (
+            args.crop_gap_free_loss_weight)
+        cfg.model.future_pred_head.crop_gap_alpha = args.crop_gap_alpha
+        cfg.model.future_pred_head.crop_gap_sigma = args.crop_gap_sigma
+        cfg.model.future_pred_head.crop_gap_radius = args.crop_gap_radius
+    if args.use_selective_c2f is not None:
+        cfg.model.future_pred_head.use_selective_c2f = bool(
+            args.use_selective_c2f)
+        cfg.model.future_pred_head.c2f_active_ratio = args.c2f_active_ratio
+        cfg.model.future_pred_head.c2f_channels = args.c2f_channels
+    if args.use_dual_hardness_refinement is not None:
+        cfg.model.future_pred_head.use_dual_hardness_refinement = bool(
+            args.use_dual_hardness_refinement)
+        cfg.model.future_pred_head.dual_hardness_active_ratio = (
+            args.dual_hardness_active_ratio)
+        cfg.model.future_pred_head.dual_hardness_gap_ratio = (
+            args.dual_hardness_gap_ratio)
+        cfg.model.future_pred_head.dual_hardness_channels = (
+            args.dual_hardness_channels)
+        cfg.model.future_pred_head.dual_hardness_local_scale = (
+            args.dual_hardness_local_scale)
+        cfg.model.future_pred_head.dual_hardness_gap_boost = (
+            args.dual_hardness_gap_boost)
+        cfg.model.future_pred_head.dual_hardness_loss_weight = (
+            args.dual_hardness_loss_weight)
+        cfg.model.future_pred_head.dual_hardness_distill_weight = (
+            args.dual_hardness_distill_weight)
+        cfg.model.future_pred_head.dual_hardness_ema_decay = (
+            args.dual_hardness_ema_decay)
+    if args.use_fixed_group_decoder is not None:
+        cfg.model.future_pred_head.use_fixed_group_decoder = bool(
+            args.use_fixed_group_decoder)
+        cfg.model.future_pred_head.group_decoder_loss_weight = (
+            args.group_decoder_loss_weight)
+        cfg.model.future_pred_head.group_decoder_prior_scale = (
+            args.group_decoder_prior_scale)
+    if args.use_gap_residual_refiner is not None:
+        cfg.model.future_pred_head.use_gap_residual_refiner = bool(
+            args.use_gap_residual_refiner)
+        cfg.model.future_pred_head.gap_refiner_channels = args.gap_refiner_channels
+        cfg.model.future_pred_head.gap_refiner_blocks = args.gap_refiner_blocks
+        cfg.model.future_pred_head.gap_refiner_coarse_loss_weight = (
+            args.gap_refiner_coarse_loss_weight)
+        cfg.model.future_pred_head.gap_refiner_boundary_loss_weight = (
+            args.gap_refiner_boundary_loss_weight)
+        cfg.model.future_pred_head.gap_refiner_gap_loss_weight = (
+            args.gap_refiner_gap_loss_weight)
+        cfg.model.future_pred_head.gap_refiner_crop_loss_weight = (
+            args.gap_refiner_crop_loss_weight)
+        cfg.model.future_pred_head.gap_refiner_use_bev_feature = bool(
+            args.gap_refiner_use_bev_feature)
+        cfg.model.future_pred_head.gap_refiner_use_image_features = bool(
+            args.gap_refiner_use_image_features)
+        cfg.model.future_pred_head.gap_refiner_image_active_ratio = (
+            args.gap_refiner_image_active_ratio)
+        cfg.model.future_pred_head.gap_refiner_image_channels = (
+            args.gap_refiner_image_channels)
+        cfg.model.future_pred_head.gap_refiner_image_levels = (
+            args.gap_refiner_image_levels)
+        cfg.model.future_pred_head.gap_refiner_image_crop_ratio = (
+            args.gap_refiner_image_crop_ratio)
+    if args.use_nearfar_bev is not None:
+        cfg.model.pts_bbox_head.transformer.encoder.use_nearfar_bev = bool(
+            args.use_nearfar_bev)
+        cfg.model.pts_bbox_head.transformer.encoder.nearfar_near_ratio = (
+            args.nearfar_near_ratio)
+        cfg.model.pts_bbox_head.transformer.encoder.nearfar_far_stride = (
+            args.nearfar_far_stride)
     if args.use_efficient_baseline:
         # Use R50 and keep only C3/C4 FPN outputs; make all image-BEV
         # attention settings consistent with the two-level representation.
@@ -391,6 +642,15 @@ def main():
         # use config filename as default work_dir if cfg.work_dir is None
         cfg.work_dir = osp.join('./work_dirs',
                                 osp.splitext(osp.basename(args.config))[0])
+    if args.load_from and args.resume_from:
+        raise ValueError(
+            '--load-from initializes a new run while --resume-from continues '
+            'an existing run; specify only one of them')
+    if args.load_from:
+        if not osp.isfile(args.load_from):
+            raise FileNotFoundError(
+                f'--load-from checkpoint does not exist: {args.load_from}')
+        cfg.load_from = args.load_from
     if args.resume_from:
         if not osp.isfile(args.resume_from):
             raise FileNotFoundError(
@@ -463,6 +723,32 @@ def main():
         train_cfg=cfg.get('train_cfg'),
         test_cfg=cfg.get('test_cfg'))
     model.init_weights()
+
+    frozen_refiner_specs = (
+        ('GapRef', args.freeze_gap_refiner_base,
+         cfg.model.future_pred_head.use_gap_residual_refiner,
+         'future_pred_head.gap_refiner_', 'freeze_gap_refiner_base',
+         '--freeze-gap-refiner-base'),
+    )
+    for (label, requested, enabled, parameter_prefix, model_flag,
+         command_flag) in frozen_refiner_specs:
+        if not requested:
+            continue
+        if not enabled:
+            raise ValueError(
+                f'{command_flag} requires its refiner to be enabled.')
+        trainable_names = []
+        for name, parameter in model.named_parameters():
+            trainable = name.startswith(parameter_prefix)
+            parameter.requires_grad_(trainable)
+            if trainable:
+                trainable_names.append(name)
+        if not trainable_names:
+            raise RuntimeError(
+                f'{label} freeze requested but no {label} parameters exist.')
+        setattr(model, model_flag, True)
+        logger.info('%s diagnostic freeze enabled; trainable parameters: %s',
+                    label, ', '.join(trainable_names))
 
     trainable_params = sum(p.numel() for p in model.parameters()
                            if p.requires_grad)

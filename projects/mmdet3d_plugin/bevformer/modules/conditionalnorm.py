@@ -248,6 +248,11 @@ class ConditionalNorm(BaseModule):
         beta = self.ego_mlp_beta(actv)
 
         # apply scale and bias
+        # gamma/beta are per-sample vectors [B, C], while BEV features are
+        # [B, H, W, C].  Explicit spatial singleton dimensions are required
+        # once B > 1; implicit broadcasting only happened to work for B == 1.
+        gamma = gamma[:, None, None, :]
+        beta = beta[:, None, None, :]
         embed = gamma * embed + beta
         return embed
 

@@ -352,10 +352,16 @@ class WorldHeadTemplate(BaseModule):
 
         # 3. obtain prev embeddings (bs, num_frames, bev_h * bev_w, dims).
         if self.prev_render_neck:
-            from .visualization import save_bev_render_compare
-            import time
             render_dict = self.prev_render_neck(prev_features.view(bs, num_frames, bev_w, bev_h, emebd_dim).transpose(2,3), cond_norm_dict)
-            save_bev_render_compare(prev_features, render_dict['bev_embed'], bs, num_frames, bev_w, bev_h, emebd_dim, prefix=f'bev_render_{time.strftime("%Y%m%d_%H%M%S")}')
+            # Visualization is diagnostic-only.  Writing it during every
+            # rollout creates many PNGs and can slow multi-GPU training.
+            if getattr(self.prev_render_neck, 'viz_response', False):
+                from .visualization import save_bev_render_compare
+                import time
+                save_bev_render_compare(
+                    prev_features, render_dict['bev_embed'], bs, num_frames,
+                    bev_w, bev_h, emebd_dim,
+                    prefix=f'bev_render_{time.strftime("%Y%m%d_%H%M%S")}')
             prev_features = render_dict['bev_embed']
             bev_sem_pred = render_dict['bev_sem_pred']  # B,cls,H,W
 

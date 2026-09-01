@@ -144,6 +144,15 @@ class Drive_OccWorld_V2(BEVFormer):
         self._viz_pcd_path = _viz_pcd_path
         # Set by tools/test.py only when prediction artifacts were requested.
         self._return_prediction_artifacts = False
+        # -1 means save every sample.  A non-negative value is the exclusive
+        # upper bound for stable dataset indices in prediction artifacts.
+        self._prediction_artifact_limit = -1
+        # ``None`` preserves leading-index selection.  A set is populated by
+        # tools/test.py for sequence-balanced prediction saving.
+        self._prediction_artifact_indices = None
+        # Synchronized per-stage timing is useful for debugging but serializes
+        # every inference batch and produces one log block per batch.
+        self._profile_test = False
 
         # remove the useless modules in pts_bbox_head
         #  * box/cls prediction head; decoder transformer.
@@ -168,6 +177,33 @@ class Drive_OccWorld_V2(BEVFormer):
 
     def set_epoch(self, epoch):
         self.training_epoch = epoch
+
+    def train(self, mode=True):
+        """Keep a frozen base deterministic during refiner diagnostics.
+
+        The runner invokes ``model.train()`` at every epoch.  Parameter
+        freezing alone would still reactivate dropout in the frozen BEV model,
+        so diagnostic runs explicitly put all base children in eval mode and
+        restore training mode only for the selected refiner modules.
+        """
+        super().train(mode)
+        freeze_gap = getattr(self, 'freeze_gap_refiner_base', False)
+        if not (mode and freeze_gap):
+            return self
+        for module in self.children():
+            module.eval()
+        trainable_names = []
+        if freeze_gap:
+            trainable_names.extend((
+                'gap_refiner_bev_proj', 'gap_refiner_stem',
+                'gap_refiner_blocks_module', 'gap_refiner_gate',
+                'gap_refiner_delta', 'gap_refiner_image_proj',
+                'gap_refiner_image_view_attn', 'gap_refiner_image_fuse'))
+        for name in trainable_names:
+            module = getattr(self.future_pred_head, name, None)
+            if module is not None:
+                module.train()
+        return self
 
     ####################### Image Feature Extraction. #######################
     @auto_fp16(apply_to=('img'))
@@ -324,7 +360,7 @@ class Drive_OccWorld_V2(BEVFormer):
         return tgt_grids, aligned_bev_grids, ref2future, future_to_history_list.transpose(-1, -2)
     
 
-    def obtain_ref_bev(self, img, img_metas, prev_bev):
+    def obtain_ref_bev(self, img, img_metas, prev_bev, return_img_feats=False):
         # Extract current BEV features.
         # C1. Forward.
         img_feats = self.extract_feat(img=img, img_metas=img_metas)
@@ -334,11 +370,14 @@ class Drive_OccWorld_V2(BEVFormer):
         # C3. BEVFormer Encoder Forward.
         # ref_bev: bs, bev_h * bev_w, c
         ref_bev = self.pts_bbox_head(img_feats, img_metas, prev_bev, only_bev=True)
+        if return_img_feats:
+            return ref_bev, img_feats
         return ref_bev
 
     
-    def future_pred(self, prev_bev_input, action_condition_dict, cond_norm_dict, plan_dict, 
-                    valid_frames, img_metas, prev_img_metas, num_frames, future_bev=None):
+    def future_pred(self, prev_bev_input, action_condition_dict, cond_norm_dict, plan_dict,
+                    valid_frames, img_metas, prev_img_metas, num_frames, future_bev=None,
+                    current_img_feats=None):
         
         # D1. preparations.
         # prev_bev_input: B,memory_queue_len,HW,C
@@ -357,7 +396,8 @@ class Drive_OccWorld_V2(BEVFormer):
         if future_frame_num == 0:
             return {
                 'next_bev_preds': self.future_pred_head.forward_head(
-                    torch.stack(next_bev_feats, 0)),
+                    torch.stack(next_bev_feats, 0), img_feats=current_img_feats,
+                    img_metas=img_metas),
                 'next_bev_sem': next_bev_sem,
             }
 
@@ -428,7 +468,8 @@ class Drive_OccWorld_V2(BEVFormer):
         # D4. forward head.
         next_bev_feats = torch.stack(next_bev_feats, 0)
         # forward head
-        next_bev_preds = self.future_pred_head.forward_head(next_bev_feats)
+        next_bev_preds = self.future_pred_head.forward_head(
+            next_bev_feats, img_feats=current_img_feats, img_metas=img_metas)
 
         ret_dict = {
             'next_bev_preds': next_bev_preds,
@@ -503,7 +544,13 @@ class Drive_OccWorld_V2(BEVFormer):
         # preds [Lout, inter_num, bs, bev_h * bev_w, d, num_cls]    Lout = cur + future_select
         occ_preds = occ_preds.permute(1, 0, 2, 5, 3, 4)
         inter_num, select_frames, bs, num_cls, hw, d = occ_preds.shape
-        occ_preds = occ_preds.view(inter_num, select_frames*bs, num_cls, self.bev_w, self.bev_h, d).transpose(3,4) # TODO: now the feature map size is the same as the output size, not efficient!
+        # permute above makes this tensor non-contiguous when both time and
+        # batch dimensions have size > 1.  reshape preserves the intended
+        # [time, batch] flattening and materializes contiguous storage only
+        # when required.
+        occ_preds = occ_preds.reshape(
+            inter_num, select_frames * bs, num_cls,
+            self.bev_w, self.bev_h, d).transpose(3, 4)
         # gts; preserve every sample when BATCH_SIZE > 1.
         occ_gts = self._format_occ_targets(occ_gts, select_frames, bs)
         ground_height, ground_valid = self._format_ground_targets(
@@ -515,12 +562,13 @@ class Drive_OccWorld_V2(BEVFormer):
             occ_gts, ground_height=ground_height, ground_valid=ground_valid))
         return losses_occupancy
 
-    def current_occ_prediction(self, ref_bev):
+    def current_occ_prediction(self, ref_bev, img_feats=None, img_metas=None):
         """Run only the semantic-occupancy heads for the current frame."""
         num_heads = len(self.future_pred_head.bev_pred_head)
         current_bev = ref_bev.unsqueeze(0).unsqueeze(0).repeat(
             1, num_heads, 1, 1, 1).contiguous()
-        return dict(next_bev_preds=self.future_pred_head.forward_head(current_bev),
+        return dict(next_bev_preds=self.future_pred_head.forward_head(
+                        current_bev, img_feats=img_feats, img_metas=img_metas),
                     next_bev_sem=[])
     
     def compute_sem_norm_loss(self, bev_sem_preds, occ_gts):
@@ -554,7 +602,7 @@ class Drive_OccWorld_V2(BEVFormer):
         # preds
         occ_preds = occ_preds.permute(1, 0, 2, 5, 3, 4)
         inter_num, select_frames, bs, num_cls, hw, d = occ_preds.shape
-        occ_preds = occ_preds.view(
+        occ_preds = occ_preds.reshape(
             inter_num, select_frames * bs, num_cls, self.bev_w, self.bev_h, d
         ).transpose(3, 4)
         # gts; preserve every sample when BATCH_SIZE > 1.
@@ -670,7 +718,16 @@ class Drive_OccWorld_V2(BEVFormer):
         # C. Extract current BEV features.
         img = img[:, -1, ...]
         img_metas = [each[num_frames-1] for each in img_metas]
-        ref_bev = self.obtain_ref_bev(img, img_metas, prev_bev)
+        needs_gap_image = bool(getattr(
+            self.future_pred_head, 'use_gap_residual_refiner', False) and
+            getattr(self.future_pred_head,
+                    'gap_refiner_use_image_features', False))
+        if needs_gap_image:
+            ref_bev, current_img_feats = self.obtain_ref_bev(
+                img, img_metas, prev_bev, return_img_feats=True)
+        else:
+            ref_bev = self.obtain_ref_bev(img, img_metas, prev_bev)
+            current_img_feats = None
 
         sem_occupancy = None
         if self.turn_on_plan:
@@ -695,7 +752,8 @@ class Drive_OccWorld_V2(BEVFormer):
         if self.only_train_cur_frame:
             # The former code only defined ret_dict inside this else branch,
             # so a zero-future occupancy task could not be trained.
-            ret_dict = self.current_occ_prediction(ref_bev)
+            ret_dict = self.current_occ_prediction(
+                ref_bev, img_feats=current_img_feats, img_metas=img_metas)
         else:
             if self.supervise_all_future:
                 valid_frames.extend(list(range(1, self.future_pred_frame_num + 1)))
@@ -703,8 +761,15 @@ class Drive_OccWorld_V2(BEVFormer):
                 train_frame = np.random.choice(np.arange(1, self.future_pred_frame_num + 1), 1)[0]
                 valid_frames.append(train_frame)
             # D1. prepare memory_queue
-            prev_bev_list = torch.stack(prev_bev_list, dim=1)
-            prev_bev_list = torch.cat([prev_bev_list, ref_bev.unsqueeze(1)], dim=1)[:, -self.memory_queue_len:, ...]
+            if prev_bev_list:
+                prev_bev_list = torch.stack(prev_bev_list, dim=1)
+                prev_bev_list = torch.cat(
+                    [prev_bev_list, ref_bev.unsqueeze(1)], dim=1)
+            else:
+                # ``history_queue_length=0``: current BEV is the complete
+                # temporal context rather than stacking an empty list.
+                prev_bev_list = ref_bev.unsqueeze(1)
+            prev_bev_list = prev_bev_list[:, -self.memory_queue_len:, ...]
             # D2. prepare conditional-normalization dict
             if self.future_pred_head.prev_render_neck.sem_norm and self.future_pred_head.prev_render_neck.sem_gt_train and self.training_epoch < 12:
                 occ_gts = segmentation[0][self.future_pred_head.history_queue_length+1-self.memory_queue_len:-1]
@@ -718,8 +783,9 @@ class Drive_OccWorld_V2(BEVFormer):
             plan_dict = {'gt_traj': sdc_planning, 'pred_traj': pose_pred}
 
             # D5. predict future occ in auto-regressive manner
-            ret_dict = self.future_pred(prev_bev_list, action_condition_dict, cond_norm_dict, plan_dict, 
-                                                                            valid_frames, img_metas, prev_img_metas, num_frames, future_bev=future_bev)
+            ret_dict = self.future_pred(prev_bev_list, action_condition_dict, cond_norm_dict, plan_dict,
+                                                                            valid_frames, img_metas, prev_img_metas, num_frames, future_bev=future_bev,
+                                                                            current_img_feats=current_img_feats)
         # E. Compute Loss
         losses = dict()
         # E1. Compute loss for occ predictions.
@@ -749,7 +815,9 @@ class Drive_OccWorld_V2(BEVFormer):
 
     def _build_prediction_artifacts(self, occ_preds, segmentation, img_metas,
                                     sample_idx, pose_pred=None,
-                                    sdc_planning=None):
+                                    sdc_planning=None,
+                                    prediction_limit=-1,
+                                    prediction_indices=None):
         """Convert occupancy logits into compact per-sample CPU artifacts."""
         # [Lout, inter, B, HW, Z, C] -> final decoder [T*B, C, X, Y, Z].
         occ_preds = occ_preds.permute(1, 0, 2, 5, 3, 4)
@@ -762,8 +830,8 @@ class Drive_OccWorld_V2(BEVFormer):
         if logits.shape[-3:] != targets.shape[-3:]:
             logits = F.interpolate(logits, size=targets.shape[-3:],
                                    mode='trilinear', align_corners=False)
-        pred_labels = torch.argmax(logits, dim=1).reshape(
-            num_frames, batch_size, *targets.shape[-3:])
+        logits = logits.reshape(num_frames, batch_size, num_classes,
+                                *targets.shape[-3:])
         target_labels = targets.reshape(num_frames, batch_size,
                                         *targets.shape[-3:])
         if sample_idx is None:
@@ -773,18 +841,28 @@ class Drive_OccWorld_V2(BEVFormer):
 
         artifacts = []
         for batch_index in range(batch_size):
+            if (prediction_indices is not None and
+                    sample_indices[batch_index] not in prediction_indices):
+                continue
+            if (prediction_indices is None and prediction_limit >= 0 and
+                    sample_indices[batch_index] >= prediction_limit):
+                continue
+            # Sequence-balanced saving usually selects only one sample from a
+            # batch.  Keep argmax and GPU-to-CPU copies proportional to those
+            # selected samples instead of materialising the entire batch.
+            pred_labels = torch.argmax(logits[:, batch_index], dim=1)
             meta = img_metas[batch_index]
             artifact = dict(
                 sample_index=int(sample_indices[batch_index]),
                 scene_token=str(meta.get('scene_token', 'scene')),
                 lidar_token=str(meta.get('lidar_token', batch_index)),
-                current_pred=pred_labels[0, batch_index].cpu().numpy().astype(np.uint8),
+                current_pred=pred_labels[0].cpu().numpy().astype(np.uint8),
                 current_gt=target_labels[0, batch_index].cpu().numpy().astype(np.uint8),
                 point_cloud_range=np.asarray(self.point_cloud_range, dtype=np.float32),
                 num_classes=int(self.future_pred_head.num_classes),
             )
             if num_frames > 1:
-                artifact['future_pred'] = pred_labels[1:, batch_index].cpu().numpy().astype(np.uint8)
+                artifact['future_pred'] = pred_labels[1:].cpu().numpy().astype(np.uint8)
                 artifact['future_gt'] = target_labels[1:, batch_index].cpu().numpy().astype(np.uint8)
             if pose_pred is not None:
                 artifact['trajectory_pred'] = torch.cumsum(
@@ -795,7 +873,23 @@ class Drive_OccWorld_V2(BEVFormer):
             artifacts.append(artifact)
         return artifacts
 
-    @avg_sections(name="test", unit="ms", warmup=2, sync=torch.cuda.synchronize)
+    def _should_build_prediction_artifacts(self, sample_idx):
+        """Whether this batch contains an artifact selected for saving."""
+        prediction_indices = self._prediction_artifact_indices
+        if prediction_indices is not None:
+            if sample_idx is None:
+                return True
+            sample_indices = torch.as_tensor(sample_idx).reshape(-1)
+            return any(int(index) in prediction_indices
+                       for index in sample_indices.detach().cpu().tolist())
+        prediction_limit = self._prediction_artifact_limit
+        if prediction_limit < 0 or sample_idx is None:
+            return True
+        sample_indices = torch.as_tensor(sample_idx).reshape(-1)
+        return bool(torch.any(sample_indices < prediction_limit))
+
+    @avg_sections(name="test", unit="ms", warmup=2,
+                  sync=torch.cuda.synchronize, enabled_attr='_profile_test')
     def forward_test(self, 
                      img_metas, 
                      img=None,
@@ -833,22 +927,37 @@ class Drive_OccWorld_V2(BEVFormer):
             # C. Extract current BEV features.
             img = img[:, -1, ...]
             img_metas = [each[num_frames-1] for each in img_metas]
-            ref_bev = self.obtain_ref_bev(img, img_metas, prev_bev)
+            needs_gap_image = bool(getattr(
+                self.future_pred_head, 'use_gap_residual_refiner', False) and
+                getattr(self.future_pred_head,
+                        'gap_refiner_use_image_features', False))
+            if needs_gap_image:
+                ref_bev, current_img_feats = self.obtain_ref_bev(
+                    img, img_metas, prev_bev, return_img_feats=True)
+            else:
+                ref_bev = self.obtain_ref_bev(img, img_metas, prev_bev)
+                current_img_feats = None
 
         with self.t('planning'):
             if self.turn_on_plan:
                 pose_pred = self.plan_head(ref_bev, command[:, 0])
                 if self.only_plan:
                     self.evaluate_plan(pose_pred, sdc_planning[:, :self.n_future], sdc_planning_mask[:, :self.n_future], segmentation_bev[:, :self.n_future], img_metas)
-                return {}
+                    return {}
             else:
                 pose_pred = None
 
         # D. Predict future BEV.
         valid_frames = [] # no frame have grad
         # D1. prepare memory_queue
-        prev_bev_list = torch.stack(prev_bev_list, dim=1)
-        prev_bev_list = torch.cat([prev_bev_list, ref_bev.unsqueeze(1)], dim=1)[:, -self.memory_queue_len:, ...]
+        if prev_bev_list:
+            prev_bev_list = torch.stack(prev_bev_list, dim=1)
+            prev_bev_list = torch.cat(
+                [prev_bev_list, ref_bev.unsqueeze(1)], dim=1)
+        else:
+            # Keep inference consistent with the zero-history training path.
+            prev_bev_list = ref_bev.unsqueeze(1)
+        prev_bev_list = prev_bev_list[:, -self.memory_queue_len:, ...]
         # D2. prepare conditional-normalization dict
         cond_norm_dict = {'occ_gts': None}
         # D3. prepare action condition dict
@@ -858,7 +967,8 @@ class Drive_OccWorld_V2(BEVFormer):
 
         # D5. predict future occ in auto-regressive manner
         ret_dict = self.future_pred(prev_bev_list, action_condition_dict, cond_norm_dict, plan_dict,
-                                                                valid_frames, img_metas, prev_img_metas, num_frames)
+                                                                valid_frames, img_metas, prev_img_metas, num_frames,
+                                                                current_img_feats=current_img_feats)
 
 
         # E. Evaluate
@@ -868,11 +978,14 @@ class Drive_OccWorld_V2(BEVFormer):
         test_output.update(hist_for_iou=occ_iou, hist_for_iou_current=occ_iou_current,
                            hist_for_iou_future=occ_iou_future, hist_for_iou_future_time_weighting=occ_iou_future_time_weighting)
 
-        if self._return_prediction_artifacts:
+        if (self._return_prediction_artifacts and
+                self._should_build_prediction_artifacts(kwargs.get('sample_idx'))):
             test_output['prediction_artifacts'] = self._build_prediction_artifacts(
                 ret_dict['next_bev_preds'], segmentation, img_metas,
                 kwargs.get('sample_idx'), pose_pred=pose_pred,
-                sdc_planning=sdc_planning)
+                sdc_planning=sdc_planning,
+                prediction_limit=self._prediction_artifact_limit,
+                prediction_indices=self._prediction_artifact_indices)
 
         # evluate plan
         if self.turn_on_plan:

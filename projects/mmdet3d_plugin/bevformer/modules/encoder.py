@@ -206,6 +206,16 @@ class BEVFormerEncoder(TransformerLayerSequence):
                 level_start_index, prev_bev, shift, img_metas,
                 coarse_img_feats, *args, **acfs_kwargs)
 
+        if getattr(self, 'use_nearfar_bev', False):
+            # The deterministic near/far path also consumes image metadata for
+            # camera projection, but does not require ACFS coarse-image cues.
+            nearfar_kwargs = dict(kwargs)
+            img_metas = nearfar_kwargs.pop('img_metas')
+            return self._forward_nearfar(
+                bev_query, key, value, bev_h, bev_w, bev_pos, spatial_shapes,
+                level_start_index, prev_bev, shift, img_metas, *args,
+                **nearfar_kwargs)
+
         output = bev_query  # HW,B,C
         intermediate = []
 

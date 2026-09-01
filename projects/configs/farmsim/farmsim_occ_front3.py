@@ -5,10 +5,23 @@ point_cloud_range = [0.0, -10.0, -2.0, 20.0, 10.0, 3.0]
 occ_size = [100, 100, 25]
 bev_h_ = 100
 bev_w_ = 100
+plan_grid_conf = dict(
+    xbound=[0.0, 20.0, 0.2],
+    ybound=[-10.0, 10.0, 0.2],
+    zbound=[-2.0, 3.0, 5.0],
+)
 
 model = dict(
     point_cloud_range=point_cloud_range,
     bev_h=bev_h_, bev_w=bev_w_,
+    # The inherited IR-WM E2E planner is also applied to the front3 BEV.
+    # Its input has 100 x 100 queries here, rather than the source config's
+    # 200 x 200 surround-view BEV.
+    plan_head=dict(
+        bev_h=bev_h_, bev_w=bev_w_,
+        plan_grid_conf=plan_grid_conf,
+        positional_encoding=dict(row_num_embed=bev_h_, col_num_embed=bev_w_),
+    ),
     future_pred_head=dict(
         bev_h=bev_h_, bev_w=bev_w_, pc_range=point_cloud_range,
         positional_encoding=dict(row_num_embed=bev_h_, col_num_embed=bev_w_),

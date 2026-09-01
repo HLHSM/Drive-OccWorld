@@ -229,6 +229,12 @@ class BEVFormer(MVXTwoStageDetector):
 
     def obtain_history_bev(self, img, img_metas, drop_prev_index=-1):
         num_frames = img.shape[1]   # 只有history 没有当前帧
+        # A zero-history FarmSim run contains only the current image.  Avoid
+        # passing an empty temporal batch through the feature extractor and
+        # let the caller seed the future-prediction memory with that current
+        # BEV instead.
+        if num_frames == 0:
+            return None, []
         backward_prev_frame_num = self.backwarded_prev_frame_num if self.training else 0    # 1
         backward_prev_start_idx = num_frames - backward_prev_frame_num                      # 4-1=3
         backward_prev_end_idx = backward_prev_start_idx + backward_prev_frame_num           # 3+1=4

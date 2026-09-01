@@ -168,7 +168,10 @@ class PlanningMetric_v2(Metric):
             )
             m1 = torch.logical_and(m1, torch.logical_not(gt_box_coll))
 
-            ti = torch.arange(n_future)
+            # ``segmentation`` is moved onto each local DDP GPU by the
+            # FarmSim evaluator, so the temporal advanced-index tensor must
+            # be created on that same device as well.
+            ti = torch.arange(n_future, device=segmentation.device)
             obj_coll_sum[ti[m1]] += segmentation[i, ti[m1], xi[m1], yi[m1]].long()
 
             m2 = torch.logical_not(gt_box_coll)

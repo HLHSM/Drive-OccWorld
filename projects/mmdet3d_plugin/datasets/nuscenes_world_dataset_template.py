@@ -616,7 +616,9 @@ class NuScenesWorldDatasetTemplate(CustomNuScenesDataset):
         
         if 'planning_results_computed' in results.keys():
             planning_results_computed = results['planning_results_computed']
-            num_frames = len(planning_results_computed['L2'])
+            num_frames = len(planning_results_computed.get('L2', []))
+            if num_frames == 0:
+                return eval_results
             planning_tab = PrettyTable()
             planning_tab.field_names = [
                 "metrics", "0.5s", "1.0s", "1.5s", "2.0s", "2.5s", "3.0s"][:num_frames+1]
@@ -626,6 +628,11 @@ class NuScenesWorldDatasetTemplate(CustomNuScenesDataset):
                 row_value.append(key)
                 for i in range(len(value)):
                     row_value.append('%.4f' % float(value[i]))
+                    # Expose every planning horizon as a scalar so the epoch
+                    # logger and log.json persist trajectory metrics, rather
+                    # than only printing a PrettyTable to stdout.
+                    eval_results[f'planning_{key}_{(i + 1) * 0.5:.1f}s'] = \
+                        float(value[i])
                 planning_tab.add_row(row_value)
             print(planning_tab)
 

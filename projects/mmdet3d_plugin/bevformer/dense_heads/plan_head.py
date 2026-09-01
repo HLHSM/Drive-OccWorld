@@ -382,11 +382,10 @@ class PlanHead_v1(BaseModule):
         bev_feats = rearrange(bev_feats, 'b c h w -> b (w h) c')
 
         # # 1. plan_query
-        plan_query = self.plan_embedding.weight.to(dtype)
-        plan_query = plan_query[None]   
+        plan_query = self.plan_embedding.weight.to(dtype).unsqueeze(0).expand(
+            bs, -1, -1)
         # navi_embed
-        navi_embed = self.navi_embedding.weight[command]
-        navi_embed = navi_embed[None]
+        navi_embed = self.navi_embedding(command.reshape(bs)).unsqueeze(1)
         # mlp_fuser
         plan_query = torch.cat([plan_query, navi_embed], dim=-1)
         plan_query = self.mlp_fuser(plan_query)
@@ -545,11 +544,10 @@ class PlanHead_v2(BaseModule):
 
         # # 1. plan_query
         # plan_query = select_traj
-        plan_query = self.plan_embedding.weight.to(dtype)
-        plan_query = plan_query[None]
+        plan_query = self.plan_embedding.weight.to(dtype).unsqueeze(0).expand(
+            bs, -1, -1)
         # navi_embed
-        navi_embed = self.navi_embedding.weight[command]
-        navi_embed = navi_embed[None]
+        navi_embed = self.navi_embedding(command.reshape(bs)).unsqueeze(1)
         # mlp_fuser
         plan_query = torch.cat([plan_query, navi_embed], dim=-1)
         plan_query = self.mlp_fuser(plan_query)
