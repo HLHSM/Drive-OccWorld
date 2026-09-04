@@ -53,6 +53,10 @@ mkdir -p pretrained
 wget -c https://github.com/zhiqi-li/storage/releases/download/v1.0/r101_dcn_fcos3d_pretrain.pth \
   -O pretrained/r101_dcn_fcos3d_pretrain.pth
 
+mkdir -p pretrained
+wget -c https://github.com/zhiqi-li/storage/releases/download/v1.0/r50_fcos3d_pretrain.pth \
+  -O pretrained/r50_fcos3d_pretrain.pth
+
 # 仅使用 InternImage 主干时才需要安装 DCNv3。
 # FarmSim 默认的 ResNet-101 主干不使用 DCNv3，无需执行下面两行。
 cd projects/mmdet3d_plugin/bevformer/backbones/ops_dcnv3

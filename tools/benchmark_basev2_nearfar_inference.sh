@@ -23,8 +23,6 @@ common_args=(
   model.turn_on_plan=False model.future_pred_head.use_plan_traj=False
   model.future_pred_head.history_queue_length=0
   model.future_pred_frame_num=0 model.test_future_frame_num=0
-  model.future_pred_head.use_tghd=False
-  model.future_pred_head.use_dual_hardness_refinement=False
   model.future_pred_head.use_gap_residual_refiner=False
   predict_trajectory=False data.test.data_root="${DATA_ROOT}"
   data.test.ann_file="${VAL_ANN_FILE}" data.test.queue_length=0

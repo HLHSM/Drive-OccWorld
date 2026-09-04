@@ -87,7 +87,7 @@ class FarmSimWorldDataset(torch.utils.data.Dataset):
     def __init__(self, ann_file, data_root=None, queue_length=2, camera_mode='surround',
                  image_size=(640, 360), front_only=False, test_mode=False,
                  future_pred_frame_num=0, future_traj_frame_num=0,
-                 predict_trajectory=False, return_ground_height=False,
+                 predict_trajectory=False,
                  max_samples=None, pipeline=None,
                  **kwargs):
         del pipeline, kwargs
@@ -101,7 +101,6 @@ class FarmSimWorldDataset(torch.utils.data.Dataset):
         self.future_pred_frame_num = int(future_pred_frame_num)
         self.future_traj_frame_num = int(future_traj_frame_num) if predict_trajectory else 0
         self.predict_trajectory = bool(predict_trajectory)
-        self.return_ground_height = bool(return_ground_height)
         self.max_samples = None if max_samples is None else int(max_samples)
         if self.max_samples is not None and self.max_samples < 1:
             raise ValueError('max_samples must be positive when specified')
@@ -261,33 +260,6 @@ class FarmSimWorldDataset(torch.utils.data.Dataset):
             raw = raw[100:, :, :]
         return torch.from_numpy(raw.astype(np.int64, copy=False))
 
-    def _load_ground_height(self, seq, frame_id):
-        """Load explicit UE terrain height as [x, y] meters plus validity."""
-        meta = self._meta(seq, frame_id)
-        occupancy = meta['semantic_occupancy']
-        surface = occupancy['ground_surface']
-        seq_path = self._sequence_path(seq)
-        index = np.fromfile(seq_path / surface['index_file'], dtype='<u2')
-        valid = np.fromfile(seq_path / surface['valid_mask_file'], dtype=np.uint8)
-        x_size, y_size, _ = occupancy['dimensions_xyz']
-        expected = x_size * y_size
-        if index.size != expected or valid.size != expected:
-            raise RuntimeError(
-                f'{seq_path}: unexpected ground-surface size for frame {frame_id}')
-        # Source layout is [y, x], x-fastest; model uses [x, y].
-        index = index.reshape(y_size, x_size).transpose(1, 0)
-        valid = valid.reshape(y_size, x_size).transpose(1, 0).astype(bool)
-        min_z = float(occupancy['min_m_xyz'][2])
-        voxel_size = float(occupancy['voxel_size_m'])
-        # ``index`` is the first valid layer.  Supervise its voxel center so
-        # height targets and decoder z centers use the same convention.
-        ground_height = min_z + (index.astype(np.float32) + 0.5) * voxel_size
-        if self.front_only:
-            ground_height = ground_height[100:, :]
-            valid = valid[100:, :]
-        return (torch.from_numpy(ground_height),
-                torch.from_numpy(valid))
-
     def __getitem__(self, index):
         seq_idx, frame_index = self.samples[index]
         seq = self.sequences[seq_idx]
@@ -339,16 +311,6 @@ class FarmSimWorldDataset(torch.utils.data.Dataset):
             # The original detector receives a list after mmcv collation.
             segmentation=segmentation,
         )
-        # ``getattr`` also keeps worker processes created from a pre-TGHD
-        # dataset instance compatible when source code is updated in place.
-        # Fresh instances always define the attribute in ``__init__`` above.
-        if getattr(self, 'return_ground_height', False):
-            ground_targets = [self._load_ground_height(seq, frame_id)
-                              for frame_id in occupancy_ids]
-            result['ground_height'] = torch.stack(
-                [item[0] for item in ground_targets], dim=0)
-            result['ground_valid'] = torch.stack(
-                [item[1] for item in ground_targets], dim=0)
         if self.predict_trajectory:
             trajectory = self._trajectory_targets(seq, reference_pose, future_traj_ids)
             steps = self.future_traj_frame_num

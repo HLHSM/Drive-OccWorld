@@ -172,7 +172,6 @@ class BEVFormerEncoder(TransformerLayerSequence):
                 valid_ratios=None,
                 prev_bev=None,
                 shift=0.,
-                coarse_img_feats=None,
                 **kwargs):
         """Forward function for `TransformerDecoder`.
         Args:
@@ -193,22 +192,9 @@ class BEVFormerEncoder(TransformerLayerSequence):
                 [num_layers, num_query, bs, embed_dims].
         """
 
-        if getattr(self, 'use_acfs_bev', False):
-            if coarse_img_feats is None:
-                raise ValueError('ACFS-BEV requires coarse_img_feats from the image neck.')
-            # ``img_metas`` is consumed explicitly by the sparse-query path
-            # for projection.  Remove it from kwargs so it is not passed a
-            # second time through ``**kwargs``.
-            acfs_kwargs = dict(kwargs)
-            img_metas = acfs_kwargs.pop('img_metas')
-            return self._forward_acfs(
-                bev_query, key, value, bev_h, bev_w, bev_pos, spatial_shapes,
-                level_start_index, prev_bev, shift, img_metas,
-                coarse_img_feats, *args, **acfs_kwargs)
-
         if getattr(self, 'use_nearfar_bev', False):
             # The deterministic near/far path also consumes image metadata for
-            # camera projection, but does not require ACFS coarse-image cues.
+            # camera projection, but does not require coarse image cues.
             nearfar_kwargs = dict(kwargs)
             img_metas = nearfar_kwargs.pop('img_metas')
             return self._forward_nearfar(
@@ -321,9 +307,13 @@ class BEVFormerLayer(MyCustomBaseTransformerLayer):
             ffn_num_fcs=ffn_num_fcs,
             **kwargs)
         self.fp16_enabled = False
-        assert len(operation_order) == 6
-        assert set(operation_order) == set(
-            ['self_attn', 'norm', 'cross_attn', 'ffn'])
+        valid_orders = {
+            ('self_attn', 'norm', 'cross_attn', 'norm', 'ffn', 'norm'),
+            ('cross_attn', 'norm', 'ffn', 'norm'),
+        }
+        assert tuple(operation_order) in valid_orders, (
+            'BEVFormerLayer expects the standard temporal order or the '
+            f'no-temporal order, got {operation_order}.')
 
     def forward(self,
                 query,
@@ -477,9 +467,13 @@ class MM_BEVFormerLayer(MyCustomBaseTransformerLayer):
             ffn_num_fcs=ffn_num_fcs,
             **kwargs)
         self.fp16_enabled = False
-        assert len(operation_order) == 6
-        assert set(operation_order) == set(
-            ['self_attn', 'norm', 'cross_attn', 'ffn'])
+        valid_orders = {
+            ('self_attn', 'norm', 'cross_attn', 'norm', 'ffn', 'norm'),
+            ('cross_attn', 'norm', 'ffn', 'norm'),
+        }
+        assert tuple(operation_order) in valid_orders, (
+            'BEVFormerLayerV2 expects the standard temporal order or the '
+            f'no-temporal order, got {operation_order}.')
         self.cross_model_weights = torch.nn.Parameter(torch.tensor(0.5), requires_grad=True) 
         if lidar_cross_attn_layer:
             self.lidar_cross_attn_layer = build_attention(lidar_cross_attn_layer)

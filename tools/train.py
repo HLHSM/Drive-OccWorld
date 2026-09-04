@@ -74,16 +74,6 @@ def parse_args():
                          help='future trajectory steps when enabled')
     farmsim.add_argument('--use-fp16', type=int, choices=(0, 1),
                          help='enable AMP FP16 with dynamic loss scaling')
-    farmsim.add_argument('--use-tghd', type=int, choices=(0, 1),
-                         help='enable the Terrain-Normalized Geometry-Semantic Height Decoder')
-    farmsim.add_argument('--use-acfs-bev', type=int, choices=(0, 1),
-                         help='enable Agriculture-aware Coarse-to-Fine Sparse BEV')
-    farmsim.add_argument('--acfs-active-ratio', type=float, default=0.5,
-                         help='fraction of BEV queries receiving full attention')
-    farmsim.add_argument('--use-row-topology', type=int, choices=(0, 1),
-                         help='enable crop-row directional topology refinement')
-    farmsim.add_argument('--row-topology-loss-weight', type=float, default=0.1,
-                         help='weight of the crop-row adjacency supervision')
     farmsim.add_argument('--use-crop-gap-refinement', type=int, choices=(0, 1),
                          help='enable crop/free boundary and gap refinement')
     farmsim.add_argument('--crop-gap-boundary-loss-weight', type=float,
@@ -106,29 +96,23 @@ def parse_args():
                          help='hidden width of the selective C2F subquery decoder')
     farmsim.add_argument('--use-dual-hardness-refinement', type=int,
                          choices=(0, 1),
-                         help='enable training-only agricultural dual-hardness mining')
+                         help='enable ADHR training-only agricultural hard-voxel refinement')
     farmsim.add_argument('--dual-hardness-active-ratio', type=float, default=0.04,
-                         help='fraction of voxel positions selected for refinement')
+                         help='fraction of voxel positions selected by ADHR')
     farmsim.add_argument('--dual-hardness-gap-ratio', type=float, default=0.5,
-                         help='selected-voxel quota reserved for crop/free gaps')
+                         help='ADHR selected-voxel quota reserved for crop/free gaps')
     farmsim.add_argument('--dual-hardness-channels', type=int, default=128,
-                         help='hidden width of the dual-hardness voxel refiner')
+                         help='hidden width of the ADHR voxel refiner')
     farmsim.add_argument('--dual-hardness-local-scale', type=float, default=0.25,
-                         help='local GT anisotropy weighting scale')
+                         help='ADHR local GT anisotropy weighting scale')
     farmsim.add_argument('--dual-hardness-gap-boost', type=float, default=0.5,
-                         help='additional crop/free gap weight for selected voxels')
+                         help='ADHR crop/free gap weighting boost')
     farmsim.add_argument('--dual-hardness-loss-weight', type=float, default=0.5,
-                         help='selected-voxel refinement loss weight')
+                         help='ADHR selected-voxel refinement loss weight')
     farmsim.add_argument('--dual-hardness-distill-weight', type=float, default=0.1,
-                         help='EMA refinement-teacher distillation loss weight')
+                         help='ADHR EMA-teacher distillation loss weight')
     farmsim.add_argument('--dual-hardness-ema-decay', type=float, default=0.99,
-                         help='EMA decay for the training-only refinement teacher')
-    farmsim.add_argument('--use-fixed-group-decoder', type=int, choices=(0, 1),
-                         help='enable fixed free/crop/other semantic group decoder')
-    farmsim.add_argument('--group-decoder-loss-weight', type=float, default=0.3,
-                         help='fixed semantic group supervision weight')
-    farmsim.add_argument('--group-decoder-prior-scale', type=float, default=1.0,
-                         help='strength of group prior added to semantic logits')
+                         help='ADHR EMA-teacher decay')
     farmsim.add_argument('--use-gap-residual-refiner', type=int, choices=(0, 1),
                          help='enable end-to-end BEV/logit gap residual refiner')
     farmsim.add_argument('--gap-refiner-channels', type=int, default=24,
@@ -171,6 +155,33 @@ def parse_args():
                          help='full-attention fraction along the near BEV axis')
     farmsim.add_argument('--nearfar-far-stride', type=int, default=2,
                          help='regular far-field BEV sampling stride')
+    farmsim.add_argument('--disable-temporal-self-attention', type=int,
+                         choices=(0, 1),
+                         help='remove temporal self-attention when --history-frames=0')
+    farmsim.add_argument('--use-r50-image-encoder', type=int, choices=(0, 1),
+                         help='use the R50 image backbone; defaults load-from to '
+                              'pretrained/r50_fcos3d_pretrain.pth when omitted')
+    farmsim.add_argument('--use-gvad-attention', type=int, choices=(0, 1),
+                         help='replace no-history TSA with geometry-visible anchor deformable attention')
+    farmsim.add_argument('--gvad-use-visibility', type=int, choices=(0, 1),
+                         default=1,
+                         help='use calibrated BEV projection visibility for GVAD anchors')
+    farmsim.add_argument('--gvad-use-local-deformable', type=int,
+                         choices=(0, 1), default=1,
+                         help='keep the local deformable sampling path in GVAD')
+    farmsim.add_argument('--gvad-num-heads', type=int, default=8,
+                         help='head count shared by GVAD local and anchor attention')
+    farmsim.add_argument('--gvad-anchor-grid-height', type=int, default=4,
+                         help='number of GVAD anchor tiles along BEV height')
+    farmsim.add_argument('--gvad-anchor-grid-width', type=int, default=8,
+                         help='number of GVAD anchor tiles along BEV width')
+    farmsim.add_argument('--use-directional-decay-retention', type=int,
+                         choices=(0, 1),
+                         help='replace no-history TSA with directional decay and selective local retention')
+    farmsim.add_argument('--ddsr-retention-radius', type=int, default=15,
+                         help='one-sided spatial context radius for directional retention')
+    farmsim.add_argument('--ddsr-local-dilation', type=int, default=3,
+                         help='dilation of the selective long local kernel')
     farmsim.add_argument('--use-efficient-baseline', type=int, choices=(0, 1),
                          help='use the 2-level FPN / 4-layer / 4-point BEV baseline')
     farmsim.add_argument(
@@ -263,10 +274,6 @@ def apply_farmsim_options(cfg, args):
             raise ValueError(f'{name} must be {qualifier}, got {value}.')
     if args.future_occ_steps < 0 or args.future_traj_steps < 0:
         raise ValueError('future occupancy and trajectory step counts cannot be negative.')
-    if not 0.0 < args.acfs_active_ratio <= 1.0:
-        raise ValueError('--acfs-active-ratio must be in (0, 1].')
-    if args.row_topology_loss_weight < 0:
-        raise ValueError('--row-topology-loss-weight must be non-negative.')
     if args.crop_gap_boundary_loss_weight < 0:
         raise ValueError('--crop-gap-boundary-loss-weight must be non-negative.')
     if args.crop_gap_free_loss_weight < 0:
@@ -287,6 +294,15 @@ def apply_farmsim_options(cfg, args):
         raise ValueError('--dual-hardness-gap-ratio must be in [0, 1].')
     if args.dual_hardness_channels < 8:
         raise ValueError('--dual-hardness-channels must be at least 8.')
+    for name, value in (
+            ('--dual-hardness-local-scale', args.dual_hardness_local_scale),
+            ('--dual-hardness-gap-boost', args.dual_hardness_gap_boost),
+            ('--dual-hardness-loss-weight', args.dual_hardness_loss_weight),
+            ('--dual-hardness-distill-weight', args.dual_hardness_distill_weight)):
+        if value < 0:
+            raise ValueError(f'{name} must be non-negative.')
+    if not 0.0 <= args.dual_hardness_ema_decay < 1.0:
+        raise ValueError('--dual-hardness-ema-decay must be in [0, 1).')
     if args.gap_refiner_channels < 8:
         raise ValueError('--gap-refiner-channels must be at least 8.')
     if args.gap_refiner_blocks < 1:
@@ -300,44 +316,57 @@ def apply_farmsim_options(cfg, args):
     if not 0.0 <= args.gap_refiner_image_crop_ratio <= 1.0:
         raise ValueError('--gap-refiner-image-crop-ratio must be in [0, 1].')
     for name, value in (
-            ('--dual-hardness-local-scale', args.dual_hardness_local_scale),
-            ('--dual-hardness-gap-boost', args.dual_hardness_gap_boost),
-            ('--dual-hardness-loss-weight', args.dual_hardness_loss_weight),
-            ('--dual-hardness-distill-weight', args.dual_hardness_distill_weight),
-            ('--group-decoder-loss-weight', args.group_decoder_loss_weight),
-            ('--group-decoder-prior-scale', args.group_decoder_prior_scale),
             ('--gap-refiner-coarse-loss-weight', args.gap_refiner_coarse_loss_weight),
             ('--gap-refiner-boundary-loss-weight', args.gap_refiner_boundary_loss_weight),
             ('--gap-refiner-gap-loss-weight', args.gap_refiner_gap_loss_weight),
             ('--gap-refiner-crop-loss-weight', args.gap_refiner_crop_loss_weight)):
         if value < 0:
             raise ValueError(f'{name} must be non-negative.')
-    if not 0.0 <= args.dual_hardness_ema_decay < 1.0:
-        raise ValueError('--dual-hardness-ema-decay must be in [0, 1).')
     if not 0.0 < args.nearfar_near_ratio <= 1.0:
         raise ValueError('--nearfar-near-ratio must be in (0, 1].')
     if args.nearfar_far_stride < 2:
         raise ValueError('--nearfar-far-stride must be at least 2.')
-    if args.use_acfs_bev == 1 and args.use_nearfar_bev == 1:
-        raise ValueError('--use-acfs-bev and --use-nearfar-bev are mutually exclusive.')
-    if args.use_tghd == 1 and args.use_row_topology == 1:
-        raise ValueError('--use-tghd and --use-row-topology cannot be combined: '
-                         'the row-topology head refines the direct 2D decoder.')
-    if args.use_tghd == 1 and args.use_crop_gap_refinement == 1:
-        raise ValueError('--use-tghd and --use-crop-gap-refinement cannot be '
-                         'combined: the refinement uses the direct 2D decoder.')
-    if args.use_tghd == 1 and args.use_selective_c2f == 1:
-        raise ValueError('--use-tghd and --use-selective-c2f cannot be '
-                         'combined: the refinement uses the direct 2D decoder.')
-    if args.use_tghd == 1 and args.use_dual_hardness_refinement == 1:
-        raise ValueError('--use-tghd and --use-dual-hardness-refinement cannot '
-                         'be combined: the refinement uses direct 2D BEV features.')
-    if args.use_tghd == 1 and args.use_fixed_group_decoder == 1:
-        raise ValueError('--use-tghd and --use-fixed-group-decoder cannot be '
-                         'combined: the group decoder uses direct 2D BEV features.')
-    if args.use_tghd == 1 and args.use_gap_residual_refiner == 1:
-        raise ValueError('--use-tghd and --use-gap-residual-refiner cannot be '
-                         'combined: the refiner uses direct 2D BEV features.')
+    if (args.disable_temporal_self_attention == 1 and
+            args.history_frames != 0):
+        raise ValueError('--disable-temporal-self-attention requires '
+                         '--history-frames=0, because it removes the only '
+                         'path that reads prev_bev.')
+    if args.use_r50_image_encoder == 1 and args.use_efficient_baseline == 1:
+        raise ValueError('--use-r50-image-encoder and --use-efficient-baseline '
+                         'cannot be combined: the latter changes the FPN and '
+                         'BEV encoder in addition to using R50.')
+    spatial_mixer_count = sum(flag == 1 for flag in (
+        args.disable_temporal_self_attention,
+        args.use_gvad_attention,
+        args.use_directional_decay_retention))
+    if spatial_mixer_count > 1:
+        raise ValueError('Choose only one of --disable-temporal-self-attention, '
+                         '--use-gvad-attention, and '
+                         '--use-directional-decay-retention.')
+    if ((args.use_gvad_attention == 1 or
+         args.use_directional_decay_retention == 1) and
+            args.history_frames != 0):
+        raise ValueError('The no-history BEV spatial mixers require '
+                         '--history-frames=0; otherwise they would discard '
+                         'the available prev_bev.')
+    if args.use_gvad_attention == 1:
+        if args.gvad_num_heads < 1 or 256 % args.gvad_num_heads:
+            raise ValueError('--gvad-num-heads must be a positive divisor of 256.')
+        if (args.gvad_anchor_grid_height < 1 or
+                args.gvad_anchor_grid_width < 1):
+            raise ValueError('GVAD anchor grid dimensions must be positive.')
+        if not (args.gvad_use_visibility or args.gvad_use_local_deformable):
+            raise ValueError('GVAD requires visibility anchors or the local '
+                             'deformable path.')
+    if args.use_directional_decay_retention == 1:
+        if args.ddsr_retention_radius < 2:
+            raise ValueError('--ddsr-retention-radius must be at least 2.')
+        if args.ddsr_local_dilation < 1:
+            raise ValueError('--ddsr-local-dilation must be positive.')
+    if (args.use_directional_decay_retention == 1 and
+            args.use_nearfar_bev == 1):
+        raise ValueError('Directional decay retention requires a dense BEV '
+                         'grid and cannot be combined with --use-nearfar-bev=1.')
     if args.data_root is not None and not osp.isdir(args.data_root):
         raise FileNotFoundError(
             f'FarmSim --data-root does not exist: {args.data_root}')
@@ -384,12 +413,14 @@ def apply_farmsim_options(cfg, args):
     has_farmsim_option = any(value is not None for value in (
         args.data_root, args.batch_size, args.image_width, args.image_height,
         args.epochs, args.history_frames, args.predict_future_occ,
-        args.predict_future_traj, args.use_fp16, args.use_tghd,
-        args.use_acfs_bev, args.use_row_topology, args.use_crop_gap_refinement,
+        args.predict_future_traj, args.use_fp16, args.use_crop_gap_refinement,
         args.use_selective_c2f, args.use_dual_hardness_refinement,
-        args.use_fixed_group_decoder,
         args.use_gap_residual_refiner,
         args.use_nearfar_bev,
+        args.disable_temporal_self_attention,
+        args.use_r50_image_encoder,
+        args.use_gvad_attention,
+        args.use_directional_decay_retention,
         args.use_efficient_baseline,
         args.num_gpus, args.train_ann_file, args.val_ann_file,
         args.workers_per_gpu, args.total_batch_size, args.grad_accum_steps))
@@ -481,19 +512,6 @@ def apply_farmsim_options(cfg, args):
     if args.total_batch_size is not None:
         cfg.farmsim_total_batch_size = args.total_batch_size
         cfg.farmsim_grad_accum_steps = grad_accum_steps
-    if args.use_tghd is not None:
-        cfg.model.future_pred_head.use_tghd = bool(args.use_tghd)
-        cfg.data.train.return_ground_height = bool(args.use_tghd)
-    if args.use_acfs_bev is not None:
-        cfg.model.pts_bbox_head.transformer.encoder.use_acfs_bev = bool(
-            args.use_acfs_bev)
-        cfg.model.pts_bbox_head.transformer.encoder.acfs_active_ratio = (
-            args.acfs_active_ratio)
-    if args.use_row_topology is not None:
-        cfg.model.future_pred_head.use_row_topology = bool(
-            args.use_row_topology)
-        cfg.model.future_pred_head.row_topology_loss_weight = (
-            args.row_topology_loss_weight)
     if args.use_crop_gap_refinement is not None:
         cfg.model.future_pred_head.use_crop_gap_refinement = bool(
             args.use_crop_gap_refinement)
@@ -528,13 +546,6 @@ def apply_farmsim_options(cfg, args):
             args.dual_hardness_distill_weight)
         cfg.model.future_pred_head.dual_hardness_ema_decay = (
             args.dual_hardness_ema_decay)
-    if args.use_fixed_group_decoder is not None:
-        cfg.model.future_pred_head.use_fixed_group_decoder = bool(
-            args.use_fixed_group_decoder)
-        cfg.model.future_pred_head.group_decoder_loss_weight = (
-            args.group_decoder_loss_weight)
-        cfg.model.future_pred_head.group_decoder_prior_scale = (
-            args.group_decoder_prior_scale)
     if args.use_gap_residual_refiner is not None:
         cfg.model.future_pred_head.use_gap_residual_refiner = bool(
             args.use_gap_residual_refiner)
@@ -567,6 +578,60 @@ def apply_farmsim_options(cfg, args):
             args.nearfar_near_ratio)
         cfg.model.pts_bbox_head.transformer.encoder.nearfar_far_stride = (
             args.nearfar_far_stride)
+    if args.disable_temporal_self_attention == 1:
+        layer_cfg = cfg.model.pts_bbox_head.transformer.encoder.transformerlayers
+        temporal_order = ('self_attn', 'norm', 'cross_attn', 'norm', 'ffn',
+                          'norm')
+        if tuple(layer_cfg.operation_order) != temporal_order:
+            raise ValueError('The configured BEV encoder does not use the '
+                             'standard TemporalSelfAttention layout.')
+        attn_cfgs = list(layer_cfg.attn_cfgs)
+        if (len(attn_cfgs) != 2 or
+                attn_cfgs[0].get('type') != 'TemporalSelfAttention'):
+            raise ValueError('Expected TemporalSelfAttention as the first '
+                             'BEV encoder attention configuration.')
+        layer_cfg.attn_cfgs = attn_cfgs[1:]
+        layer_cfg.operation_order = ('cross_attn', 'norm', 'ffn', 'norm')
+        cfg.farmsim_temporal_self_attention = False
+    elif (args.use_gvad_attention == 1 or
+          args.use_directional_decay_retention == 1):
+        layer_cfg = cfg.model.pts_bbox_head.transformer.encoder.transformerlayers
+        temporal_order = ('self_attn', 'norm', 'cross_attn', 'norm', 'ffn',
+                          'norm')
+        if tuple(layer_cfg.operation_order) != temporal_order:
+            raise ValueError('The configured BEV encoder does not use the '
+                             'standard TemporalSelfAttention layout.')
+        attn_cfgs = list(layer_cfg.attn_cfgs)
+        if (len(attn_cfgs) != 2 or
+                attn_cfgs[0].get('type') != 'TemporalSelfAttention'):
+            raise ValueError('Expected TemporalSelfAttention as the first '
+                             'BEV encoder attention configuration.')
+        mixer_cfg = dict(attn_cfgs[0])
+        if args.use_gvad_attention == 1:
+            mixer_cfg.update(
+                type='GeometryVisibleAnchorDeformableAttention',
+                num_heads=args.gvad_num_heads,
+                anchor_grid_height=args.gvad_anchor_grid_height,
+                anchor_grid_width=args.gvad_anchor_grid_width,
+                use_visibility=bool(args.gvad_use_visibility),
+                use_local_deformable=bool(args.gvad_use_local_deformable))
+            if args.gvad_use_visibility and args.gvad_use_local_deformable:
+                cfg.farmsim_bev_spatial_mixer = 'gvad'
+            elif args.gvad_use_local_deformable:
+                cfg.farmsim_bev_spatial_mixer = 'gvad_plain_anchor'
+            else:
+                cfg.farmsim_bev_spatial_mixer = 'gvad_anchor_only'
+        else:
+            mixer_cfg.update(
+                type='DirectionalDecaySelectiveRetention',
+                retention_radius=args.ddsr_retention_radius,
+                local_dilation=args.ddsr_local_dilation)
+            cfg.farmsim_bev_spatial_mixer = 'directional_decay_retention'
+        attn_cfgs[0] = mixer_cfg
+        layer_cfg.attn_cfgs = attn_cfgs
+    if args.use_r50_image_encoder == 1:
+        cfg.model.img_backbone.depth = 50
+        cfg.farmsim_image_encoder = 'r50'
     if args.use_efficient_baseline:
         # Use R50 and keep only C3/C4 FPN outputs; make all image-BEV
         # attention settings consistent with the two-level representation.
@@ -591,6 +656,11 @@ def apply_farmsim_options(cfg, args):
 
 def main():
     args = parse_args()
+
+    if args.use_r50_image_encoder == 1 and args.load_from is None:
+        repo_root = osp.dirname(osp.dirname(osp.abspath(__file__)))
+        args.load_from = osp.join(
+            repo_root, 'pretrained', 'r50_fcos3d_pretrain.pth')
 
     cfg = Config.fromfile(args.config)
     if args.cfg_options is not None:

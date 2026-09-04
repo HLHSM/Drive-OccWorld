@@ -8,7 +8,7 @@ from mmdet.models import HEADS, build_loss
 
 from mmcv.runner import force_fp32, auto_fp16
 from .world_head_base import WorldHeadBase
-from projects.mmdet3d_plugin.bevformer.losses.semkitti_loss import geo_scal_loss, sem_scal_loss, CE_ssc_loss, Smooth_L1_loss, BCE_loss
+from projects.mmdet3d_plugin.bevformer.losses.semkitti_loss import geo_scal_loss, sem_scal_loss, CE_ssc_loss
 from projects.mmdet3d_plugin.bevformer.losses.lovasz_softmax import lovasz_softmax
 
 
@@ -41,15 +41,6 @@ class WorldHeadV1(WorldHeadBase):
                  soft_weight,
                  loss_weight_cfg=None,
                  output_scale=2,
-                 use_tghd=False,
-                 tghd_channels=16,
-                 tghd_ground_classes=(2, 3),
-                 tghd_ground_loss_weight=1.0,
-                 tghd_geometry_loss_weight=1.0,
-                 use_row_topology=False,
-                 row_topology_loss_weight=0.1,
-                 row_topology_crop_class=1,
-                 row_topology_channels=64,
                  use_crop_gap_refinement=False,
                  crop_gap_crop_class=1,
                  crop_gap_boundary_loss_weight=0.5,
@@ -60,6 +51,8 @@ class WorldHeadV1(WorldHeadBase):
                  use_selective_c2f=False,
                  c2f_active_ratio=0.25,
                  c2f_channels=128,
+                 # ADHR is training-only agricultural dual-hardness mining.
+                 # It is independent of the removed uncertainty-refinement path.
                  use_dual_hardness_refinement=False,
                  dual_hardness_active_ratio=0.04,
                  dual_hardness_gap_ratio=0.5,
@@ -69,9 +62,6 @@ class WorldHeadV1(WorldHeadBase):
                  dual_hardness_loss_weight=0.5,
                  dual_hardness_distill_weight=0.1,
                  dual_hardness_ema_decay=0.99,
-                 use_fixed_group_decoder=False,
-                 group_decoder_loss_weight=0.3,
-                 group_decoder_prior_scale=1.0,
                  use_gap_residual_refiner=False,
                  gap_refiner_channels=24,
                  gap_refiner_blocks=3,
@@ -91,16 +81,6 @@ class WorldHeadV1(WorldHeadBase):
 
         self.history_queue_length = history_queue_length    # 2
         self.output_scale=output_scale
-        self.use_tghd = use_tghd
-        self.tghd_ground_classes = tuple(tghd_ground_classes)
-        self.tghd_ground_loss_weight = tghd_ground_loss_weight
-        self.tghd_geometry_loss_weight = tghd_geometry_loss_weight
-        self._tghd_aux = None
-        self.use_row_topology = bool(use_row_topology)
-        self.row_topology_loss_weight = float(row_topology_loss_weight)
-        self.row_topology_crop_class = int(row_topology_crop_class)
-        self.row_topology_channels = int(row_topology_channels)
-        self._row_topology_aux = None
         self.use_crop_gap_refinement = bool(use_crop_gap_refinement)
         self.crop_gap_crop_class = int(crop_gap_crop_class)
         self.crop_gap_boundary_loss_weight = float(crop_gap_boundary_loss_weight)
@@ -122,10 +102,6 @@ class WorldHeadV1(WorldHeadBase):
         self.dual_hardness_distill_weight = float(dual_hardness_distill_weight)
         self.dual_hardness_ema_decay = float(dual_hardness_ema_decay)
         self._dual_hardness_features = None
-        self.use_fixed_group_decoder = bool(use_fixed_group_decoder)
-        self.group_decoder_loss_weight = float(group_decoder_loss_weight)
-        self.group_decoder_prior_scale = float(group_decoder_prior_scale)
-        self._fixed_group_logits = None
         # Dense but lightweight BEV-conditioned 3D residual refinement.  Its
         # optional image branch samples FPN only at selected difficult/crop
         # cells, then feeds that evidence back into this same refinement head.
@@ -149,10 +125,6 @@ class WorldHeadV1(WorldHeadBase):
             gap_refiner_image_crop_ratio)
         self._gap_refiner_coarse_logits = None
         self._gap_refiner_gate_logits = None
-        if self.row_topology_loss_weight < 0:
-            raise ValueError('row_topology_loss_weight must be non-negative.')
-        if self.row_topology_channels < 4:
-            raise ValueError('row_topology_channels must be at least 4.')
         if self.crop_gap_boundary_loss_weight < 0:
             raise ValueError('crop_gap_boundary_loss_weight must be non-negative.')
         if self.crop_gap_free_loss_weight < 0:
@@ -178,12 +150,9 @@ class WorldHeadV1(WorldHeadBase):
         if min(self.dual_hardness_local_scale, self.dual_hardness_gap_boost,
                self.dual_hardness_loss_weight,
                self.dual_hardness_distill_weight) < 0:
-            raise ValueError('dual-hardness loss weights must be non-negative.')
+            raise ValueError('ADHR loss weights must be non-negative.')
         if not 0.0 <= self.dual_hardness_ema_decay < 1.0:
             raise ValueError('dual_hardness_ema_decay must be in [0, 1).')
-        if min(self.group_decoder_loss_weight,
-               self.group_decoder_prior_scale) < 0:
-            raise ValueError('fixed-group decoder weights must be non-negative.')
         if self.gap_refiner_channels < 8:
             raise ValueError('gap_refiner_channels must be at least 8.')
         if self.gap_refiner_blocks < 1:
@@ -201,23 +170,16 @@ class WorldHeadV1(WorldHeadBase):
             raise ValueError('gap_refiner_image_levels must be at least 1.')
         if not 0.0 <= self.gap_refiner_image_crop_ratio <= 1.0:
             raise ValueError('gap_refiner_image_crop_ratio must be in [0, 1].')
-        if self.use_row_topology and (self.use_tghd or soft_weight):
-            raise ValueError(
-                'Row topology is a direct 2D BEV semantic-head refinement and '
-                'cannot be combined with TGHD or soft_weight decoding.')
-        if self.use_crop_gap_refinement and (self.use_tghd or soft_weight):
+        if self.use_crop_gap_refinement and soft_weight:
             raise ValueError(
                 'Crop-gap refinement requires the direct 2D occupancy decoder.')
-        if self.use_selective_c2f and (self.use_tghd or soft_weight):
+        if self.use_selective_c2f and soft_weight:
             raise ValueError(
                 'Selective C2F refinement requires the direct 2D occupancy decoder.')
-        if self.use_dual_hardness_refinement and (self.use_tghd or soft_weight):
+        if self.use_dual_hardness_refinement and soft_weight:
             raise ValueError(
-                'Dual-hardness refinement requires the direct 2D occupancy decoder.')
-        if self.use_fixed_group_decoder and (self.use_tghd or soft_weight):
-            raise ValueError(
-                'Fixed-group decoder requires the direct 2D occupancy decoder.')
-        if self.use_gap_residual_refiner and (self.use_tghd or soft_weight):
+                'ADHR requires the direct 2D occupancy decoder.')
+        if self.use_gap_residual_refiner and soft_weight:
             raise ValueError(
                 'Gap residual refiner requires the direct 2D occupancy decoder.')
 
@@ -238,26 +200,6 @@ class WorldHeadV1(WorldHeadBase):
 
         self.soft_weight = soft_weight
         self._init_bev_pred_layers()
-
-        if self.use_row_topology:
-            # The four bins represent horizontal, vertical and the two
-            # diagonal crop-row connectivities.  This stays entirely in BEV
-            # space: unlike TGHD, it neither predicts terrain height nor uses
-            # a 3D convolutional semantic decoder.
-            self.row_topology_direction = nn.Sequential(
-                nn.Linear(self.embed_dims, self.row_topology_channels),
-                nn.ReLU(inplace=True),
-                nn.Linear(self.row_topology_channels, 4))
-            self.row_topology_residual = nn.Sequential(
-                nn.Linear(self.embed_dims * 2, self.row_topology_channels),
-                nn.ReLU(inplace=True),
-                nn.Linear(self.row_topology_channels,
-                          self.num_pred_height * self.num_classes))
-            # Start from the baseline semantic logits.  The topology branch
-            # then learns a residual instead of perturbing a new run with an
-            # unrelated random occupancy offset at iteration zero.
-            nn.init.zeros_(self.row_topology_residual[-1].weight)
-            nn.init.zeros_(self.row_topology_residual[-1].bias)
 
         if self.use_crop_gap_refinement:
             # The branch predicts a 3D crop/free boundary confidence from the
@@ -312,27 +254,6 @@ class WorldHeadV1(WorldHeadBase):
             for parameter in self.dual_hardness_teacher.parameters():
                 parameter.requires_grad_(False)
 
-        if self.use_fixed_group_decoder:
-            # Fixed groups avoid PPQR-style unconstrained prototypes: each
-            # group is directly supervised as free, crop, or other occupied.
-            self.fixed_group_head = nn.Linear(
-                self.embed_dims, self.num_pred_height * 3)
-            self.fixed_group_residual = nn.Sequential(
-                nn.Linear(self.embed_dims, self.embed_dims // 2),
-                nn.LayerNorm(self.embed_dims // 2),
-                nn.ReLU(inplace=True),
-                nn.Linear(self.embed_dims // 2,
-                          self.num_pred_height * self.num_classes))
-            nn.init.zeros_(self.fixed_group_head.weight)
-            nn.init.zeros_(self.fixed_group_head.bias)
-            nn.init.zeros_(self.fixed_group_residual[-1].weight)
-            nn.init.zeros_(self.fixed_group_residual[-1].bias)
-            group_map = torch.full((self.num_classes,), 2, dtype=torch.long)
-            group_map[0] = 0
-            group_map[self.crop_gap_crop_class] = 1
-            self.register_buffer('fixed_group_class_map', group_map,
-                                 persistent=False)
-
         if self.use_gap_residual_refiner:
             # The BEV feature still contains image evidence that the coarse
             # semantic MLP may have smoothed away.  Compress it before the
@@ -383,30 +304,6 @@ class WorldHeadV1(WorldHeadBase):
                               self.gap_refiner_channels, 1))
                 nn.init.zeros_(self.gap_refiner_image_fuse[-1].weight)
                 nn.init.zeros_(self.gap_refiner_image_fuse[-1].bias)
-
-        if self.use_tghd:
-            # Terrain-Normalized Geometry-Semantic Height Decoder (TGHD).
-            # Keep the 3D fusion width deliberately small: applying a full
-            # BEV-width Conv3D to all auxiliary decoder outputs is needlessly
-            # expensive for a 100x100x25 FarmSim volume.
-            self.tghd_bev_proj = nn.Linear(self.embed_dims, tghd_channels)
-            self.tghd_ground_head = nn.Linear(self.embed_dims, 1)
-            self.tghd_geometry_head = nn.Linear(self.embed_dims,
-                                                 self.num_pred_height)
-            self.tghd_height_embed = nn.Sequential(
-                nn.Linear(1, tghd_channels), nn.ReLU(inplace=True),
-                nn.Linear(tghd_channels, tghd_channels))
-            self.tghd_geometry_embed = nn.Linear(1, tghd_channels)
-            self.tghd_semantic = nn.Sequential(
-                nn.Conv3d(tghd_channels * 3, tghd_channels, 3, padding=1),
-                nn.ReLU(inplace=True),
-                nn.Conv3d(tghd_channels, self.num_classes, 1))
-            z_centers = torch.linspace(
-                self.pc_range[2] + (self.pc_range[5] - self.pc_range[2]) /
-                (2 * self.num_pred_height),
-                self.pc_range[5] - (self.pc_range[5] - self.pc_range[2]) /
-                (2 * self.num_pred_height), self.num_pred_height)
-            self.register_buffer('tghd_z_centers', z_centers, persistent=False)
 
         self.num_points_sampling_feat = self.transformer.decoder.num_layers
         if self.soft_weight:
@@ -486,9 +383,7 @@ class WorldHeadV1(WorldHeadBase):
                 [Lout, inter_num, bs, bev_h * bev_w, dims]    Lout = cur + future_select
         """
         next_bev_preds = []
-        topology_aux = None
         crop_gap_boundary_logits = None
-        fixed_group_logits = None
         final_level = next_bev_feats.shape[1] - 1
         for lvl in range(next_bev_feats.shape[1]):
             #  ===> Lout, bs, h*w, d, num_frame
@@ -508,53 +403,23 @@ class WorldHeadV1(WorldHeadBase):
             if self.use_selective_c2f and lvl == final_level:
                 next_bev_pred = self._selective_c2f_refine(
                     next_bev_feats[:, lvl], next_bev_pred)
-            if self.use_fixed_group_decoder and lvl == final_level:
-                next_bev_pred, fixed_group_logits = self._fixed_group_refine(
-                    next_bev_feats[:, lvl], next_bev_pred)
-            # Apply topology refinement only to the final decoder layer used
-            # at inference.  Earlier layers still receive their normal voxel
-            # supervision, but do not pay for a second directional branch.
-            if self.use_row_topology and lvl == final_level:
-                topology_residual, direction_logits = self._row_topology_refine(
-                    next_bev_feats[:, lvl])
-                crop_prob = torch.softmax(next_bev_pred, dim=-1)[...,
-                    self.row_topology_crop_class].amax(dim=-1)
-                direction_confidence = torch.softmax(
-                    direction_logits, dim=-1).amax(dim=-1)
-                residual_gate = (crop_prob * direction_confidence).unsqueeze(
-                    -1).unsqueeze(-1)
-                next_bev_pred = next_bev_pred + topology_residual * residual_gate
-                topology_aux = direction_logits
             next_bev_preds.append(next_bev_pred)
-        self._row_topology_aux = topology_aux
         self._crop_gap_boundary_logits = crop_gap_boundary_logits
-        self._fixed_group_logits = fixed_group_logits
         if self.use_dual_hardness_refinement:
             self._dual_hardness_features = next_bev_feats[:, final_level]
         next_bev_preds = torch.stack(next_bev_preds, 1) # Lout, inner, bs, h*w, d, num_cls
         return next_bev_preds
     
     def forward_head(self, next_bev_feats, img_feats=None, img_metas=None):
-        self._row_topology_aux = None
         self._crop_gap_boundary_logits = None
         self._dual_hardness_features = None
-        self._fixed_group_logits = None
         self._gap_refiner_coarse_logits = None
         self._gap_refiner_gate_logits = None
-        if self.use_tghd:
-            return self.forward_head_tghd(next_bev_feats)
         if self.soft_weight:
             return self.forward_head_soft(next_bev_feats)   # multi-decoder_layers soft_weight_sum
         else:
             return self.forward_head_layers(
                 next_bev_feats, img_feats=img_feats, img_metas=img_metas)
-
-    @staticmethod
-    def _shift_bev_map(feature_map, dy, dx):
-        """Read a zero-padded neighbour at ``(dy, dx)`` for an NCHW map."""
-        height, width = feature_map.shape[-2:]
-        padded = F.pad(feature_map, (1, 1, 1, 1))
-        return padded[..., 1 + dy:1 + dy + height, 1 + dx:1 + dx + width]
 
     def _crop_gap_refine(self, features, logits):
         """Gate a voxel-logit residual by crop/free boundary confidence."""
@@ -829,192 +694,6 @@ class WorldHeadV1(WorldHeadBase):
             parent_residuals)
         return logits + residual
 
-    def _fixed_group_refine(self, features, logits):
-        """Apply fixed free/crop/other group priors to semantic logits."""
-        group_logits = self.fixed_group_head(features).view(
-            *features.shape[:-1], self.num_pred_height, 3)
-        group_log_prior = F.log_softmax(group_logits, dim=-1).index_select(
-            -1, self.fixed_group_class_map)
-        residual = self.fixed_group_residual(features).view(
-            *features.shape[:-1], self.num_pred_height, self.num_classes)
-        refined = logits + self.group_decoder_prior_scale * group_log_prior + residual
-        return refined, group_logits
-
-    def _row_topology_refine(self, features):
-        """Fuse directionally connected BEV features into occupancy logits."""
-        frames, batch, hw, channels = features.shape
-        if hw != self.bev_h * self.bev_w:
-            raise ValueError(
-                f'Row topology expected {self.bev_h * self.bev_w} BEV cells, '
-                f'got {hw}.')
-        feature_map = features.reshape(frames * batch, self.bev_h, self.bev_w,
-                                       channels).permute(0, 3, 1, 2)
-        direction_logits = self.row_topology_direction(features)
-        weights = torch.softmax(direction_logits, dim=-1).reshape(
-            frames * batch, self.bev_h, self.bev_w, 4).permute(0, 3, 1, 2)
-        neighbours = torch.stack([
-            self._shift_bev_map(feature_map, 0, 1),
-            self._shift_bev_map(feature_map, 1, 0),
-            self._shift_bev_map(feature_map, 1, 1),
-            self._shift_bev_map(feature_map, 1, -1),
-        ], dim=1)
-        context = (neighbours * weights.unsqueeze(2)).sum(dim=1)
-        context = context.permute(0, 2, 3, 1).reshape(frames, batch, hw,
-                                                        channels)
-        residual = self.row_topology_residual(torch.cat((features, context),
-                                                        dim=-1))
-        residual = residual.view(frames, batch, hw, self.num_pred_height,
-                                 self.num_classes)
-        return residual, direction_logits
-
-    def forward_head_tghd(self, next_bev_feats):
-        """Decode semantic occupancy in terrain-relative height coordinates.
-
-        The ground branch estimates h(x,y); the geometry branch predicts
-        occupied/free logits; the semantic branch receives BEV features,
-        geometry features and an MLP embedding of z - h(x,y).
-        """
-        frames, inter, batch, hw, channels = next_bev_feats.shape
-        if hw != self.bev_h * self.bev_w:
-            raise ValueError(f'TGHD expected {self.bev_h * self.bev_w} BEV cells, got {hw}.')
-        feat = next_bev_feats.reshape(frames, inter, batch, self.bev_h,
-                                      self.bev_w, channels)
-        ground = self.tghd_ground_head(feat).squeeze(-1)
-        geo_logits = self.tghd_geometry_head(feat)
-        rel_height = (self.tghd_z_centers.to(feat.dtype).view(1, 1, 1, 1, 1, -1)
-                      - ground.unsqueeze(-1))
-        bev_features = self.tghd_bev_proj(feat).unsqueeze(-2).expand(
-            -1, -1, -1, -1, -1, self.num_pred_height, -1)
-        height_features = self.tghd_height_embed(rel_height.unsqueeze(-1))
-        geometry_features = self.tghd_geometry_embed(geo_logits.unsqueeze(-1))
-        fused = torch.cat((bev_features, height_features, geometry_features), dim=-1)
-        fused = fused.permute(0, 1, 2, 5, 6, 3, 4).reshape(
-            frames * inter * batch, fused.shape[-1], self.num_pred_height,
-            self.bev_h, self.bev_w)
-        logits = self.tghd_semantic(fused).reshape(
-            frames, inter, batch, self.num_classes, self.num_pred_height,
-            self.bev_h, self.bev_w).permute(0, 1, 2, 5, 6, 4, 3)
-        # Keep the public occupancy-head contract identical to the baseline:
-        # [time, decoder_layer, batch, bev_h * bev_w, z, class].  The 3D
-        # TGHD semantic branch naturally produces separate BEV H/W axes, but
-        # downstream loss and validation code consume flattened BEV queries.
-        logits = logits.reshape(frames, inter, batch, hw,
-                                self.num_pred_height, self.num_classes)
-        self._tghd_aux = (ground, geo_logits)
-        return logits.contiguous()
-
-    def loss_tghd(self, target_voxels, ground_height=None, ground_valid=None):
-        """Ground SmoothL1 and occupied/free BCE supervision for TGHD."""
-        if not self.use_tghd or self._tghd_aux is None:
-            return {}
-        ground_pred, geo_logits = self._tghd_aux
-        # Train the auxiliary branches from the final decoder layer only.
-        ground_pred = ground_pred[:, -1].reshape(-1, *ground_pred.shape[-2:])
-        geo_logits = geo_logits[:, -1].reshape(
-            -1, *geo_logits.shape[-3:])
-        target_voxels = target_voxels.reshape(
-            -1, *target_voxels.shape[-3:]).long()
-        target_h, target_w, target_d = target_voxels.shape[-3:]
-        if ground_pred.shape[-2:] != (target_h, target_w):
-            ground_pred = F.interpolate(ground_pred.unsqueeze(1),
-                                        size=(target_h, target_w),
-                                        mode='bilinear', align_corners=False).squeeze(1)
-        if geo_logits.shape[-3:] != (target_h, target_w, target_d):
-            geo_logits = F.interpolate(geo_logits.unsqueeze(1),
-                                       size=(target_h, target_w, target_d),
-                                       mode='trilinear', align_corners=False).squeeze(1)
-
-        known = target_voxels != 255
-        geometry_target = ((target_voxels != 0) & known).to(geo_logits.dtype)
-        if known.any():
-            geometry_loss = F.binary_cross_entropy_with_logits(
-                geo_logits[known], geometry_target[known])
-        else:
-            geometry_loss = geo_logits.sum() * 0
-        losses = {'loss_tghd_geometry': self.tghd_geometry_loss_weight *
-                  geometry_loss}
-        if ground_height is not None and ground_valid is not None:
-            ground_height = ground_height.reshape(-1, *ground_height.shape[-2:])
-            ground_valid = ground_valid.reshape(-1, *ground_valid.shape[-2:]).bool()
-            if ground_height.shape[-2:] != (target_h, target_w):
-                ground_height = F.interpolate(ground_height.unsqueeze(1),
-                                              size=(target_h, target_w),
-                                              mode='bilinear',
-                                              align_corners=False).squeeze(1)
-                ground_valid = F.interpolate(ground_valid.unsqueeze(1).float(),
-                                             size=(target_h, target_w),
-                                             mode='nearest').squeeze(1).bool()
-            z_gt = ground_height.to(ground_pred.dtype)
-        else:
-            # Compatibility fallback for datasets without explicit UE terrain
-            # GT: infer a surface from ground semantic labels.
-            ground_mask = torch.zeros_like(known)
-            for ground_class in self.tghd_ground_classes:
-                ground_mask |= target_voxels == ground_class
-            ground_valid = ground_mask.any(dim=-1)
-            reverse_index = torch.argmax(
-                ground_mask.flip(-1).to(torch.int64), dim=-1)
-            z_index = target_d - 1 - reverse_index
-            z_gt = self.pc_range[2] + (z_index.to(ground_pred.dtype) + .5) * (
-                self.pc_range[5] - self.pc_range[2]) / target_d
-        if ground_valid.any():
-            losses['loss_tghd_ground'] = self.tghd_ground_loss_weight * F.smooth_l1_loss(
-                ground_pred[ground_valid], z_gt[ground_valid])
-        else:
-            losses['loss_tghd_ground'] = ground_pred.sum() * 0
-        return losses
-
-    def loss_row_topology(self, target_voxels):
-        """Supervise crop-cell adjacency from the existing voxel labels.
-
-        The labels are generated on the fly: a crop BEV cell is positive for
-        a direction only when its neighbour in that direction is crop too.
-        It therefore needs no new FarmSim annotation format.
-        """
-        if not self.use_row_topology or self._row_topology_aux is None:
-            return {}
-        direction_logits = self._row_topology_aux.reshape(
-            -1, self.bev_h, self.bev_w, 4)
-        target_voxels = target_voxels.reshape(
-            -1, *target_voxels.shape[-3:]).long()
-        target_h, target_w, _ = target_voxels.shape[-3:]
-        if direction_logits.shape[1:3] != (target_h, target_w):
-            direction_logits = F.interpolate(
-                direction_logits.permute(0, 3, 1, 2),
-                size=(target_h, target_w), mode='bilinear',
-                align_corners=False).permute(0, 2, 3, 1)
-        if not 0 <= self.row_topology_crop_class < self.num_classes:
-            return {'loss_row_topology': direction_logits.sum() * 0}
-
-        known = (target_voxels != 255).any(dim=-1)
-        crop = ((target_voxels == self.row_topology_crop_class).any(dim=-1)
-                & known)
-        crop_map = crop.to(direction_logits.dtype).unsqueeze(1)
-        known_map = known.to(direction_logits.dtype).unsqueeze(1)
-        axis_strengths = []
-        for dy, dx in ((0, 1), (1, 0), (1, 1), (1, -1)):
-            forward = (crop & self._shift_bev_map(crop_map, dy, dx).squeeze(1).bool()
-                       & self._shift_bev_map(known_map, dy, dx).squeeze(1).bool())
-            backward = (crop & self._shift_bev_map(crop_map, -dy, -dx).squeeze(1).bool()
-                        & self._shift_bev_map(known_map, -dy, -dx).squeeze(1).bool())
-            axis_strengths.append(forward.to(direction_logits.dtype) +
-                                  backward.to(direction_logits.dtype))
-        axis_strength = torch.stack(axis_strengths, dim=-1)
-        total_strength = axis_strength.sum(dim=-1)
-        strongest = axis_strength.topk(k=2, dim=-1).values
-        # A homogeneous crop canopy activates several axes equally.  It is not
-        # a row-direction label, so ignore it rather than forcing an arbitrary
-        # direction.  Straight row interiors retain two neighbours on one axis.
-        valid = (crop & known & (total_strength >= 2) &
-                 ((strongest[..., 0] - strongest[..., 1]) >= 1))
-        if valid.any():
-            target_direction = axis_strength / total_strength.clamp_min(1).unsqueeze(-1)
-            loss = F.kl_div(F.log_softmax(direction_logits[valid], dim=-1),
-                            target_direction[valid], reduction='batchmean')
-        else:
-            loss = direction_logits.sum() * 0
-        return {'loss_row_topology': self.row_topology_loss_weight * loss}
-
     @staticmethod
     def _shift_voxel_mask(mask, dh, dw, dz):
         """Read a zero-padded 3D neighbour from a ``[B,H,W,Z]`` mask."""
@@ -1113,7 +792,7 @@ class WorldHeadV1(WorldHeadBase):
 
     @torch.no_grad()
     def _update_dual_hardness_teacher(self):
-        """Advance the EMA teacher once per training loss computation."""
+        """Advance the ADHR EMA teacher once per training loss computation."""
         if not self.training:
             return
         decay = self.dual_hardness_ema_decay
@@ -1125,7 +804,7 @@ class WorldHeadV1(WorldHeadBase):
             teacher.mul_(decay).add_(student, alpha=1.0 - decay)
 
     def _dual_hardness_indices(self, logits, target_voxels):
-        """Select globally uncertain voxels with an agricultural gap quota."""
+        """Select uncertain voxels while reserving a crop/free-gap quota."""
         batch, _, height, width, depth = logits.shape
         total_voxels = height * width * depth
         selected_count = max(1, int(round(
@@ -1184,31 +863,29 @@ class WorldHeadV1(WorldHeadBase):
         return torch.stack(selected_indices), torch.stack(selected_valid), crop_gap
 
     def loss_dual_hardness_refinement(self, output_voxels, target_voxels):
-        """HASSC-style dual-hardness refinement, active during training only."""
+        """ADHR: supervised hard-voxel refinement with an EMA teacher."""
         if (not self.use_dual_hardness_refinement or
                 self._dual_hardness_features is None):
             return {}
         logits = output_voxels[-1]
         target_voxels = target_voxels.long()
         if logits.shape[-3:] != target_voxels.shape[-3:]:
-            return {'loss_dual_hard_refine': logits.sum() * 0,
-                    'loss_dual_hard_distill': logits.sum() * 0}
+            return {'loss_adhr_refine': logits.sum() * 0,
+                    'loss_adhr_distill': logits.sum() * 0}
         features = self._dual_hardness_features.reshape(
             -1, self.bev_h * self.bev_w, self.embed_dims)
         if features.shape[0] != target_voxels.shape[0]:
-            return {'loss_dual_hard_refine': logits.sum() * 0,
-                    'loss_dual_hard_distill': logits.sum() * 0}
+            return {'loss_adhr_refine': logits.sum() * 0,
+                    'loss_adhr_distill': logits.sum() * 0}
         indices, selected_valid, crop_gap = self._dual_hardness_indices(
             logits, target_voxels)
-        batch, _, height, width, depth = logits.shape
+        batch, _, _, width, depth = logits.shape
         selected_labels = torch.gather(target_voxels.reshape(batch, -1), 1,
                                        indices)
         cell_indices = torch.div(indices, depth, rounding_mode='floor')
         height_indices = torch.div(cell_indices, width, rounding_mode='floor')
         width_indices = cell_indices.remainder(width)
         z_indices = indices.remainder(depth)
-        # The BEV token order is [H,W], while selected voxels are flattened
-        # as [H,W,Z]. The final z embedding creates a true voxel descriptor.
         bev_indices = height_indices * width + width_indices
         selected_features = torch.gather(
             features, 1,
@@ -1221,11 +898,12 @@ class WorldHeadV1(WorldHeadBase):
             indices.unsqueeze(-1).expand(-1, -1, self.num_classes))
         refined_logits = coarse_selected + self.dual_hardness_refiner(
             student_features)
-        lga = self._local_semantic_anisotropy(target_voxels).reshape(batch, -1)
-        selected_lga = torch.gather(lga, 1, indices)
+        anisotropy = self._local_semantic_anisotropy(target_voxels).reshape(batch, -1)
+        selected_anisotropy = torch.gather(anisotropy, 1, indices)
         selected_gap = torch.gather(crop_gap.reshape(batch, -1), 1, indices)
-        weights = (1.0 + self.dual_hardness_local_scale * selected_lga +
-                   self.dual_hardness_gap_boost * selected_gap.to(selected_lga.dtype))
+        weights = (1.0 + self.dual_hardness_local_scale * selected_anisotropy +
+                   self.dual_hardness_gap_boost * selected_gap.to(
+                       selected_anisotropy.dtype))
         valid = selected_valid & (selected_labels != 255)
         if valid.any():
             refine_loss = F.cross_entropy(
@@ -1253,34 +931,9 @@ class WorldHeadV1(WorldHeadBase):
         else:
             distill = logits.sum() * 0
         return {
-            'loss_dual_hard_refine': self.dual_hardness_loss_weight * refine_loss,
-            'loss_dual_hard_distill': self.dual_hardness_distill_weight * distill,
+            'loss_adhr_refine': self.dual_hardness_loss_weight * refine_loss,
+            'loss_adhr_distill': self.dual_hardness_distill_weight * distill,
         }
-
-    def loss_fixed_group_decoder(self, target_voxels):
-        """Supervise fixed free/crop/other occupancy groups."""
-        if not self.use_fixed_group_decoder:
-            return {}
-        group_logits = self._fixed_group_logits
-        if group_logits is None:
-            return {}
-        target_voxels = target_voxels.long()
-        expected_batch = target_voxels.shape[0]
-        if group_logits.shape[0] * group_logits.shape[1] != expected_batch:
-            return {'loss_fixed_group': group_logits.sum() * 0}
-        group_logits = group_logits.reshape(
-            expected_batch, self.bev_h, self.bev_w,
-            self.num_pred_height, 3).permute(0, 4, 1, 2, 3)
-        if group_logits.shape[-3:] != target_voxels.shape[-3:]:
-            group_logits = F.interpolate(group_logits,
-                                         size=target_voxels.shape[-3:],
-                                         mode='trilinear', align_corners=False)
-        group_target = torch.full_like(target_voxels, 255)
-        known = target_voxels != 255
-        group_target[known] = self.fixed_group_class_map[
-            target_voxels[known]]
-        return {'loss_fixed_group': self.group_decoder_loss_weight *
-                F.cross_entropy(group_logits, group_target, ignore_index=255)}
 
     def _raw_logits_to_loss_volume(self, logits):
         """Match Drive_OccWorld_V2's public-logit to loss-volume reshape."""
@@ -1469,11 +1122,9 @@ class WorldHeadV1(WorldHeadBase):
         loss_dict = {}
         for index, output_voxel in enumerate(output_voxels):
             loss_dict.update(self.loss_voxel(output_voxel, target_voxels,  tag='inter_{}'.format(index)))
-        loss_dict.update(self.loss_row_topology(target_voxels))
         loss_dict.update(self.loss_crop_gap_refinement(output_voxels, target_voxels))
         loss_dict.update(self.loss_dual_hardness_refinement(
             output_voxels, target_voxels))
-        loss_dict.update(self.loss_fixed_group_decoder(target_voxels))
         loss_dict.update(self.loss_gap_residual_refiner(
             output_voxels, target_voxels))
 

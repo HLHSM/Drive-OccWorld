@@ -522,25 +522,7 @@ class Drive_OccWorld_V2(BEVFormer):
         occ_gts = occ_gts.permute(1, 0, 2, 3, 4).contiguous()
         return occ_gts.reshape(select_frames * batch_size, *occ_gts.shape[-3:])
 
-    def _format_ground_targets(self, ground_height, ground_valid,
-                               select_frames, batch_size):
-        if ground_height is None or ground_valid is None:
-            return None, None
-        start = self.future_pred_head.history_queue_length
-        stop = start + select_frames
-        if ground_height.shape[:2] != ground_valid.shape[:2]:
-            raise ValueError('ground_height and ground_valid time dimensions differ')
-        if ground_height.shape[0] != batch_size or ground_height.shape[1] < stop:
-            raise ValueError('ground targets do not match occupancy prediction batch/time')
-        ground_height = ground_height[:, start:stop].permute(1, 0, 2, 3)
-        ground_valid = ground_valid[:, start:stop].permute(1, 0, 2, 3)
-        return (ground_height.reshape(select_frames * batch_size,
-                                      *ground_height.shape[-2:]),
-                ground_valid.reshape(select_frames * batch_size,
-                                     *ground_valid.shape[-2:]))
-
-    def compute_occ_loss(self, occ_preds, occ_gts, ground_height=None,
-                         ground_valid=None):
+    def compute_occ_loss(self, occ_preds, occ_gts):
         # preds [Lout, inter_num, bs, bev_h * bev_w, d, num_cls]    Lout = cur + future_select
         occ_preds = occ_preds.permute(1, 0, 2, 5, 3, 4)
         inter_num, select_frames, bs, num_cls, hw, d = occ_preds.shape
@@ -553,14 +535,8 @@ class Drive_OccWorld_V2(BEVFormer):
             self.bev_w, self.bev_h, d).transpose(3, 4)
         # gts; preserve every sample when BATCH_SIZE > 1.
         occ_gts = self._format_occ_targets(occ_gts, select_frames, bs)
-        ground_height, ground_valid = self._format_ground_targets(
-            ground_height, ground_valid, select_frames, bs)
-        
         # occ loss
-        losses_occupancy = self.future_pred_head.loss_occ(occ_preds, occ_gts)
-        losses_occupancy.update(self.future_pred_head.loss_tghd(
-            occ_gts, ground_height=ground_height, ground_valid=ground_valid))
-        return losses_occupancy
+        return self.future_pred_head.loss_occ(occ_preds, occ_gts)
 
     def current_occ_prediction(self, ref_bev, img_feats=None, img_metas=None):
         """Run only the semantic-occupancy heads for the current frame."""
@@ -650,8 +626,6 @@ class Drive_OccWorld_V2(BEVFormer):
                       img=None,
                       # occ_flow
                       segmentation=None,
-                      ground_height=None,
-                      ground_valid=None,
                       instance=None,
                       flow=None,
                       # sdc-plan
@@ -790,8 +764,7 @@ class Drive_OccWorld_V2(BEVFormer):
         losses = dict()
         # E1. Compute loss for occ predictions.
         losses_occupancy = self.compute_occ_loss(
-            ret_dict['next_bev_preds'], segmentation, ground_height,
-            ground_valid)
+            ret_dict['next_bev_preds'], segmentation)
         losses.update(losses_occupancy)
         if self.use_lwm:
             losses.update(ret_dict['loss_bev'])

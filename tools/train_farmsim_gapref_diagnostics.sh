@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Second-stage image-guided GapRef training on two first-stage bases.
-# Both runs freeze every non-GapRef parameter and use only the primary
+# Second-stage image-guided GapRef training on three first-stage bases.
+# All runs freeze every non-GapRef parameter and use only the primary
 # occupancy loss; all previous GapRef auxiliary-loss weights are zero.
 set -euo pipefail
 
@@ -12,7 +12,8 @@ BASE_CONFIG="${BASE_CONFIG:-projects/configs/farmsim/farmsim_occ_front3.py}"
 VAL_ANN_FILE="${VAL_ANN_FILE:-data/farmsim/splits/val.json}"
 
 ADHR_BASE_CHECKPOINT="${ADHR_BASE_CHECKPOINT:-work_dirs/front3_base_adhr_nohis_ep8_20260829_085702/epoch_8.pth}"
-NEARFAR_BASE_CHECKPOINT="${NEARFAR_BASE_CHECKPOINT:-work_dirs/front3_nearfar_v2_r0.6_s2_nohis_ep5_20260827_172317/epoch_5.pth}"
+NEARFAR_BASE_CHECKPOINT="${NEARFAR_BASE_CHECKPOINT:-work_dirs/front3_base_nearfar_r0.6_s2_nohis_ep8_20260901_141259/epoch_8.pth}"
+ADHR_NEARFAR_BASE_CHECKPOINT="${ADHR_NEARFAR_BASE_CHECKPOINT:-work_dirs/front3_adhr_nearfar_r0.6_s2_nohis_ep8_20260901_141259/epoch_8.pth}"
 
 EPOCHS="${EPOCHS:-5}"
 BATCH_SIZE="${BATCH_SIZE:-6}"
@@ -21,9 +22,10 @@ IMAGE_WIDTH="${IMAGE_WIDTH:-512}"
 IMAGE_HEIGHT="${IMAGE_HEIGHT:-288}"
 SEED="${SEED:-0}"
 
-# Set either switch to 0 to skip a completed second-stage run.
+# Set any switch to 0 to skip a completed second-stage run.
 RUN_ADHR_BASE="${RUN_ADHR_BASE:-1}"
 RUN_NEARFAR_BASE="${RUN_NEARFAR_BASE:-1}"
+RUN_ADHR_NEARFAR_BASE="${RUN_ADHR_NEARFAR_BASE:-1}"
 NEARFAR_NEAR_RATIO="${NEARFAR_NEAR_RATIO:-0.6}"
 NEARFAR_FAR_STRIDE="${NEARFAR_FAR_STRIDE:-2}"
 
@@ -35,7 +37,8 @@ GAP_REFINER_IMAGE_LEVELS="${GAP_REFINER_IMAGE_LEVELS:-2}"
 GAP_REFINER_IMAGE_CROP_RATIO="${GAP_REFINER_IMAGE_CROP_RATIO:-0.5}"
 
 for required_path in "${BASE_CONFIG}" "${ADHR_BASE_CHECKPOINT}" \
-                     "${NEARFAR_BASE_CHECKPOINT}"; do
+                     "${NEARFAR_BASE_CHECKPOINT}" \
+                     "${ADHR_NEARFAR_BASE_CHECKPOINT}"; do
   if [[ ! -f "${required_path}" ]]; then
     echo "Missing required file: ${required_path}" >&2
     exit 1
@@ -58,10 +61,8 @@ run_gapref_stage2() {
     --val-ann-file "${VAL_ANN_FILE}" --batch-size "${BATCH_SIZE}" \
     --total-batch-size "${TOTAL_BATCH_SIZE}" --image-width "${IMAGE_WIDTH}" \
     --image-height "${IMAGE_HEIGHT}" --epochs "${EPOCHS}" \
-    --use-fp16 1 --use-tghd 0 --use-acfs-bev 0 \
-    --use-row-topology 0 --use-crop-gap-refinement 0 \
-    --use-selective-c2f 0 --use-dual-hardness-refinement 0 \
-    --use-fixed-group-decoder 0 \
+    --use-fp16 1 --use-crop-gap-refinement 0 \
+    --use-selective-c2f 0 \
     --use-nearfar-bev "${use_nearfar}" \
     --nearfar-near-ratio "${NEARFAR_NEAR_RATIO}" \
     --nearfar-far-stride "${NEARFAR_FAR_STRIDE}" \
@@ -91,4 +92,11 @@ fi
 if [[ "${RUN_NEARFAR_BASE}" == "1" ]]; then
   run_gapref_stage2 "nearfar_r${NEARFAR_NEAR_RATIO}_s${NEARFAR_FAR_STRIDE}_image_aux0" \
     "${NEARFAR_BASE_CHECKPOINT}" 1
+fi
+
+# Stage 2C: retain both the NearFar encoder and the ADHR-trained base weights.
+# ADHR itself remains disabled because only the GapRef branch is trainable here.
+if [[ "${RUN_ADHR_NEARFAR_BASE}" == "1" ]]; then
+  run_gapref_stage2 "adhr_nearfar_r${NEARFAR_NEAR_RATIO}_s${NEARFAR_FAR_STRIDE}_image_aux0" \
+    "${ADHR_NEARFAR_BASE_CHECKPOINT}" 1
 fi

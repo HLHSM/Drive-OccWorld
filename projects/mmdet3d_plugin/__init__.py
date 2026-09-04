@@ -7,6 +7,8 @@ from .bevformer.modules.transformer import PerceptionTransformer
 from .bevformer.modules.spatial_cross_attention import (SpatialCrossAttention,
                                                          MSDeformableAttention3D)
 from .bevformer.modules.temporal_self_attention import TemporalSelfAttention
+from .bevformer.modules.agri_bev_attention import (
+    GeometryVisibleAnchorDeformableAttention, DirectionalDecaySelectiveRetention)
 from .bevformer.modules.encoder import BEVFormerEncoder
 from .bevformer.modules.decoder import (DetectionTransformerDecoder,
                                         CustomMSDeformableAttention)

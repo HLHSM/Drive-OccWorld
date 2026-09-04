@@ -102,11 +102,11 @@ class MyCustomBaseTransformerLayer(BaseModule):
 
         self.batch_first = batch_first
 
-        assert set(operation_order) & set(['self_attn', 'norm', 'ffn', 'cross_attn']) ==\
-               set(['self_attn', 'norm', 'ffn', 'cross_attn']), f'The operation_order of' \
-               f' {self.__class__.__name__} should ' \
-               f'contains all four operation type ' \
-               f"{['self_attn', 'norm', 'ffn', 'cross_attn']}"
+        required_operations = {'norm', 'ffn', 'cross_attn'}
+        present_operations = set(operation_order)
+        assert required_operations.issubset(present_operations), \
+            f'The operation_order of {self.__class__.__name__} should ' \
+            f'contain {sorted(required_operations)}, got {operation_order}.'
 
         num_attn = operation_order.count('self_attn') + operation_order.count(
             'cross_attn') + operation_order.count('cross_attn_action')

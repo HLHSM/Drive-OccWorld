@@ -1,6 +1,4 @@
 import torch
-import torch.nn as nn
-import torch.nn.functional as F
 import copy
 import warnings
 from mmcv.cnn.bricks.registry import (ATTENTION,
@@ -29,25 +27,12 @@ class CustomPerceptionTransformer(PerceptionTransformer):
 class CustomBEVFormerEncoder(BEVFormerEncoder):
     def __init__(self,
                  keep_idx=(2,),
-                 use_acfs_bev=False,
-                 acfs_active_ratio=0.5,
-                 acfs_coarse_channels=16,
-                 acfs_occ_weight=1.0,
-                 acfs_uncertainty_weight=1.0,
-                 acfs_boundary_weight=1.0,
                  use_nearfar_bev=False,
                  nearfar_near_ratio=0.6,
                  nearfar_far_stride=2,
                  *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        if not 0.0 < acfs_active_ratio <= 1.0:
-            raise ValueError('acfs_active_ratio must be in (0, 1].')
-        self.use_acfs_bev = bool(use_acfs_bev)
-        self.acfs_active_ratio = float(acfs_active_ratio)
-        self.acfs_occ_weight = float(acfs_occ_weight)
-        self.acfs_uncertainty_weight = float(acfs_uncertainty_weight)
-        self.acfs_boundary_weight = float(acfs_boundary_weight)
         self.use_nearfar_bev = bool(use_nearfar_bev)
         self.nearfar_near_ratio = float(nearfar_near_ratio)
         self.nearfar_far_stride = int(nearfar_far_stride)
@@ -55,20 +40,6 @@ class CustomBEVFormerEncoder(BEVFormerEncoder):
             raise ValueError('nearfar_near_ratio must be in (0, 1].')
         if self.nearfar_far_stride < 2:
             raise ValueError('nearfar_far_stride must be at least 2.')
-        if self.use_acfs_bev and self.use_nearfar_bev:
-            raise ValueError('ACFS-BEV and near-far BEV are mutually exclusive.')
-        if self.use_acfs_bev:
-            self.acfs_coarse_trunk = nn.Sequential(
-                nn.Conv2d(1, acfs_coarse_channels, 3, padding=1),
-                nn.ReLU(inplace=True),
-                nn.Conv2d(acfs_coarse_channels, acfs_coarse_channels, 3,
-                          padding=1), nn.ReLU(inplace=True))
-            self.acfs_occ_head = nn.Conv2d(acfs_coarse_channels, 1, 1)
-            self.acfs_uncertainty_head = nn.Conv2d(acfs_coarse_channels, 1, 1)
-            embed_dims = self.layers[0].embed_dims
-            self.acfs_easy_update = nn.Sequential(
-                nn.Linear(embed_dims, embed_dims), nn.ReLU(inplace=True),
-                nn.Linear(embed_dims, embed_dims))
         if self.use_nearfar_bev:
             if len(self.layers) < 2:
                 raise ValueError('Near-far BEV requires at least two encoder layers.')
@@ -93,79 +64,6 @@ class CustomBEVFormerEncoder(BEVFormerEncoder):
         ret = super().forward(*args, **kwargs)
         self.return_intermediate = default_return_intermediate
         return ret
-
-    def _acfs_importance(self, coarse_img_feats, bev_h, bev_w):
-        """Build image-derived importance and a batch-shared Top-K query set."""
-        evidence = coarse_img_feats[0].mean(dim=(1, 2)).unsqueeze(1)
-        evidence = F.interpolate(evidence, size=(bev_h, bev_w),
-                                 mode='bilinear', align_corners=False)
-        hidden = self.acfs_coarse_trunk(evidence)
-        occupancy = torch.sigmoid(self.acfs_occ_head(hidden))
-        uncertainty = torch.sigmoid(self.acfs_uncertainty_head(hidden))
-        boundary = (occupancy - F.avg_pool2d(occupancy, 3, stride=1,
-                                             padding=1)).abs()
-        score = (self.acfs_occ_weight * occupancy +
-                 self.acfs_uncertainty_weight * uncertainty +
-                 self.acfs_boundary_weight * boundary)
-        global_score = score.mean(dim=0).flatten()
-        active_count = max(1, int(round(global_score.numel() *
-                                        self.acfs_active_ratio)))
-        active_indices = torch.topk(global_score, active_count,
-                                    sorted=False).indices
-        return score.flatten(1).unsqueeze(-1), active_indices
-
-    def _forward_acfs(self, bev_query, key, value, bev_h, bev_w, bev_pos,
-                      spatial_shapes, level_start_index, prev_bev, shift,
-                      img_metas, coarse_img_feats, *args, **kwargs):
-        """Run full attention on active queries, then complete the dense map."""
-        dense_query = bev_query.permute(1, 0, 2)
-        dense_pos = bev_pos.permute(1, 0, 2)
-        importance, active_indices = self._acfs_importance(
-            coarse_img_feats, bev_h, bev_w)
-        active_query = dense_query.index_select(1, active_indices)
-        active_pos = dense_pos.index_select(1, active_indices)
-        batch_size, active_count, _ = active_query.shape
-        ref_3d = self.get_reference_points(
-            bev_h, bev_w, self.pc_range[5] - self.pc_range[2],
-            self.num_points_in_pillar, dim='3d', bs=batch_size,
-            device=bev_query.device, dtype=bev_query.dtype).index_select(
-                2, active_indices)
-        ref_2d = self.get_reference_points(
-            bev_h, bev_w, dim='2d', bs=batch_size, device=bev_query.device,
-            dtype=bev_query.dtype).index_select(1, active_indices)
-        reference_points_cam, bev_mask = self.point_sampling(
-            ref_3d, self.pc_range, img_metas)
-        shifted_ref_2d = ref_2d.clone()
-        shifted_ref_2d += shift[:, None, None, :]
-        if prev_bev is not None:
-            prev_bev = prev_bev.index_select(0, active_indices).permute(1, 0, 2)
-            prev_bev = torch.stack([prev_bev, active_query], 1).reshape(
-                batch_size * 2, active_count, -1)
-            hybrid_ref_2d = torch.stack([shifted_ref_2d, ref_2d], 1).reshape(
-                batch_size * 2, active_count, 1, 2)
-        else:
-            hybrid_ref_2d = torch.stack([ref_2d, ref_2d], 1).reshape(
-                batch_size * 2, active_count, 1, 2)
-
-        output = active_query
-        for layer in self.layers:
-            output = layer(
-                output, key, value, *args, bev_pos=active_pos,
-                ref_2d=hybrid_ref_2d, ref_3d=ref_3d,
-                # Temporal attention reads only selected history tokens.
-                bev_h=active_count, bev_w=1, spatial_shapes=spatial_shapes,
-                level_start_index=level_start_index,
-                reference_points_cam=reference_points_cam, bev_mask=bev_mask,
-                prev_bev=prev_bev, **kwargs)
-        # The attention stack may promote its output to fp32.  Preserve that
-        # contract for the completed BEV, because evaluation runs the world
-        # head outside MMCV's fp16 autocast context.
-        easy = (dense_query + importance * self.acfs_easy_update(dense_query)
-                ).to(dtype=output.dtype)
-        return easy.scatter(
-            1, active_indices.view(1, -1, 1).expand(batch_size, -1,
-                                                      easy.size(-1)),
-            output)
 
     def _nearfar_layout(self, bev_h, bev_w, device):
         """Return forward-x sparse queries and bilinear restore metadata.
@@ -287,7 +185,9 @@ class CustomBEVFormerEncoder(BEVFormerEncoder):
                 bev_h=active_count, bev_w=1, spatial_shapes=spatial_shapes,
                 level_start_index=level_start_index,
                 reference_points_cam=reference_points_cam, bev_mask=bev_mask,
-                prev_bev=sparse_prev_bev, **kwargs)
+                prev_bev=sparse_prev_bev, gvad_sparse_layout=True,
+                gvad_active_indices=active_indices, gvad_dense_bev_h=bev_h,
+                gvad_dense_bev_w=bev_w, **kwargs)
         restored = output[:, restore_positions]
         restored = (restored * restore_weights.to(output.dtype).view(
             1, -1, 4, 1)).sum(dim=2)
@@ -321,7 +221,8 @@ class CustomBEVFormerEncoder(BEVFormerEncoder):
             bev_h=bev_h, bev_w=bev_w, spatial_shapes=spatial_shapes,
             level_start_index=level_start_index,
             reference_points_cam=dense_reference_points_cam,
-            bev_mask=dense_bev_mask, prev_bev=dense_prev, **kwargs)
+            bev_mask=dense_bev_mask, prev_bev=dense_prev,
+            gvad_sparse_layout=False, **kwargs)
 
 
 @TRANSFORMER_LAYER.register_module()
@@ -439,6 +340,11 @@ class BEVFormerLayerV2(MyCustomBaseTransformerLayer):
                     attn_mask=attn_masks[attn_index],
                     key_padding_mask=query_key_padding_mask,
                     reference_points=ref_2d,
+                    # GVAD needs the explicit token layout.  In particular,
+                    # NearFar uses a non-square ``active_count x 1`` sparse
+                    # sequence, whose shape cannot be inferred from length.
+                    bev_h=bev_h,
+                    bev_w=bev_w,
                     spatial_shapes=torch.tensor(
                         [[bev_h, bev_w]], device=query.device),
                     level_start_index=torch.tensor([0], device=query.device),

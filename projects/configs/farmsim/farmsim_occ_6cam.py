@@ -18,8 +18,6 @@ model = dict(
         history_queue_length=2,
         num_pred_height=25,
         use_plan_traj=False,
-        use_row_topology=False,
-        row_topology_loss_weight=0.1,
         # Crop/free gap supervision and selected 2x2 BEV subqueries are
         # disabled by default, retaining the original dense baseline.
         use_crop_gap_refinement=False,
@@ -31,8 +29,8 @@ model = dict(
         use_selective_c2f=False,
         c2f_active_ratio=0.25,
         c2f_channels=128,
-        # Training-only agricultural dual-hardness refinement. It preserves
-        # the baseline inference graph while mining uncertain crop/free voxels.
+        # ADHR is a training-only hard-voxel auxiliary branch; it does not
+        # alter the public occupancy output at inference.
         use_dual_hardness_refinement=False,
         dual_hardness_active_ratio=0.04,
         dual_hardness_gap_ratio=0.5,
@@ -42,10 +40,6 @@ model = dict(
         dual_hardness_loss_weight=0.5,
         dual_hardness_distill_weight=0.1,
         dual_hardness_ema_decay=0.99,
-        # COTR-inspired fixed semantic hierarchy: free, crop, other occupied.
-        use_fixed_group_decoder=False,
-        group_decoder_loss_weight=0.3,
-        group_decoder_prior_scale=1.0,
         # End-to-end agricultural coarse-to-refinement proposals.  Both are
         # disabled by default and use the direct BEV semantic decoder.
         use_gap_residual_refiner=False,

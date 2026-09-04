@@ -88,13 +88,13 @@ bash tools/train_farmsim_front3.sh
 - `BATCH_SIZE`、`EPOCHS`：每张卡的微 batch size 和完整遍历训练集的次数。`BATCH_SIZE` 决定峰值激活显存，且同时写入训练、验证和测试数据加载器（六相机脚本默认 `--no-validate`，需要每 epoch 验证时可删除该参数）。
 - `IMAGE_WIDTH`、`IMAGE_HEIGHT`：每路 RGB 图像的输入分辨率，格式为宽×高，前视三相机脚本默认 `512×288`。该值会同步写入 train/val/test；减小分辨率可显著降低显存，但会改变输入规格，应作为独立实验记录。
 - `USE_FP16`：`1` 时启用 PyTorch AMP FP16（动态 loss scale），可降低激活显存；`0` 时使用 FP32。当前 FarmSim 路径已对变参 BEV encoder 和概率 BCE 尺度损失作 FP16 兼容处理。
-- `USE_TGHD`：`1` 时启用 Terrain-Normalized Geometry-Semantic Height Decoder；默认 `0`，保持原始高效 channel-to-height occupancy head。TGHD 预测地表高度 `h(x,y)`、occupied/free 几何体积，并将相对高度 `z-h(x,y)` 的嵌入与 BEV/几何特征送入轻量 Conv3D 语义分支。训练时数据集读取每帧 `occupancy_ground_index`（`uint16`，首个有效 Z 层）和 `occupancy_ground_valid`，将源 `[y,x]` 转为模型 `[x,y]`，并以 `min_z + (index + 0.5) × voxel_size_m` 的体素中心高度监督地表分支；无效列不参与 ground loss。开启后会增加 `loss_tghd_ground` 与 `loss_tghd_geometry`，并因 3D 融合增加显存，建议从每卡较小 batch 开始测试。
-- `USE_ACFS_BEV`：`1` 时启用 Agriculture-aware Coarse-to-Fine Sparse BEV（ACFS-BEV）；默认 `0`，保留原 dense BEVFormer encoder。该模块从最低层 FPN 的多相机视觉证据生成 coarse occupied、uncertainty 和 boundary 分数，按 `S=P_occ+U+B` 选择全 batch 共享的 Top-K BEV query。只有 active query 经过每层完整 temporal/spatial attention，其他 query 用可学习的轻量 MLP 更新，再 scatter 回原 `100×100` dense BEV 网格，因此 occupancy decoder 的输入形状保持不变。
-- `ACFS_ACTIVE_RATIO`：完整 attention 的 query 比例，范围 `(0,1]`，默认 `0.5`。在前视配置的 `100×100` BEV 中，`0.5` 表示 `5,000 / 10,000` 个 query 进入完整 attention。建议从 `0.5` 开始，对比 `1.0`（等价于不裁剪 attention，但仍使用 ACFS coarse/easy 分支）、`0.7` 与 `0.3` 的速度、显存和 mIoU；较低比例不一定更好。
 - `USE_CROP_GAP_REFINEMENT`：`1` 时启用 Crop-Gap-Aware Boundary Refinement。模型从现有 occupancy 标签在线生成 crop/free 3D 边界，并对距离 crop 较近的 free voxel 加权；最终 decoder 的边界置信度仅门控一个零初始化的占用残差。`CROP_GAP_BOUNDARY_LOSS_WEIGHT`、`CROP_GAP_FREE_LOSS_WEIGHT` 控制两项附加损失，`CROP_GAP_ALPHA`、`CROP_GAP_SIGMA`、`CROP_GAP_RADIUS` 控制 free-gap 距离权重。
 - `USE_SELECTIVE_C2F`：`1` 时启用 Selective Coarse-to-Fine Plant Occupancy Refinement。它按 coarse logits 的 crop/free 不确定性挑选 `C2F_ACTIVE_RATIO` 的 BEV cell，仅为这些 cell 解码四个 2×2 子查询，再将子查询残差聚合回原 `100×100` 输出；因此不改变数据标签、评估接口或全局 BEV query 数。`C2F_CHANNELS` 控制子查询解码宽度。
-- `USE_DUAL_HARDNESS_REFINEMENT`：`1` 时启用 Agricultural Dual-Hardness Refinement（HASSC 的农业化改写）。最终 occupancy logits 按类别间概率间隔选择全局困难 voxel，同时为 crop/free 边界与近 crop free gap 保留 `DUAL_HARDNESS_GAP_RATIO` 配额；GT 六邻域语义差异形成局部各向异性权重。训练期仅对选中 voxel 的 BEV+Z MLP refinement 施加 `loss_dual_hard_refine`，并由 EMA refinement teacher 提供 `loss_dual_hard_distill`；推理不增加分支。`DUAL_HARDNESS_ACTIVE_RATIO` 默认 `0.04`，即每帧约 10,000 个 `100×100×25` voxel。
-- `USE_FIXED_GROUP_DECODER`：`1` 时启用 COTR 启发的固定语义分组解码器。组定义固定为 `free`、`crop`、`other_occupied`，由现有六类 GT 自动映射并产生 `loss_fixed_group`；组先验与零初始化语义残差共同细化最终六类 logits。它不是无标签动态原型，因此与已移除的 PPQR 机制不同。`GROUP_DECODER_LOSS_WEIGHT` 和 `GROUP_DECODER_PRIOR_SCALE` 分别控制组监督和组先验强度。
+- `--use-dual-hardness-refinement 1`：启用 ADHR（Agricultural Dual-Hardness Refinement）。训练期从最终 occupancy logits 选取类别间隔最小的困难 voxel，并为 crop/free 边界和近 crop free gap 保留配额；BEV 特征加高度嵌入后由轻量 MLP 细化，同时用 EMA teacher 蒸馏。它仅增加 `loss_adhr_refine`、`loss_adhr_distill`，不改变推理输出图。
+- `--use-gvad-attention 1`：在 `HISTORY_FRAMES=0` 下用 Geometry-Visible Anchor Deformable Attention（GVAD）替换 TSA。它保留 query-adaptive deformable 局部采样，并从已有相机投影 `bev_mask` 中构造几何可见性加权的 BEV anchors，将可靠可见区域的上下文传播给弱可见区域。`--gvad-anchor-grid-height/width` 默认生成 `4×8=32` 个 anchors。
+- `--gvad-use-visibility 0`：GVAD 的去可见性消融，anchor 改为普通平均池化；`--gvad-use-local-deformable 0`：去局部可变形路径，仅保留 anchor 上下文。三种 GVAD 变体均保持原始 occupancy 输出接口。
+- `--use-directional-decay-retention 1`：在 `HISTORY_FRAMES=0` 下用 Directional-Decay Selective Retention 替换 TSA。模块以四个带可学习指数衰减的方向性 depthwise 核建模长垄行依赖，并以短/长感受野分支和局部方差门控保留株间细节；`--ddsr-retention-radius`、`--ddsr-local-dilation` 控制长程尺度。前视训练脚本用 `RUN_DIRECTIONAL_DECAY_RETENTION=1` 启动该任务。
+- GVAD、DDSR 与“移除 TSA”开关彼此互斥，且不能与 `USE_NEARFAR_BEV=1` 联用；历史帧大于 0 时仍使用原始 TSA。
 - `USE_GAP_RESIDUAL_REFINER`：`1` 时启用端到端 Gap-Aware BEV Residual Refiner。最终 decoder 的完整 logits、压缩后的 `ref_bev`、crop/free 歧义和熵进入轻量各向异性 depthwise Conv3D；网络预测边界门控和零初始化残差，得到 `L_refined=L_coarse+M×ΔL`。除低权重的 coarse 深监督外，训练同时使用边界门控、近 crop free 的 `loss_gap_refiner_free` 和近 free crop 的对称 `loss_gap_refiner_crop`，以免仅保留空隙时侵蚀小作物。默认权重依次为 coarse `0.15`、boundary `0.25`、free gap `0.5`、crop preservation `0.5`；`GAP_REFINER_*` 可覆盖。
 - `tools/train_farmsim_gapref_diagnostics.sh`：新版图像 GapRef 的二阶段消融脚本。三组实验都从同一 H=0/current-occupancy base checkpoint 开始，冻结 R101、FPN、BEV encoder、world decoder 与 coarse occupancy head，只训练 GapRef 和其图像证据分支：A 所有 GapRef 附加损失均为 0；B 使用 boundary=`0.10`、free-gap=`0.05`；C 在 B 的基础上增加 crop=`0.05`。每个 epoch 都保留训练框架的常规验证，无须先重复评估 base checkpoint。
 - `GAP_REFINER_USE_IMAGE_FEATURES`：`1` 时，新版 GapRef 会按 crop/free 歧义和 crop 覆盖率选取 `GAP_REFINER_IMAGE_ACTIVE_RATIO` 的当前 BEV cell，把其 25 个高度查询利用已有 `lidar2img` 标定投影到当前相机的最高 `GAP_REFINER_IMAGE_LEVELS` 个 FPN 层。可见视角由 BEV-query 条件的 attention 融合，并以零初始化残差注入原 3D GapRef；因此初始时与旧 GapRef 完全一致。`GAP_REFINER_IMAGE_CROP_RATIO` 控制所选 cell 中 crop 区域的比例，余下为边界歧义区域，输出仍是 `100×100×25×6`。
@@ -153,7 +153,7 @@ USE_EFFICIENT_BASELINE=1
 | `MSDeformableAttention3D.num_points` | 8 | 4 |
 | AMP 精度 | 按 `USE_FP16` | FP16（强制） |
 
-以 `farmsim_occ_front3.py`、关闭 TGHD 和 ACFS-BEV、使用聚合后 6 类 taxonomy 时实际构建的可训练参数计：
+以 `farmsim_occ_front3.py`、使用聚合后 6 类 taxonomy 时实际构建的可训练参数计：
 原版 R101 为 `53,500,101`，Efficient R50 为 `30,615,877`，减少 `22,884,224` 个参数
 （`42.77%`）。FP16 不改变参数量；参数减少比例也不等同于速度或显存减少比例，
 因为 attention 的激活和采样计算占比更高。应在相同 batch、图像分辨率、GPU 与
