@@ -2,6 +2,7 @@
 # that register this path; importing the historical nuScenes/DD3D package
 # would otherwise require Detectron2 and 3D detection CUDA operators.
 from .datasets.farmsim_world_dataset import FarmSimWorldDataset
+from .datasets.orad3d_world_dataset import ORAD3DWorldDataset
 from .core.hooks.set_epoch_info_hook import SetEpochInfoHook
 from .bevformer.modules.transformer import PerceptionTransformer
 from .bevformer.modules.spatial_cross_attention import (SpatialCrossAttention,

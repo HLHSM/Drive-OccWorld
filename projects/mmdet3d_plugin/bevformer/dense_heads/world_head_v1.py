@@ -1083,7 +1083,7 @@ class WorldHeadV1(WorldHeadBase):
         H, W, D = target_voxels.shape[-3:]
 
         # output_voxel align to H,W,D
-        if pH != H:
+        if (pH, pW, pD) != (H, W, D):
             output_voxels = F.interpolate(output_voxels, size=(H, W, D), mode='trilinear', align_corners=False)
 
         # target_voxel align to H,W,D
@@ -1140,7 +1140,7 @@ class WorldHeadV1(WorldHeadBase):
 
         H, W, D = target_voxels.shape[-3:]
         # output_voxel align to H,W,D
-        if pH != H:
+        if (pH, pW, pD) != (H, W, D):
             output_voxels = F.interpolate(output_voxels.flatten(0,1), size=(H, W, D), mode='trilinear', align_corners=False)
             output_voxels = output_voxels.view(inter, B,C,H,W,D)
         

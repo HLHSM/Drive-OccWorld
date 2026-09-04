@@ -28,7 +28,7 @@ import os.path as osp
 
 
 def _print_occupancy_metrics(outputs, classes):
-    """Print per-class IoU and mIoU from FarmSim confusion matrices."""
+    """Print semantic and binary IoU from occupancy confusion matrices."""
     for key in ('hist_for_iou', 'hist_for_iou_current'):
         if key not in outputs:
             continue
@@ -55,13 +55,23 @@ def _print_occupancy_metrics(outputs, classes):
               f'({valid.sum()}/{len(iou)})')
         print(f'{key} mIoU (all classes): {iou.mean():.4f}')
         print(f'{key} voxel accuracy: {diagonal.sum() / hist.sum():.4f}')
+        if len(iou) > 1:
+            occupied_tp = hist[1:, 1:].sum()
+            occupied_union = (occupied_tp + hist[0, 1:].sum() +
+                              hist[1:, 0].sum())
+            free_union = hist[0, :].sum() + hist[:, 0].sum() - hist[0, 0]
+            occupied_iou = occupied_tp / occupied_union if occupied_union else 0.0
+            free_iou = hist[0, 0] / free_union if free_union else 0.0
+            print(f'{key} binary IoU: free={free_iou:.4f}, '
+                  f'occupied={occupied_iou:.4f}, '
+                  f'mIoU={(free_iou + occupied_iou) / 2:.4f}')
 
 
 def _select_per_sequence_prediction_indices(dataset, count):
-    """Return an exact, evenly distributed set of FarmSim sample indices."""
+    """Return evenly distributed indices for sequence occupancy datasets."""
     if not hasattr(dataset, 'samples') or not hasattr(dataset, 'sequences'):
         raise TypeError(
-            '--save-prediction-sampling per-sequence requires a FarmSim '
+            '--save-prediction-sampling per-sequence requires an occupancy '
             'dataset with samples and sequences attributes.')
     grouped = {}
     for sample_index, sample in enumerate(dataset.samples):
@@ -365,7 +375,7 @@ def main():
             dataset.format_results(outputs, **kwargs)
 
         if isinstance(outputs, dict):
-            print('\nFarmSim occupancy evaluation:')
+            print('\nOccupancy evaluation:')
             for key, value in outputs.items():
                 if not (isinstance(value, np.ndarray) and value.ndim == 2):
                     print(f'{key}: {value}')

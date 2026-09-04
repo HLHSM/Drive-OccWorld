@@ -84,16 +84,32 @@ def _with_occupancy_summaries(results, class_names=None):
         total = float(hist.sum())
         ordered[f'{prefix}_voxel_acc'] = (
             float(diagonal.sum() / total) if total else 0.0)
+        if len(iou) > 1:
+            occupied_tp = float(hist[1:, 1:].sum())
+            occupied_union = occupied_tp + float(hist[0, 1:].sum()) + float(
+                hist[1:, 0].sum())
+            free_union = float(hist[0, :].sum() + hist[:, 0].sum() - hist[0, 0])
+            occupied_iou = occupied_tp / occupied_union if occupied_union else 0.0
+            free_iou = float(hist[0, 0]) / free_union if free_union else 0.0
+            ordered[f'{prefix}_IoU_occupied'] = occupied_iou
+            ordered[f'{prefix}_IoU_free_binary'] = free_iou
+            ordered[f'{prefix}_mIoU_binary'] = (occupied_iou + free_iou) / 2.0
         for class_name, class_iou in zip(names, iou):
             ordered[f'{prefix}_IoU_{class_name}'] = float(class_iou)
 
         per_class = ', '.join(
             f'{class_name}={class_iou:.4f}'
             for class_name, class_iou in zip(names, iou))
+        binary_suffix = ''
+        if len(iou) > 1:
+            binary_suffix = (
+                f', binary_mIoU={ordered[f"{prefix}_mIoU_binary"]:.4f}, '
+                f'occupied_IoU={ordered[f"{prefix}_IoU_occupied"]:.4f}')
         summary.append(
             f'{prefix}: mIoU={ordered[f"{prefix}_mIoU"]:.4f}, '
             f'mIoU_all={ordered[f"{prefix}_mIoU_all"]:.4f}, '
-            f'voxel_acc={ordered[f"{prefix}_voxel_acc"]:.4f}; '
+            f'voxel_acc={ordered[f"{prefix}_voxel_acc"]:.4f}'
+            f'{binary_suffix}; '
             f'IoU[{per_class}]')
     return ordered, summary
 
@@ -145,7 +161,7 @@ class CustomEvalHook(BaseEvalHook):
             results, planning_summary = _with_planning_summaries(results)
             summary.extend(planning_summary)
             if summary:
-                runner.logger.info('FarmSim validation metrics: ' + ', '.join(summary))
+                runner.logger.info('Occupancy validation metrics: ' + ', '.join(summary))
             for name, value in results.items():
                 runner.log_buffer.output[name] = value
             runner.log_buffer.ready = True

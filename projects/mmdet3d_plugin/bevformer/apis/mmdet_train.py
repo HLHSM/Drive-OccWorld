@@ -190,11 +190,12 @@ def custom_train_detector(model,
         eval_cfg = cfg.get('evaluation', {})
         eval_cfg['by_epoch'] = cfg.runner['type'] != 'IterBasedRunner'
         eval_cfg['jsonfile_prefix'] = osp.join('val', cfg.work_dir, time.ctime().replace(' ','_').replace(':','_'))
-        # FarmSim model outputs are occupancy metric dictionaries rather than
+        # The image-only occupancy datasets return metric dictionaries rather than
         # detection-result lists.  Keep the stock detection hook for the
         # repository's original nuScenes/3D-detection configurations.
-        is_farmsim = cfg.data.val.get('type') == 'FarmSimWorldDataset'
-        if is_farmsim:
+        is_occupancy_dataset = cfg.data.val.get('type') in (
+            'FarmSimWorldDataset', 'ORAD3DWorldDataset')
+        if is_occupancy_dataset:
             eval_hook = CustomDistEvalHook if distributed else CustomEvalHook
         else:
             eval_hook = EvalHook
