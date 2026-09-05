@@ -138,7 +138,7 @@ train_one() {
     --work-dir "${work_dir}" --load-from "${initialization}" \
     --num-gpus "${NUM_GPUS}" --data-root "${ORAD_ROOT}" \
     --train-ann-file "${train_manifest}" \
-    --val-ann-file "${SPLIT_DIR}/test.json" \
+    --val-ann-file "${SPLIT_DIR}/val.json" \
     --workers-per-gpu "${WORKERS_PER_GPU}" \
     --batch-size "${BATCH_SIZE}" --total-batch-size "${TOTAL_BATCH_SIZE}" \
     --image-width "${IMAGE_WIDTH}" --image-height "${IMAGE_HEIGHT}" \

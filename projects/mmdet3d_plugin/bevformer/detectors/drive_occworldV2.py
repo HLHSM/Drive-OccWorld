@@ -222,11 +222,13 @@ class Drive_OccWorld_V2(BEVFormer):
         """Extract features of images."""
         B = img.size(0)
         if img is not None:
-            if img.dim() == 5 and img.size(0) == 1:
-                img.squeeze_()
-            elif img.dim() == 5 and img.size(0) > 1:
+            if img.dim() == 5:
                 B, N, C, H, W = img.size()
                 img = img.reshape(B * N, C, H, W)
+            elif img.dim() != 4:
+                raise ValueError(
+                    'Expected image tensor [B, N, C, H, W] or [B, C, H, W], '
+                    f'got {tuple(img.shape)}.')
             if self.use_grid_mask and self.grid_mask_image:
                 img = self.grid_mask(img)
 
