@@ -56,8 +56,10 @@ try:
     import mmcv.parallel._functions as _mmcv_parallel_functions
     _torch_get_stream = _mmcv_parallel_functions._get_stream
     def _dow2_get_stream(device):
-        if isinstance(device, int):
-            device = _torch.device('cuda', device)
+        # Torch 2.x keeps its stream cache as a list indexed by an integer.
+        # MMCV callers may pass either an integer or ``torch.device``.
+        if isinstance(device, _torch.device):
+            device = device.index
         return _torch_get_stream(device)
     _mmcv_parallel_functions._get_stream = _dow2_get_stream
 

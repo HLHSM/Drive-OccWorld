@@ -156,11 +156,11 @@ train_one() {
   fi
 }
 
-if [[ "${RUN_SCRATCH_100}" == "1" ]]; then
-  train_one scratch 100 "${GENERIC_PRETRAINED}"
-fi
+# if [[ "${RUN_SCRATCH_100}" == "1" ]]; then
+#   train_one scratch 100 "${GENERIC_PRETRAINED}"
+# fi
 
-EPOCHS=4
+EPOCHS=1
 [[ "${RUN_FINETUNE_10}" == "1" ]] && train_one farmsim_ft 10 "${adapted_checkpoint}"
 [[ "${RUN_FINETUNE_25}" == "1" ]] && train_one farmsim_ft 25 "${adapted_checkpoint}"
 [[ "${RUN_FINETUNE_50}" == "1" ]] && train_one farmsim_ft 50 "${adapted_checkpoint}"

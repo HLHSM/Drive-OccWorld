@@ -68,7 +68,13 @@ def _print_occupancy_metrics(outputs, classes):
 
 
 def _select_per_sequence_prediction_indices(dataset, count):
-    """Return evenly distributed indices for sequence occupancy datasets."""
+    """Return balanced, contiguous sample windows for sequence datasets.
+
+    The quota is balanced across sequences first.  Within each sequence the
+    selected dataset indices form one centred contiguous block, which makes
+    saved frames suitable for short temporal preview videos and avoids the
+    scattered-frame behaviour of the former linspace sampler.
+    """
     if not hasattr(dataset, 'samples') or not hasattr(dataset, 'sequences'):
         raise TypeError(
             '--save-prediction-sampling per-sequence requires an occupancy '
@@ -102,9 +108,8 @@ def _select_per_sequence_prediction_indices(dataset, count):
         candidates = grouped[sequence_index]
         quota = quotas[sequence_index]
         if quota:
-            positions = np.linspace(0, len(candidates) - 1, quota,
-                                    dtype=np.int64)
-            selected.extend(candidates[position] for position in positions)
+            start = (len(candidates) - quota) // 2
+            selected.extend(candidates[start:start + quota])
     return frozenset(selected)
 
 
@@ -124,7 +129,7 @@ def parse_args():
     parser.add_argument('--save-prediction-sampling',
                         choices=('leading', 'per-sequence'), default='leading',
                         help='selection strategy for a non-negative prediction count: '
-                             'leading (default) or evenly sampled per FarmSim sequence')
+                             'leading (default) or balanced contiguous windows per sequence')
     parser.add_argument('--out', help='output result file in pickle format')
     parser.add_argument(
         '--fuse-conv-bn',
@@ -314,8 +319,8 @@ def main():
             args.save_prediction_sampling == 'per-sequence'):
         prediction_indices = _select_per_sequence_prediction_indices(
             dataset, args.save_prediction_count)
-        print(f'Saving {len(prediction_indices)} predictions sampled evenly '
-              f'across {len(dataset.sequences)} validation sequences.')
+        print(f'Saving {len(prediction_indices)} predictions in balanced '
+              f'contiguous windows across {len(dataset.sequences)} validation sequences.')
 
     # build the model and load checkpoint
     cfg.model.train_cfg = None
