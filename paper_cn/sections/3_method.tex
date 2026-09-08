@@ -1,0 +1,82 @@
+\section{方法}\label{sec:method}
+
+\subsection{任务定义与总体结构}\label{sec:task}
+给定时刻 $t$ 的三路同步图像 $\I_t=\{I_t^{\mathrm{FL}},I_t^{\mathrm{F}},I_t^{\mathrm{FR}}\}$、相机内外参和机器人坐标系，目标是在前向空间
+\begin{equation}
+\B=[0,20]\times[-10,10]\times[-2,3]~\mathrm{m}
+\end{equation}
+中预测语义占用。体素分辨率为 $0.2~\mathrm{m}$，因此输出网格为 $100\times100\times25$。每个有效体素 $v\in\V$ 的标签 $y_v\in\{0,\ldots,5\}$ 分别表示自由空间、作物、土壤地面、可通行区域、其他植被与其他障碍物；未标注体素记为 ignore，不参与损失和指标。
+
+图\ref{fig:overview}给出 AgriOcc。图像编码器使用 ImageNet/FCOS3D 预训练的 ResNet-101 与 FPN 提取四级二维特征。每个 BEV 查询根据相机投影关系，通过空间交叉注意力从多尺度图像中聚合几何对齐的视觉证据。六层 BEV 编码器输出 $100\times100$、通道数为 256 的 BEV token；三层占用解码器进一步为每个 token 预测 25 个高度位置上的六类 logits。AgriOcc 以 GVAD 建模可见性驱动的全局上下文，以 ADHR 提升困难体素的判别性，并以近远场布局将早期编码计算聚焦于近场精细结构。
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\linewidth]{figures/agriocc_overview_ai_v2.png}
+\caption{AgriOcc 总体结构。三路前视图像经 ResNet--FPN 提取多尺度特征；GVAD 增强的 BEV 编码器将多相机证据聚合至前方鸟瞰空间；近远场布局优先分配近场计算；三层占用解码器输出 $100\times100\times25\times6$ 语义 logits。ADHR 仅在训练阶段对困难体素施加辅助监督。}
+\label{fig:overview}
+\end{figure}
+
+\subsection{几何可见锚点可变形注意力}\label{sec:gvad}
+对于当前帧 BEV 表征，关键在于同时建模局部投影细节与跨区域空间上下文。局部可变形采样与 Deformable DETR\cite{zhu2021deformable} 的稀疏参考点聚合、以及 DETR3D\cite{wang2022detr3d} 的三维查询投影机制一脉相承，但其对观测可靠性的利用仍是隐式的。GVAD 在保持输入输出尺寸不变的前提下，将局部可变形路径与可见性加权的全局锚点路径耦合，使每个 BEV 单元能够依据其观测条件自适应整合上下文。
+
+设第 $l$ 层的 BEV token 为 $\bm{q}_i\in\R^d$，由相机投影有效掩码得到其可见性 $m_i\in[0,1]$。将 BEV 均匀划分为 $H_a\times W_a$ 个 tile；本文采用 $H_a=4,W_a=8$，共 32 个锚点。对第 $a$ 个 tile 内的 token，先根据特征置信度和可见性计算归一化权重：
+\begin{equation}
+\alpha_{ia}=\softmax_{i\in a}\left(\bm{w}_c^\top\bm{q}_i+\gamma\log(m_i+\epsilon)\right),\quad
+\bm{z}_a=\sum_{i\in a}\alpha_{ia}\bm{q}_i .
+\end{equation}
+锚点坐标也由同一权重聚合。每个查询随后对所有锚点作多头注意力，并使用可学习的非负距离衰减 $\rho_h$ 约束远距离读取：
+\begin{equation}
+ A_{i,a}^{(h)}=\frac{(W_q^{(h)}\bm{q}_i)^\top(W_k^{(h)}\bm{z}_a)}{\sqrt{d_h}}
+ -\rho_h\|\bm{p}_i-\bm{p}_a\|_2^2 .
+\end{equation}
+锚点上下文 $\bm{g}_i$ 与原始局部可变形分支增量 $\bm{d}_i$ 通过门控残差融合：
+\begin{equation}
+\bm{q}_i'=\bm{q}_i+\bm{d}_i+\sigma\left(f_g([\bm{q}_i,m_i])\right)(1-0.75m_i)\bm{g}_i.
+\end{equation}
+因此，弱可见 BEV 单元更倾向读取可靠锚点，而直接可见区域仍以局部图像投影特征为主。去可见性消融将锚点替换为普通平均池化；去局部路径消融仅保留锚点上下文。
+
+图\ref{fig:gvad}进一步展示 GVAD 的双路径结构：局部可变形路径保持细粒度投影证据，可见锚点路径提供可靠区域的长程上下文，门控融合根据单元可见性完成自适应组合。
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.94\linewidth]{figures/gvad_module_ai.png}
+\caption{GVAD 模块。输入 BEV token 一方面在局部可变形路径中从多尺度图像读取细节，另一方面通过可见性加权的 tile pooling 构造全局锚点；锚点注意力与局部增量经可见性门控残差融合，输出增强的 BEV token。}
+\label{fig:gvad}
+\end{figure}
+
+\subsection{农业双困难细化}\label{sec:adhr}
+标准体素损失会被大面积自由空间和连续地面主导，而作物间隙与类别边界只占少量体素。ADHR 只在训练阶段工作，不改变推理输出图或主网络的部署路径。它从最终 occupancy logits 的前两类概率差定义全局不确定性：
+\begin{equation}
+h_v=\frac{1}{p_{(1)}(v)-p_{(2)}(v)+\epsilon}.
+\end{equation}
+对每个样本，ADHR 选取 $r=4\%$ 的有效体素，其中尽可能保留 $50\%$ 配额给作物--自由空间边界或近作物自由间隙。选中体素从 BEV token 读取特征、加入高度嵌入后经小型 MLP 预测残差 logits。令 $a_v$ 为六邻域语义变化数，$g_v$ 表示间隙掩码，细化交叉熵为
+\begin{equation}
+\mathcal{L}_{\mathrm{ADHR}}=\frac{\sum_{v\in\mathcal{S}}(1+\lambda_a a_v+\lambda_g g_v)\CE(\hat{\bm{o}}_v, y_v)}
+{\sum_{v\in\mathcal{S}}(1+\lambda_a a_v+\lambda_g g_v)}.
+\end{equation}
+本文使用 $\lambda_a=0.25,\lambda_g=0.5$。为降低小样本困难挖掘的训练振荡，MLP 的指数滑动平均副本提供温度为 2 的 KL 蒸馏项。最终附加项为 $0.5\mathcal{L}_{\mathrm{ADHR}}+0.1\mathcal{L}_{\mathrm{KD}}$。注意，ADHR 的细化 logits 只用于附加训练损失；测试阶段仍使用主占用头输出，故不增加推理参数或延迟。
+
+如图\ref{fig:adhr}所示，ADHR 将全局不确定性与农业结构先验联合用于难例选择：一半配额优先覆盖作物--自由空间边界和近作物间隙，其余配额由高不确定体素构成，从而将有限的细化学习能力集中于最具判别难度的区域。
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.94\linewidth]{figures/adhr_module_ai_v2.png}
+\caption{ADHR 模块。主占用 logits 与 GT 语义共同生成不确定性图、作物--自由空间边界和近作物间隙掩码；双困难采样得到的体素从 BEV 特征读取细化表示，经轻量 MLP 输出辅助残差 logits，并以加权交叉熵和 KL 蒸馏监督训练。}
+\label{fig:adhr}
+\end{figure}
+
+\subsection{近远场 BEV 查询布局}\label{sec:nearfar}
+农业机器人前方近处的植株、垄沟和障碍物需要稠密几何分辨率，而远处单元投影面积小、可见性较弱。设 BEV 宽度方向对应前向距离，将前 $60\%$ 列作为近场，保留全部查询；其余远场每隔 2 个单元在二维规则网格保留一个查询。前五个编码层只处理这些 active token。对于未激活远场位置，使用其四个相邻 active token 的双线性权重恢复特征；最后一个编码层恢复为完整 $100\times100$ 网格并执行一次稠密、图像条件的交叉注意力。该安排避免仅由查询插值补全远场语义，同时使已有占用解码头保持不变。GVAD 在稀疏层中按 token 的原始稠密 BEV 坐标分箱生成锚点，而不是把非均匀 token 序列误当作一维图像。
+
+图\ref{fig:nearfar}给出了近远场布局。它保留近场的完整网格以表达作物、垄沟和障碍物的细粒度几何，同时对远场执行规则稀疏采样，并在进入最终稠密图像交叉注意力前恢复完整特征图。
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.94\linewidth]{figures/nearfar_module_ai_v2.png}
+\caption{近远场 BEV 查询布局。近场保留稠密 token，远场以规则步长稀疏激活；前五个编码层处理 active token，随后通过二维双线性恢复补齐远场，并由最终稠密图像交叉注意力进行特征校正。}
+\label{fig:nearfar}
+\end{figure}
+
+\subsection{总体优化目标}\label{sec:loss}
+占用主损失沿用多层解码器监督，包含类别交叉熵、语义尺度损失、几何尺度损失和 Lov\'{a}sz-Softmax 项。记该损失为 $\mathcal{L}_{\mathrm{occ}}$，则启用 ADHR 时的训练目标为
+\begin{equation}
+\mathcal{L}=\mathcal{L}_{\mathrm{occ}}+0.5\mathcal{L}_{\mathrm{ADHR}}+0.1\mathcal{L}_{\mathrm{KD}}.
+\end{equation}
+GVAD 和近远场模块不引入额外标签或额外损失。该设计使三项改进可分别消融，并确保训练阶段的困难监督不会改变部署时的预测接口。

@@ -496,6 +496,11 @@ def apply_farmsim_options(cfg, args):
             'data.test.predict_trajectory': trajectory_enabled,
             'model.turn_on_plan': trajectory_enabled,
             'model.predict_trajectory': trajectory_enabled,
+            # The IR-WM world decoder has a ``cross_attn_action`` operation.
+            # Enabling future trajectories must therefore also supply the
+            # plan trajectory to the world head; otherwise that operation
+            # receives ``action_condition=None`` at its first train step.
+            'model.future_pred_head.use_plan_traj': trajectory_enabled,
             'model.plan_head.planning_steps': args.future_traj_steps,
         })
     if overrides:

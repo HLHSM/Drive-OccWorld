@@ -1,0 +1,144 @@
+\relax 
+\providecommand\hyper@newdestlabel[2]{}
+\providecommand*\HyPL@Entry[1]{}
+\HyPL@Entry{0<</S/D>>}
+\citation{philion2020lift,huang2021bevdet,li2022bevdepth}
+\citation{wang2022detr3d,li2022petr,li2022bevformer}
+\citation{wei2023surroundocc,wang2023openoccupancy}
+\citation{zheng2024occworld,mei2025irwm}
+\@writefile{toc}{\contentsline {section}{\numberline {1}引言}{2}{section.1}\protected@file@percent }
+\newlabel{sec:intro}{{1}{2}{引言}{section.1}{}}
+\citation{philion2020lift,huang2021bevdet,li2022bevdepth,li2022bevstereo}
+\citation{zhou2022matrixvt}
+\citation{wang2022detr3d}
+\citation{li2022petr,liu2023petrv2}
+\citation{li2023fbbev}
+\citation{liu2023bevfusion}
+\citation{li2022bevformer}
+\@writefile{toc}{\contentsline {section}{\numberline {2}相关工作}{3}{section.2}\protected@file@percent }
+\newlabel{sec:related}{{2}{3}{相关工作}{section.2}{}}
+\@writefile{toc}{\contentsline {paragraph}{多相机 BEV 感知与三维语义占用。}{3}{section*.1}\protected@file@percent }
+\citation{cao2022monoscene}
+\citation{huang2023tpvformer}
+\citation{li2023voxformer}
+\citation{wei2023surroundocc}
+\citation{wang2023openoccupancy}
+\citation{zhang2023occformer}
+\citation{ma2024cotr}
+\citation{wang2024panoocc}
+\citation{liu2024sparseocc}
+\citation{tang2024sparseocc}
+\citation{yu2023flashocc}
+\citation{pan2024renderocc}
+\citation{huang2022bevdet4d,wang2024panoocc}
+\citation{zheng2024occworld}
+\citation{mei2025irwm}
+\citation{mohan2026forecastocc}
+\citation{zhu2021deformable}
+\@writefile{toc}{\contentsline {paragraph}{视觉三维占用与语义场景补全。}{4}{section*.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{占用世界模型与时序预测。}{4}{section*.3}\protected@file@percent }
+\citation{geiger2012kitti}
+\citation{behley2019semantickitti}
+\citation{caesar2020nuscenes}
+\citation{jiang2020rellis}
+\citation{dosovitskiy2017carla}
+\citation{tobin2017domainrandomization,peng2018sim2real}
+\citation{hoffman2018cycada}
+\citation{chen2025orad3d}
+\@writefile{toc}{\contentsline {paragraph}{农业与越野三维感知数据。}{5}{section*.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {3}方法}{5}{section.3}\protected@file@percent }
+\newlabel{sec:method}{{3}{5}{方法}{section.3}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.1}任务定义与总体结构}{5}{subsection.3.1}\protected@file@percent }
+\newlabel{sec:task}{{3.1}{5}{任务定义与总体结构}{subsection.3.1}{}}
+\citation{zhu2021deformable}
+\citation{wang2022detr3d}
+\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces AgriOcc 总体结构。三路前视图像经 ResNet--FPN 提取多尺度特征；GVAD 增强的 BEV 编码器将多相机证据聚合至前方鸟瞰空间；近远场布局优先分配近场计算；三层占用解码器输出 $100\times 100\times 25\times 6$ 语义 logits。ADHR 仅在训练阶段对困难体素施加辅助监督。}}{6}{figure.1}\protected@file@percent }
+\newlabel{fig:overview}{{1}{6}{AgriOcc 总体结构。三路前视图像经 ResNet--FPN 提取多尺度特征；GVAD 增强的 BEV 编码器将多相机证据聚合至前方鸟瞰空间；近远场布局优先分配近场计算；三层占用解码器输出 $100\times 100\times 25\times 6$ 语义 logits。ADHR 仅在训练阶段对困难体素施加辅助监督。}{figure.1}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.2}几何可见锚点可变形注意力}{6}{subsection.3.2}\protected@file@percent }
+\newlabel{sec:gvad}{{3.2}{6}{几何可见锚点可变形注意力}{subsection.3.2}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.3}农业双困难细化}{7}{subsection.3.3}\protected@file@percent }
+\newlabel{sec:adhr}{{3.3}{7}{农业双困难细化}{subsection.3.3}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces GVAD 模块。输入 BEV token 一方面在局部可变形路径中从多尺度图像读取细节，另一方面通过可见性加权的 tile pooling 构造全局锚点；锚点注意力与局部增量经可见性门控残差融合，输出增强的 BEV token。}}{8}{figure.2}\protected@file@percent }
+\newlabel{fig:gvad}{{2}{8}{GVAD 模块。输入 BEV token 一方面在局部可变形路径中从多尺度图像读取细节，另一方面通过可见性加权的 tile pooling 构造全局锚点；锚点注意力与局部增量经可见性门控残差融合，输出增强的 BEV token。}{figure.2}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.4}近远场 BEV 查询布局}{8}{subsection.3.4}\protected@file@percent }
+\newlabel{sec:nearfar}{{3.4}{8}{近远场 BEV 查询布局}{subsection.3.4}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces ADHR 模块。主占用 logits 与 GT 语义共同生成不确定性图、作物--自由空间边界和近作物间隙掩码；双困难采样得到的体素从 BEV 特征读取细化表示，经轻量 MLP 输出辅助残差 logits，并以加权交叉熵和 KL 蒸馏监督训练。}}{9}{figure.3}\protected@file@percent }
+\newlabel{fig:adhr}{{3}{9}{ADHR 模块。主占用 logits 与 GT 语义共同生成不确定性图、作物--自由空间边界和近作物间隙掩码；双困难采样得到的体素从 BEV 特征读取细化表示，经轻量 MLP 输出辅助残差 logits，并以加权交叉熵和 KL 蒸馏监督训练。}{figure.3}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.5}总体优化目标}{9}{subsection.3.5}\protected@file@percent }
+\newlabel{sec:loss}{{3.5}{9}{总体优化目标}{subsection.3.5}{}}
+\citation{chen2025orad3d}
+\citation{jiang2020rellis}
+\@writefile{lof}{\contentsline {figure}{\numberline {4}{\ignorespaces 近远场 BEV 查询布局。近场保留稠密 token，远场以规则步长稀疏激活；前五个编码层处理 active token，随后通过二维双线性恢复补齐远场，并由最终稠密图像交叉注意力进行特征校正。}}{10}{figure.4}\protected@file@percent }
+\newlabel{fig:nearfar}{{4}{10}{近远场 BEV 查询布局。近场保留稠密 token，远场以规则步长稀疏激活；前五个编码层处理 active token，随后通过二维双线性恢复补齐远场，并由最终稠密图像交叉注意力进行特征校正。}{figure.4}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {4}实验}{10}{section.4}\protected@file@percent }
+\newlabel{sec:experiments}{{4}{10}{实验}{section.4}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.1}数据集与评价协议}{10}{subsection.4.1}\protected@file@percent }
+\newlabel{sec:data}{{4.1}{10}{数据集与评价协议}{subsection.4.1}{}}
+\@writefile{toc}{\contentsline {paragraph}{AgriOcc-Dataset。}{10}{section*.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{ORAD-3D。}{11}{section*.6}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{指标。}{11}{section*.7}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.2}实现细节}{11}{subsection.4.2}\protected@file@percent }
+\newlabel{sec:implementation}{{4.2}{11}{实现细节}{subsection.4.2}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {1}{\ignorespaces FarmSim 验证集上的三维语义占用结果。$\dagger $ 表示采用扩展的时空预测与规划任务；参数量按训练日志统计。}}{12}{table.1}\protected@file@percent }
+\newlabel{tab:main}{{1}{12}{FarmSim 验证集上的三维语义占用结果。$\dagger $ 表示采用扩展的时空预测与规划任务；参数量按训练日志统计。}{table.1}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {2}{\ignorespaces FarmSim 验证集逐类 IoU（\%）。}}{12}{table.2}\protected@file@percent }
+\newlabel{tab:class-iou}{{2}{12}{FarmSim 验证集逐类 IoU（\%）。}{table.2}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.3}与现有方法的比较}{12}{subsection.4.3}\protected@file@percent }
+\newlabel{sec:comparison}{{4.3}{12}{与现有方法的比较}{subsection.4.3}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {3}{\ignorespaces ORAD-3D 迁移结果。mIoU 为百分比；official 为官方测试集，farm\_all 为其中的农田场景子集。}}{13}{table.3}\protected@file@percent }
+\newlabel{tab:orad}{{3}{13}{ORAD-3D 迁移结果。mIoU 为百分比；official 为官方测试集，farm\_all 为其中的农田场景子集。}{table.3}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.4}仿真到真实越野场景迁移}{13}{subsection.4.4}\protected@file@percent }
+\newlabel{sec:sim2real}{{4.4}{13}{仿真到真实越野场景迁移}{subsection.4.4}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.5}模块消融}{13}{subsection.4.5}\protected@file@percent }
+\newlabel{sec:ablation}{{4.5}{13}{模块消融}{subsection.4.5}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {4}{\ignorespaces FarmSim 模块消融。\text  {$\mathsurround \z@ \mathchar "458$}表示启用；所有已填项均为 H=0、当前占用、8 epoch、固定 seed 0。}}{14}{table.4}\protected@file@percent }
+\newlabel{tab:ablation}{{4}{14}{FarmSim 模块消融。\checkmark 表示启用；所有已填项均为 H=0、当前占用、8 epoch、固定 seed 0。}{table.4}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.6}讨论}{14}{subsection.4.6}\protected@file@percent }
+\newlabel{sec:discussion}{{4.6}{14}{讨论}{subsection.4.6}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {5}结论与展望}{14}{section.5}\protected@file@percent }
+\newlabel{sec:conclusion}{{5}{14}{结论与展望}{section.5}{}}
+\bibstyle{elsarticle-num}
+\bibdata{references}
+\bibcite{philion2020lift}{{1}{}{{}}{{}}}
+\bibcite{huang2021bevdet}{{2}{}{{}}{{}}}
+\@writefile{toc}{\let\numberline\tmptocnumberline}
+\@writefile{toc}{\contentsline {section}{\numberline {附录~A}补充实现与复现协议}{15}{appendix.A}\protected@file@percent }
+\newlabel{app:implementation}{{附录~A}{15}{补充实现与复现协议}{appendix.A}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {附录~A.1}数据与运行记录}{15}{subsection.A.1}\protected@file@percent }
+\bibcite{li2022bevdepth}{{3}{}{{}}{{}}}
+\bibcite{wang2022detr3d}{{4}{}{{}}{{}}}
+\bibcite{li2022petr}{{5}{}{{}}{{}}}
+\bibcite{li2022bevformer}{{6}{}{{}}{{}}}
+\bibcite{wei2023surroundocc}{{7}{}{{}}{{}}}
+\bibcite{wang2023openoccupancy}{{8}{}{{}}{{}}}
+\bibcite{zheng2024occworld}{{9}{}{{}}{{}}}
+\bibcite{mei2025irwm}{{10}{}{{}}{{}}}
+\bibcite{li2022bevstereo}{{11}{}{{}}{{}}}
+\bibcite{zhou2022matrixvt}{{12}{}{{}}{{}}}
+\bibcite{liu2023petrv2}{{13}{}{{}}{{}}}
+\bibcite{li2023fbbev}{{14}{}{{}}{{}}}
+\bibcite{liu2023bevfusion}{{15}{}{{}}{{}}}
+\bibcite{cao2022monoscene}{{16}{}{{}}{{}}}
+\bibcite{huang2023tpvformer}{{17}{}{{}}{{}}}
+\bibcite{li2023voxformer}{{18}{}{{}}{{}}}
+\bibcite{zhang2023occformer}{{19}{}{{}}{{}}}
+\bibcite{ma2024cotr}{{20}{}{{}}{{}}}
+\bibcite{wang2024panoocc}{{21}{}{{}}{{}}}
+\bibcite{liu2024sparseocc}{{22}{}{{}}{{}}}
+\bibcite{tang2024sparseocc}{{23}{}{{}}{{}}}
+\bibcite{yu2023flashocc}{{24}{}{{}}{{}}}
+\bibcite{pan2024renderocc}{{25}{}{{}}{{}}}
+\bibcite{huang2022bevdet4d}{{26}{}{{}}{{}}}
+\bibcite{mohan2026forecastocc}{{27}{}{{}}{{}}}
+\bibcite{zhu2021deformable}{{28}{}{{}}{{}}}
+\bibcite{geiger2012kitti}{{29}{}{{}}{{}}}
+\bibcite{behley2019semantickitti}{{30}{}{{}}{{}}}
+\bibcite{caesar2020nuscenes}{{31}{}{{}}{{}}}
+\bibcite{jiang2020rellis}{{32}{}{{}}{{}}}
+\bibcite{dosovitskiy2017carla}{{33}{}{{}}{{}}}
+\bibcite{tobin2017domainrandomization}{{34}{}{{}}{{}}}
+\bibcite{peng2018sim2real}{{35}{}{{}}{{}}}
+\bibcite{hoffman2018cycada}{{36}{}{{}}{{}}}
+\bibcite{chen2025orad3d}{{37}{}{{}}{{}}}
+\providecommand\NAT@force@numbers{}\NAT@force@numbers
+\gdef \@abspage@last{21}

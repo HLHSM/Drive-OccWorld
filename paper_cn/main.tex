@@ -1,0 +1,42 @@
+\documentclass[preprint,12pt]{elsarticle}
+
+% Elsevier single-column preprint template.  ctex enables Chinese typesetting
+% under XeLaTeX while retaining elsarticle's front matter and bibliography.
+\usepackage[UTF8]{ctex}
+\usepackage{amsmath,amssymb,bm}
+\usepackage{booktabs,multirow,array}
+\usepackage{graphicx}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning,shapes.geometric,fit}
+\usepackage{enumitem}
+\usepackage{threeparttable}
+\usepackage{url}
+\usepackage[colorlinks=true,linkcolor=black,citecolor=black,urlcolor=blue]{hyperref}
+\input{math_commands}
+
+\journal{Expert Systems with Applications / Computers and Electronics in Agriculture}
+
+\begin{document}
+\begin{frontmatter}
+\title{AgriOcc：面向农业机器人的几何感知高效三维语义占用预测}
+\author{匿名作者}
+\address{匿名单位}
+\begin{abstract}
+\input{sections/0_abstract}
+\end{abstract}
+\begin{keyword}
+农业机器人 \sep 三维语义占用预测 \sep 鸟瞰表征 \sep 仿真到真实迁移 \sep 多相机视觉
+\end{keyword}
+\end{frontmatter}
+
+\input{sections/1_introduction}
+\input{sections/2_related_work}
+\input{sections/3_method}
+\input{sections/4_experiments}
+\input{sections/5_conclusion}
+\appendix
+\input{sections/A_appendix}
+
+\bibliographystyle{elsarticle-num}
+\bibliography{references}
+\end{document}

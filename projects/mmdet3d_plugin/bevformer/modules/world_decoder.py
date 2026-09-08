@@ -628,17 +628,58 @@ class PredictionMSDeformableAttention(BaseModule):
             value = value.masked_fill(key_padding_mask[..., None], 0.0)
         value = value.view(bs, num_value, self.num_heads, -1)
 
-        # Predict sampling offsets / attention weight for each query.
-        sampling_offsets = self.sampling_offsets(query).view(
-            bs, num_query, self.num_heads, self.num_levels, self.num_points, 2)
-        attention_weights = self.attention_weights(query).view(
-            bs, num_query, self.num_heads, self.num_levels * self.num_points)
+        # Predict sampling offsets / attention weights for each query.
+        #
+        # ``num_levels`` and ``num_points`` are configuration attributes,
+        # whereas the two projection layers own the corresponding parameter
+        # shapes.  Old IR-WM checkpoints/config snapshots can carry a module
+        # whose projections were built with a different point count (e.g.
+        # 8) while the live attributes say 4.  Reshaping with the attributes
+        # then fails before attention is evaluated.  The feature layout is
+        # unambiguously determined by the projections and the runtime feature
+        # levels, so derive the effective point count from those values.
+        runtime_levels = int(spatial_shapes.size(0))
+        # Do not use ``nn.Linear.out_features`` here.  Some legacy model
+        # snapshots retain stale Linear metadata even though the parameter
+        # tensor (and therefore this forward result) has a different output
+        # width.  The returned tensors are the authoritative runtime shape.
+        sampling_offsets = self.sampling_offsets(query)
+        attention_weights = self.attention_weights(query)
+        offset_dim = sampling_offsets.size(-1)
+        per_point_dim = self.num_heads * runtime_levels * 2
+        if runtime_levels < 1 or offset_dim % per_point_dim:
+            raise RuntimeError(
+                'Invalid PredictionMSDeformableAttention projection: '
+                f'offset_dim={offset_dim}, num_heads={self.num_heads}, '
+                f'runtime_levels={runtime_levels}.')
+        runtime_points = offset_dim // per_point_dim
+        expected_weight_dim = self.num_heads * runtime_levels * runtime_points
+        if attention_weights.size(-1) != expected_weight_dim:
+            raise RuntimeError(
+                'PredictionMSDeformableAttention projection mismatch: '
+                f'sampling_offsets implies {expected_weight_dim} attention '
+                f'weights, but attention_weights has '
+                f'{attention_weights.size(-1)}.')
+        if ((runtime_levels != self.num_levels or
+             runtime_points != self.num_points) and
+                not getattr(self, '_warned_runtime_attention_shape', False)):
+            warnings.warn(
+                'PredictionMSDeformableAttention configuration differs from '
+                'its projection tensors; using projection-compatible shape '
+                f'({runtime_levels} levels, {runtime_points} points) instead '
+                f'of configured ({self.num_levels}, {self.num_points}).')
+            self._warned_runtime_attention_shape = True
+
+        sampling_offsets = sampling_offsets.view(
+            bs, num_query, self.num_heads, runtime_levels, runtime_points, 2)
+        attention_weights = attention_weights.view(
+            bs, num_query, self.num_heads, runtime_levels * runtime_points)
         attention_weights = attention_weights.softmax(-1)
 
         attention_weights = attention_weights.view(bs, num_query,
                                                    self.num_heads,
-                                                   self.num_levels,
-                                                   self.num_points)
+                                                   runtime_levels,
+                                                   runtime_points)
 
         # Compute the deformable location for reference query points.
         if reference_points.shape[-1] == 2:
@@ -649,7 +690,7 @@ class PredictionMSDeformableAttention(BaseModule):
                 / offset_normalizer[None, None, None, :, None, :]
         elif reference_points.shape[-1] == 4:
             sampling_locations = reference_points[:, :, None, :, None, :2] \
-                + sampling_offsets / self.num_points \
+                + sampling_offsets / runtime_points \
                 * reference_points[:, :, None, :, None, 2:] \
                 * 0.5
         else:

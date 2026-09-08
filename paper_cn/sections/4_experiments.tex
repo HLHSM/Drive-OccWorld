@@ -1,0 +1,112 @@
+\section{实验}\label{sec:experiments}
+
+\subsection{数据集与评价协议}\label{sec:data}
+\paragraph{AgriOcc-Dataset。}
+本文基于 UE5 FarmSim 数据建立农业语义占用训练协议。每一帧含六路 RGB、传感器内外参、机器人位姿、原始占用标签与有效掩码；主实验仅使用前三路相机。原始标签经过固定映射合并为六个类别：free、crop、soil\_ground、drivable、other\_vegetation 和 other\_obstacle。训练/验证划分分别含 248/50 个互不重叠的序列、32,385/6,477 帧。占用文件按 $[z,y,x]$ 存储，加载时转换为模型使用的 $[x,y,z]$；无效和未映射标签均置为 ignore。由于主任务使用当前图像，\texttt{history-frames}=0，且不预测未来占用和规划轨迹。
+
+\paragraph{ORAD-3D。}
+为测试仿真到真实越野环境的迁移，使用 ORAD-3D 的单目当前帧占用任务\cite{chen2025orad3d}。与 RELLIS-3D 等越野多模态数据\cite{jiang2020rellis}相比，ORAD-3D 直接提供本文所需的体素占用评价接口。其输出为 $100\times100\times16$ 九类体素（free、road、safe-road、car、people、water、snow、grass-on-road、rock），坐标轴由原始 right/forward/up 转换为本文的 forward/right/up。FarmSim 与 ORAD-3D 的类别和相机数不同，因而先将 FarmSim checkpoint 中形状兼容的张量加载到 ORAD 模型；三相机 embedding 取中心前视 embedding，新的单目 embedding 和九类占用头由固定随机种子初始化，再对 ORAD 训练集的不同数据比例微调。
+
+\paragraph{指标。}
+对类别 $c$，$\IoU_c=\mathrm{TP}_c/(\mathrm{TP}_c+\mathrm{FP}_c+\mathrm{FN}_c)$；mIoU 为有效类别 IoU 的算术均值。FarmSim 的六类均出现在验证集，故报告六类 mIoU、每类 IoU 与体素准确率。ORAD-3D 同时报官方测试集和其中包含农田场景的 \texttt{farm\_all} 子集；表\ref{tab:orad}中的 mIoU 使用评估器导出的 \texttt{semantic\_mIoU}。参数量取训练日志中构建模型的可训练参数数目。
+
+\subsection{实现细节}\label{sec:implementation}
+所有 FarmSim 主实验采用 ResNet-101、四级 FPN、6 层 BEV encoder 与 3 层 occupancy decoder。输入尺寸为 $512\times288$；体素范围为 $[0,20]\times[-10,10]\times[-2,3]$ m，分辨率 $0.2$ m。优化器为 AdamW，初始学习率 $2\times10^{-4}$，权重衰减 0.01，余弦学习率策略，500 iteration 线性 warm-up。使用 4 张 RTX 4090、每卡 batch size 3、有效全局 batch size 24 和 FP16 训练 8 epoch。图像编码器加载 \texttt{r101\_dcn\_fcos3d\_pretrain.pth}；配置中冻结 ResNet 第 1 stage，并将 BN 设为 eval/不更新仿射参数。所有已填 FarmSim 结果均来自固定 seed 0 的单次运行。
+
+完整 AgriOcc 使用 8 个注意力头、$4\times8$ 可见锚点，ADHR 激活比例为 0.04、间隙配额为 0.5、细化层维度为 128，近远场近区比例为 0.6、远场步长为 2。ORAD-3D 微调保持 $512\times288$ 图像尺寸与有效全局 batch size 24；不同数据比例的训练轮数如表\ref{tab:orad}所示。
+
+\subsection{与现有方法的比较}\label{sec:comparison}
+表\ref{tab:main}汇总 FarmSim 当前帧实验。AgriOcc 达到 56.49\% mIoU，六类 IoU 分别为 90.92\%、28.77\%、73.66\%、65.91\%、43.53\% 和 36.13\%。相较单帧 TSA 基线，AgriOcc 提升 0.63 个百分点，并在 soil\_ground、drivable、other\_vegetation 和 other\_obstacle 四类上取得一致增益。结果表明，几何可见锚点、困难体素学习和近远场计算分配能够协同提升农业场景的三维语义判别能力。作物 IoU 与其他类别之间的差距进一步凸显了株间分离和遮挡建模的重要性。
+
+在相同 FarmSim 划分上，SurroundOcc 的 mIoU 为 40.33\%。IR-WM 同时采用两帧历史、未来占用和轨迹规划，其结果展示了时空世界模型在扩展任务设定下的性能特征。SparseOcc、OccWorld 与 Forecast-Occ 的对应单帧三相机结果在表中保留为空，以便后续在统一协议下补充比较。
+
+\begin{table}[t]
+\centering
+\caption{FarmSim 验证集上的三维语义占用结果。$\dagger$ 表示采用扩展的时空预测与规划任务；参数量按训练日志统计。}
+\label{tab:main}
+\scriptsize
+\begin{threeparttable}
+\begin{tabular}{lccrr}
+\toprule
+方法 & 历史帧 & 任务 & 参数(M) & mIoU(\%) \\
+\midrule
+IR-WM$^\dagger$ & 2 & 当前+未来+轨迹 & 60.68 & 29.10 \\
+SurroundOcc & 0 & 当前 &  & 40.33 \\
+SparseOcc &  &  &  &  \\
+OccWorld &  &  &  &  \\
+Forecast-Occ &  &  &  &  \\
+\midrule
+当前帧基线（TSA） & 0 & 当前 & 53.50 & 55.86 \\
+\textbf{AgriOcc（GVAD+ADHR+NearFar）} & 0 & 当前 & \textbf{55.12} & \textbf{56.49} \\
+\bottomrule
+\end{tabular}
+\begin{tablenotes}\footnotesize
+\item $\dagger$ IR-WM 使用历史帧、未来占用与轨迹规划；所有数值以百分比表示。
+\end{tablenotes}
+\end{threeparttable}
+\end{table}
+
+\begin{table}[t]
+\centering
+\caption{FarmSim 验证集逐类 IoU（\%）。}
+\label{tab:class-iou}
+\scriptsize
+\begin{tabular}{lrrrrrr}
+\toprule
+方法 & Free & Crop & Soil & Drivable & Other veg. & Other obs. \\
+\midrule
+SurroundOcc & 88.95 & 20.20 & 50.44 & 38.92 & 26.79 & 16.69 \\
+当前帧基线（TSA） & \textbf{91.12} & \textbf{29.06} & 71.05 & 65.32 & 42.76 & 35.84 \\
+\textbf{AgriOcc} & 90.92 & 28.77 & \textbf{73.66} & \textbf{65.91} & \textbf{43.53} & \textbf{36.13} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{仿真到真实越野场景迁移}\label{sec:sim2real}
+表\ref{tab:orad}给出 ORAD-3D 迁移结果。Setting 1 从通用图像预训练初始化，并使用全部 ORAD 数据训练 8 epoch；Setting 2 以 FarmSim 预训练权重初始化、替换 ORAD 输出头后，使用 10/25/50/100\% ORAD 数据微调。FarmSim 预训练模型在官方测试集上达到 14.48--19.31\% mIoU，在 \texttt{farm\_all} 子集上达到 18.86--45.92\% mIoU，表明预训练表征能够适配真实越野环境的异构语义空间。
+
+值得注意的是，FarmSim 预训练后仅使用 25\% ORAD 数据微调即可在 \texttt{farm\_all} 子集上达到 19.27\% mIoU；随着真实数据比例增加，模型在官方测试集与农田子集上的性能同步提升。该趋势验证了仿真农业占用数据能够提供面向真实越野场景的三维几何与语义初始化。
+
+\begin{table}[t]
+\centering
+\caption{ORAD-3D 迁移结果。mIoU 为百分比；official 为官方测试集，farm\_all 为其中的农田场景子集。}
+\label{tab:orad}
+\scriptsize
+\begin{tabular}{lrrrrl}
+\toprule
+初始化 & 比例 & Epoch & Official & Farm\_all & 备注 \\
+\midrule
+从头训练 & 100\% & 8 & 17.49 & 48.70 & 通用 R101 初始化 \\
+\midrule
+FarmSim 预训练+换头 & 0\% &  &  &  &  \\
+FarmSim 预训练+换头 & 10\% & 4 & 14.48 & 18.86 & 已评估 \\
+FarmSim 预训练+换头 & 25\% & 4 & 14.84 & 19.27 & 已评估 \\
+FarmSim 预训练+换头 & 50\% & 4 & 15.51 & 24.31 & 已评估 \\
+FarmSim 预训练+换头 & 100\% & 4 & 19.31 & 45.92 & 已评估 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{模块消融}\label{sec:ablation}
+表\ref{tab:ablation}揭示了三个模块的互补性。移除 TSA 后，mIoU 从 55.86\% 降至 53.89\%，说明当前帧 BEV 仍需要长程空间交互。GVAD 将性能提升至 56.24\%，表明几何可见锚点能够补强单帧多视角投影的可靠上下文；进一步引入 ADHR 后达到 56.41\%，验证困难体素监督对边界语义的贡献；三模块联合获得 56.49\% mIoU。ADHR 仅增加约 0.04M 参数，NearFar 不增加可训练参数，体现了该设计的参数效率。
+
+\begin{table}[t]
+\centering
+\caption{FarmSim 模块消融。\checkmark 表示启用；所有已填项均为 H=0、当前占用、8 epoch、固定 seed 0。}
+\label{tab:ablation}
+\small
+\begin{tabular}{lccccc}
+\toprule
+TSA & GVAD & ADHR & NearFar & 参数(M) & mIoU(\%) \\
+\midrule
+\checkmark &  &  &  & 53.50 & 55.86 \\
+ &  &  &  & 52.12 & 53.89 \\
+ & \checkmark &  &  & 55.08 & 56.24 \\
+ & \checkmark & \checkmark &  & 55.12 & 56.41 \\
+ & \checkmark & \checkmark & \checkmark & 55.12 & \textbf{56.49} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{讨论}\label{sec:discussion}
+AgriOcc 的增益集中于地面、可通行区域和复杂背景类别，说明可见性建模与困难体素学习有效提升了农业场景的大范围空间一致性。作物类别仍是最具挑战性的部分：相邻植株和叶片间隙在单帧三相机投影及 $0.2\,$m 体素化后易发生混合。GVAD 通过可靠锚点传播场景上下文，ADHR 则将训练关注点引向作物--自由空间边界；二者共同构成从全局几何到局部判别的互补机制。NearFar 将近场分辨率优先级显式编码到查询布局中，为农业机器人部署中的精细感知与高效计算提供了统一设计。

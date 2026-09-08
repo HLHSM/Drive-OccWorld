@@ -29,7 +29,7 @@ SPARSE_ENV="${SPARSE_ENV:-sparseocc}"
 # Keep the system CUDA/driver untouched.  Legacy OpenMMLab extensions are
 # compiled with this user-local CUDA 11.8 Toolkit to match their CUDA wheels.
 CUDA118_HOME="${CUDA118_HOME:-/home/HL/.local/cuda-11.8}"
-RUN_EXISTING_IRWM="${RUN_EXISTING_IRWM:-0}"
+RUN_EXISTING_IRWM="${RUN_EXISTING_IRWM:-1}"
 
 require_positive_int() {
   local name="$1"
@@ -166,16 +166,22 @@ run_cotr() {
 
 run_sparseocc() {
   local repo="${ROOT}/experiment/official/SparseOcc"
+  # Do not use torchrun --standalone here.  On this host it can publish the
+  # machine hostname as MASTER_ADDR; that hostname resolves to 127.0.1.1 and
+  # has intermittently left non-zero ranks unable to reach the TCPStore.
+  # A static loopback rendezvous is correct for this single-node launcher.
+  local master_addr="${SPARSE_MASTER_ADDR:-127.0.0.1}"
+  local master_port="${SPARSE_MASTER_PORT:-29541}"
   prepare_external_runtime
   cd "${repo}"
   # SparseOcc derives its one-step global batch from BATCH_SIZE x WORLD_SIZE
   # and uses FARMSIM_GRAD_ACCUM_STEPS for TOTAL_BATCH_SIZE.  Do not replace
   # FARMSIM_BATCH_SIZE with the effective batch here.
-  PYTHONPATH="${repo}" CUDA_HOME="${CUDA118_HOME}" CUDA_PATH="${CUDA118_HOME}" PATH="${CUDA118_HOME}/bin:${PATH}" LD_LIBRARY_PATH="${CUDA118_HOME}/lib64:${LD_LIBRARY_PATH:-}" CUDA_VISIBLE_DEVICES="${CUDA_VISIBLE_DEVICES}" \
+  PYTHONPATH="${repo}" CUDA_HOME="${CUDA118_HOME}" CUDA_PATH="${CUDA118_HOME}" PATH="${CUDA118_HOME}/bin:${PATH}" LD_LIBRARY_PATH="${CUDA118_HOME}/lib64:${LD_LIBRARY_PATH:-}" CUDA_VISIBLE_DEVICES="${CUDA_VISIBLE_DEVICES}" MASTER_ADDR="${master_addr}" MASTER_PORT="${master_port}" \
     BATCH_SIZE="${FARMSIM_BATCH_SIZE}" TOTAL_BATCH_SIZE="${FARMSIM_TOTAL_BATCH_SIZE}" USE_FP16="${FARMSIM_USE_FP16}" IMAGE_WIDTH="${FARMSIM_IMAGE_WIDTH}" IMAGE_HEIGHT="${FARMSIM_IMAGE_HEIGHT}" WORKERS_PER_GPU="${WORKERS_PER_GPU}" \
     FARMSIM_BATCH_SIZE="${FARMSIM_BATCH_SIZE}" FARMSIM_TOTAL_BATCH_SIZE="${FARMSIM_TOTAL_BATCH_SIZE}" FARMSIM_MICRO_BATCH_SIZE="${FARMSIM_MICRO_BATCH_SIZE}" FARMSIM_WORLD_SIZE="${FARMSIM_WORLD_SIZE}" FARMSIM_GRAD_ACCUM_STEPS="${FARMSIM_GRAD_ACCUM_STEPS}" FARMSIM_IMAGE_WIDTH="${FARMSIM_IMAGE_WIDTH}" FARMSIM_IMAGE_HEIGHT="${FARMSIM_IMAGE_HEIGHT}" FARMSIM_USE_FP16="${FARMSIM_USE_FP16}" \
     conda run --no-capture-output -n "${SPARSE_ENV}" python -m torch.distributed.run \
-    --standalone --nproc_per_node="${NUM_GPUS}" train.py \
+    --nnodes=1 --node_rank=0 --master_addr="${master_addr}" --master_port="${master_port}" --nproc_per_node="${NUM_GPUS}" train.py \
     --config configs/farmsim_front3_current.py \
     --run_name "farmsim_front3_ep${EPOCHS}" \
     --override total_epochs="${EPOCHS}"
@@ -189,11 +195,16 @@ case "${METHOD}" in
   sparseocc) run_sparseocc ;;
   all)
     # run_native_driveocc
-    BATCH_SIZE=6
-    # run_surroundocc
-    run_sparseocc
+
+    # BATCH_SIZE=3
+    # USE_FP16=0
+    # run_cotr
+    USE_FP16=1
+    # BATCH_SIZE=6
+    # # run_sparseocc
+    BATCH_SIZE=2
     run_irwm
-    run_cotr
+    # run_surroundocc
     ;;
   *)
     echo "Usage: $0 {driveocc|irwm|surroundocc|cotr|sparseocc|all}" >&2
