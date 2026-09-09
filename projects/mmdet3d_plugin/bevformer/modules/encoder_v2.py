@@ -30,12 +30,25 @@ class CustomBEVFormerEncoder(BEVFormerEncoder):
                  use_nearfar_bev=False,
                  nearfar_near_ratio=0.6,
                  nearfar_far_stride=2,
+                 use_acfs_bev=False,
+                 acfs_active_ratio=0.5,
                  *args, **kwargs):
         super().__init__(*args, **kwargs)
 
         self.use_nearfar_bev = bool(use_nearfar_bev)
         self.nearfar_near_ratio = float(nearfar_near_ratio)
         self.nearfar_far_stride = int(nearfar_far_stride)
+        # Older dumped FarmSim configs always carried these ACF-S fields even
+        # when the feature was disabled.  Keep that no-op configuration
+        # loadable so checkpoint evaluation is not coupled to a stale config
+        # schema.  Enabling it is deliberately rejected: this encoder no
+        # longer implements the former active-query selection path.
+        self.use_acfs_bev = bool(use_acfs_bev)
+        self.acfs_active_ratio = float(acfs_active_ratio)
+        if self.use_acfs_bev:
+            raise NotImplementedError(
+                'use_acfs_bev=True is not supported by CustomBEVFormerEncoder; '
+                'use the matching historical implementation to evaluate it.')
         if not 0.0 < self.nearfar_near_ratio <= 1.0:
             raise ValueError('nearfar_near_ratio must be in (0, 1].')
         if self.nearfar_far_stride < 2:

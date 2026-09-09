@@ -75,6 +75,24 @@ class WorldHeadV1(WorldHeadBase):
                  gap_refiner_image_channels=24,
                  gap_refiner_image_levels=2,
                  gap_refiner_image_crop_ratio=0.5,
+                 use_row_topology=False,
+                 row_topology_loss_weight=0.1,
+                 use_fixed_group_decoder=False,
+                 group_decoder_loss_weight=0.3,
+                 group_decoder_prior_scale=1.0,
+                 use_hard_fpn_refiner=False,
+                 hard_fpn_active_ratio=0.04,
+                 hard_fpn_channels=64,
+                 hard_fpn_levels=2,
+                 hard_fpn_coarse_loss_weight=0.5,
+                 hard_fpn_gap_loss_weight=0.25,
+                 use_tghd=False,
+                 use_udhfr=False,
+                 udhfr_boundary_loss_weight=0.1,
+                 use_pkg_decoder=False,
+                 pkg_center_loss_weight=0.2,
+                 pkg_offset_loss_weight=0.05,
+                 pkg_gap_loss_weight=0.1,
                  *args,
                  **kwargs):
         super().__init__(*args, **kwargs)
@@ -117,6 +135,48 @@ class WorldHeadV1(WorldHeadBase):
         self.gap_refiner_use_bev_feature = bool(gap_refiner_use_bev_feature)
         self.gap_refiner_use_image_features = bool(
             gap_refiner_use_image_features)
+        # Pre-GVAD FarmSim configs included a disabled row-topology auxiliary
+        # loss.  It was training-only and is no longer implemented, but the
+        # stale ``False`` setting must remain loadable for checkpoint eval.
+        self.use_row_topology = bool(use_row_topology)
+        self.row_topology_loss_weight = float(row_topology_loss_weight)
+        if self.use_row_topology:
+            raise NotImplementedError(
+                'use_row_topology=True is not supported by WorldHeadV1; '
+                'use the matching historical implementation to evaluate it.')
+        # More legacy, training-only branches were persisted in the same
+        # FarmSim config schema.  The checked epoch-8 runs disable every one
+        # of them.  Accepting their disabled settings preserves faithful
+        # evaluation, while rejecting enabled settings avoids silently
+        # evaluating a different architecture.
+        legacy_branch_flags = {
+            'use_fixed_group_decoder': use_fixed_group_decoder,
+            'use_hard_fpn_refiner': use_hard_fpn_refiner,
+            'use_tghd': use_tghd,
+            'use_udhfr': use_udhfr,
+            'use_pkg_decoder': use_pkg_decoder,
+        }
+        enabled_legacy_branches = [
+            name for name, enabled in legacy_branch_flags.items() if enabled]
+        if enabled_legacy_branches:
+            raise NotImplementedError(
+                'Unsupported enabled legacy WorldHeadV1 branches: ' +
+                ', '.join(enabled_legacy_branches) +
+                '. Use the matching historical implementation to evaluate them.')
+        self.legacy_disabled_options = dict(
+            row_topology_loss_weight=float(row_topology_loss_weight),
+            group_decoder_loss_weight=float(group_decoder_loss_weight),
+            group_decoder_prior_scale=float(group_decoder_prior_scale),
+            hard_fpn_active_ratio=float(hard_fpn_active_ratio),
+            hard_fpn_channels=int(hard_fpn_channels),
+            hard_fpn_levels=int(hard_fpn_levels),
+            hard_fpn_coarse_loss_weight=float(hard_fpn_coarse_loss_weight),
+            hard_fpn_gap_loss_weight=float(hard_fpn_gap_loss_weight),
+            udhfr_boundary_loss_weight=float(udhfr_boundary_loss_weight),
+            pkg_center_loss_weight=float(pkg_center_loss_weight),
+            pkg_offset_loss_weight=float(pkg_offset_loss_weight),
+            pkg_gap_loss_weight=float(pkg_gap_loss_weight),
+        )
         self.gap_refiner_image_active_ratio = float(
             gap_refiner_image_active_ratio)
         self.gap_refiner_image_channels = int(gap_refiner_image_channels)

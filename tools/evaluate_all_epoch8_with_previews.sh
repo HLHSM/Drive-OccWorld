@@ -10,6 +10,7 @@
 set -uo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+REPO_PYTHONPATH="${REPO_ROOT}${PYTHONPATH:+:${PYTHONPATH}}"
 PYTHON_BIN="${PYTHON_BIN:-/home/HL/.conda/envs/dow2/bin/python}"
 WORK_DIRS_ROOT="${WORK_DIRS_ROOT:-${REPO_ROOT}/work_dirs}"
 CHECKPOINT_NAME="${CHECKPOINT_NAME:-epoch_8.pth}"
@@ -26,7 +27,6 @@ MAX_POINTS="${MAX_POINTS:-16000}"
 PREVIEW_ELEV="${PREVIEW_ELEV:-22}"
 PREVIEW_AZIM="${PREVIEW_AZIM:--58}"
 GPU_IDS="${GPU_IDS:-}"
-FORCE="${FORCE:-0}"
 DRY_RUN="${DRY_RUN:-0}"
 
 if [[ ! -x "${PYTHON_BIN}" ]]; then
@@ -72,41 +72,19 @@ find_config() {
 
 dataset_key() {
     local config="$1"
-    if rg -q "type='FarmSimWorldDataset'|type=\"FarmSimWorldDataset\"" "${config}"; then
+    # This script is commonly launched through non-interactive shells where
+    # user-local tools such as ripgrep are not guaranteed to be on PATH.
+    # POSIX grep is sufficient here and accepts both compact and spaced MMCV
+    # config syntax (for example, ``type='...'`` and ``type = '...'``).
+    if grep -Eq "type[[:space:]]*=[[:space:]]*['\"]FarmSimWorldDataset['\"]" "${config}"; then
         printf 'farmsim\n'
-    elif rg -q "type='ORAD3DWorldDataset'|type=\"ORAD3DWorldDataset\"" "${config}"; then
+    elif grep -Eq "type[[:space:]]*=[[:space:]]*['\"]ORAD3DWorldDataset['\"]" "${config}"; then
         printf 'orad3d\n'
-    elif rg -q "type='FarmSimSurroundOccDataset'|type=\"FarmSimSurroundOccDataset\"" "${config}"; then
+    elif grep -Eq "type[[:space:]]*=[[:space:]]*['\"]FarmSimSurroundOccDataset['\"]" "${config}"; then
         printf 'external-surroundocc\n'
     else
         printf 'unknown\n'
     fi
-}
-
-prediction_manifest_matches() {
-    local run_dir="$1" config="$2" prediction_dir="$3" dataset="$4" ann_file="$5"
-    local manifest="${prediction_dir}/.epoch8_batch_eval_manifest"
-    [[ -f "${manifest}" ]] || return 1
-    [[ $(find "${prediction_dir}" -maxdepth 1 -type f -name '*.npz' | wc -l) -eq "${PREDICTION_COUNT}" ]] || return 1
-    grep -Fqx "checkpoint=${run_dir}/${CHECKPOINT_NAME}" "${manifest}" && \
-        grep -Fqx "config=${config}" "${manifest}" && \
-        grep -Fqx "sampling=${SAVE_SAMPLING}" "${manifest}" && \
-        grep -Fqx "count=${PREDICTION_COUNT}" "${manifest}" && \
-        grep -Fqx "dataset=${dataset}" "${manifest}" && \
-        grep -Fqx "ann_file=${ann_file}" "${manifest}"
-}
-
-write_manifest() {
-    local run_dir="$1" config="$2" prediction_dir="$3" dataset="$4" ann_file="$5"
-    local manifest="${prediction_dir}/.epoch8_batch_eval_manifest"
-    {
-        printf 'checkpoint=%s/%s\n' "${run_dir}" "${CHECKPOINT_NAME}"
-        printf 'config=%s\n' "${config}"
-        printf 'sampling=%s\n' "${SAVE_SAMPLING}"
-        printf 'count=%s\n' "${PREDICTION_COUNT}"
-        printf 'dataset=%s\n' "${dataset}"
-        printf 'ann_file=%s\n' "${ann_file}"
-    } > "${manifest}"
 }
 
 evaluation_ann_file() {
@@ -146,55 +124,34 @@ run_task() {
     fi
 
     mkdir -p "${prediction_dir}" "${visualization_dir}" "${gt_dir}"
-    if prediction_manifest_matches "${run_dir}" "${config}" "${prediction_dir}" "${dataset}" "${ann_file}"; then
-        if [[ "${FORCE}" != "1" ]]; then
-            echo "  predictions already complete; skipping inference"
-        else
-            echo "  FORCE=1; regenerating the verified prediction set"
-            local command=("${PYTHON_BIN}" tools/test.py "${config}" "${checkpoint}"
-                --save-predictions "${prediction_dir}"
-                --save-prediction-count "${PREDICTION_COUNT}"
-                --save-prediction-sampling "${SAVE_SAMPLING}"
-                --cfg-options "data.test.ann_file=${ann_file}"
-                --out "${metrics_path}")
-            if [[ -n "${BATCH_SIZE}" ]]; then
-                command+=(--batch-size "${BATCH_SIZE}")
-            fi
-            if ! (cd "${REPO_ROOT}" && CUDA_VISIBLE_DEVICES="${gpu}" "${command[@]}") \
-                    >"${log_path}" 2>&1; then
-                echo "  evaluation failed; inspect ${log_path}" >&2
-                return 1
-            fi
-        fi
-    else
-        local existing_count
-        existing_count="$(find "${prediction_dir}" -maxdepth 1 -type f -name '*.npz' | wc -l)"
-        if (( existing_count > 0 )); then
-            echo "  ${prediction_dir} contains ${existing_count} unverified NPZ files. Refusing to mix artifacts; move it aside or use a different PREDICTION_DIR_NAME." >&2
-            return 1
-        fi
-        local command=("${PYTHON_BIN}" tools/test.py "${config}" "${checkpoint}"
-            --save-predictions "${prediction_dir}"
-            --save-prediction-count "${PREDICTION_COUNT}"
-            --save-prediction-sampling "${SAVE_SAMPLING}"
-            --cfg-options "data.test.ann_file=${ann_file}"
-            --out "${metrics_path}")
-        if [[ -n "${BATCH_SIZE}" ]]; then
-            command+=(--batch-size "${BATCH_SIZE}")
-        fi
-        echo "  running inference; log: ${log_path}"
-        if ! (cd "${REPO_ROOT}" && CUDA_VISIBLE_DEVICES="${gpu}" "${command[@]}") \
-                >"${log_path}" 2>&1; then
-            echo "  evaluation failed; inspect ${log_path}" >&2
-            return 1
-        fi
-        local saved_count
-        saved_count="$(find "${prediction_dir}" -maxdepth 1 -type f -name '*.npz' | wc -l)"
-        if (( saved_count != PREDICTION_COUNT )); then
-            echo "  expected ${PREDICTION_COUNT} artifacts, found ${saved_count}; see ${log_path}" >&2
-            return 1
-        fi
-        write_manifest "${run_dir}" "${config}" "${prediction_dir}" "${dataset}" "${ann_file}"
+    local existing_count
+    existing_count="$(find "${prediction_dir}" -maxdepth 1 -type f -name '*.npz' | wc -l)"
+    if (( existing_count > 0 )); then
+        echo "  removing ${existing_count} previous prediction artifact(s) before re-evaluation"
+        find "${prediction_dir}" -maxdepth 1 -type f -name '*.npz' -delete
+    fi
+    find "${prediction_dir}" -maxdepth 1 -type f -name '.epoch8_batch_eval_manifest' -delete
+
+    local command=("${PYTHON_BIN}" tools/test.py "${config}" "${checkpoint}"
+        --save-predictions "${prediction_dir}"
+        --save-prediction-count "${PREDICTION_COUNT}"
+        --save-prediction-sampling "${SAVE_SAMPLING}"
+        --cfg-options "data.test.ann_file=${ann_file}"
+        --out "${metrics_path}")
+    if [[ -n "${BATCH_SIZE}" ]]; then
+        command+=(--batch-size "${BATCH_SIZE}")
+    fi
+    echo "  running inference; log: ${log_path}"
+    if ! (cd "${REPO_ROOT}" && PYTHONPATH="${REPO_PYTHONPATH}" CUDA_VISIBLE_DEVICES="${gpu}" "${command[@]}") \
+            >"${log_path}" 2>&1; then
+        echo "  evaluation failed; inspect ${log_path}" >&2
+        return 1
+    fi
+    local saved_count
+    saved_count="$(find "${prediction_dir}" -maxdepth 1 -type f -name '*.npz' | wc -l)"
+    if (( saved_count != PREDICTION_COUNT )); then
+        echo "  expected ${PREDICTION_COUNT} artifacts, found ${saved_count}; see ${log_path}" >&2
+        return 1
     fi
 
     echo "  rendering ${PREDICTION_COUNT} prediction-only previews; GT cache: ${gt_dir}"
@@ -202,9 +159,7 @@ run_task() {
         "${prediction_dir}" "${visualization_dir}" --shared-gt-dir "${gt_dir}"
         --count "${PREDICTION_COUNT}" --max-points "${MAX_POINTS}"
         --elev "${PREVIEW_ELEV}" --azim "${PREVIEW_AZIM}")
-    if [[ "${FORCE}" == "1" ]]; then
-        render_command+=(--overwrite)
-    fi
+    render_command+=(--overwrite)
     if ! "${render_command[@]}"; then
         echo "  preview rendering failed" >&2
         return 1
