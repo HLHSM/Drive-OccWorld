@@ -3,6 +3,7 @@ import torch
 import torch.nn as nn
 import numpy as np
 import torch.nn.functional as F
+from torch.utils.checkpoint import checkpoint
 
 from mmdet.models import HEADS, build_loss
 
@@ -34,6 +35,101 @@ class _AnisotropicDepthwise3DBlock(nn.Module):
         return F.relu(feature + residual, inplace=True)
 
 
+class _AgriAMoEExpert(nn.Module):
+    """One lightweight anisotropic 3D expert used by Agri-AMoE."""
+
+    def __init__(self, channels, kernel_size, dilation=(1, 1, 1)):
+        super().__init__()
+        padding = tuple(
+            (size // 2) * dil for size, dil in zip(kernel_size, dilation))
+        groups = 8 if channels % 8 == 0 else 1
+        self.depthwise = nn.Conv3d(
+            channels, channels, kernel_size, padding=padding,
+            dilation=dilation, groups=channels, bias=False)
+        self.norm = nn.GroupNorm(groups, channels)
+        self.pointwise = nn.Conv3d(channels, channels, 1, bias=False)
+
+    def forward(self, feature):
+        return self.pointwise(F.relu(self.norm(self.depthwise(feature)),
+                                     inplace=True))
+
+
+class _AgriAMoE3D(nn.Module):
+    """Gradient-energy routed agricultural 3D mixture of experts.
+
+    The three experts respectively encode XY plant detail, vertical structure,
+    and a dilated XY context.  Routing is voxel-wise and is explicitly driven
+    by finite-difference energy in the three physical volume directions.
+    """
+
+    def __init__(self, channels, use_gradient_energy=True, use_saliency=True,
+                 gate_temperature=1.0):
+        super().__init__()
+        if gate_temperature <= 0:
+            raise ValueError('Agri-AMoE gate_temperature must be positive.')
+        groups = 8 if channels % 8 == 0 else 1
+        self.use_gradient_energy = bool(use_gradient_energy)
+        self.use_saliency = bool(use_saliency)
+        self.gate_temperature = float(gate_temperature)
+        hidden = max(channels // 4, 8)
+        self.channel_gate = nn.Sequential(
+            nn.AdaptiveAvgPool3d(1), nn.Conv3d(channels, hidden, 1),
+            nn.ReLU(inplace=True), nn.Conv3d(hidden, channels, 1),
+            nn.Sigmoid())
+        self.spatial_gate = nn.Sequential(
+            nn.Conv3d(2, 1, 3, padding=1, bias=False), nn.Sigmoid())
+        self.energy_gate = nn.Sequential(
+            nn.Conv3d(2, channels, 1, bias=False), nn.GroupNorm(groups, channels),
+            nn.ReLU(inplace=True), nn.Conv3d(channels, 3, 1))
+        self.experts = nn.ModuleList((
+            _AgriAMoEExpert(channels, (1, 3, 3)),
+            _AgriAMoEExpert(channels, (3, 1, 1)),
+            _AgriAMoEExpert(channels, (1, 3, 3), dilation=(1, 2, 2)),
+        ))
+        self.out_norm = nn.GroupNorm(groups, channels)
+
+    @staticmethod
+    def _gradient_energy(feature):
+        # Feature layout is [B,C,Z,H,W]. Pad the forward differences back to
+        # the original volume so each voxel receives an energy value.
+        dz = F.pad(feature[:, :, 1:] - feature[:, :, :-1], (0, 0, 0, 0, 0, 1))
+        dy = F.pad(feature[:, :, :, 1:] - feature[:, :, :, :-1], (0, 0, 0, 1))
+        dx = F.pad(feature[:, :, :, :, 1:] - feature[:, :, :, :, :-1], (0, 1))
+        return (dx.square() + dy.square() + dz.square()).mean(
+            dim=1, keepdim=True)
+
+    def forward(self, feature):
+        if self.use_saliency:
+            feature = feature * self.channel_gate(feature)
+            spatial = self.spatial_gate(torch.cat((
+                feature.mean(dim=1, keepdim=True),
+                feature.amax(dim=1, keepdim=True)), dim=1))
+        else:
+            spatial = feature.new_zeros(feature.shape[0], 1, *feature.shape[2:])
+        if self.use_gradient_energy:
+            energy = self._gradient_energy(feature)
+        else:
+            energy = feature.new_zeros(feature.shape[0], 1, *feature.shape[2:])
+        # log1p makes the router stable across early random initializations.
+        gate = torch.softmax(self.energy_gate(torch.cat((
+            torch.log1p(energy), spatial), dim=1)) / self.gate_temperature,
+            dim=1)
+        # Checkpoint experts during training: the 100x100x25 volume is the
+        # whole reason this decoder is sparse in channel width, and retaining
+        # three expert activation graphs would needlessly multiply its memory.
+        routed = 0
+        for index, expert in enumerate(self.experts):
+            expert_gate = gate[:, index:index + 1]
+            if self.training and feature.requires_grad:
+                expert_out = checkpoint(
+                    lambda x, g, module=expert: g * module(x), feature,
+                    expert_gate, use_reentrant=False)
+            else:
+                expert_out = expert_gate * expert(feature)
+            routed = routed + expert_out
+        return F.relu(feature + self.out_norm(routed), inplace=True)
+
+
 @HEADS.register_module()
 class WorldHeadV1(WorldHeadBase):
     def __init__(self,
@@ -51,6 +147,13 @@ class WorldHeadV1(WorldHeadBase):
                  use_selective_c2f=False,
                  c2f_active_ratio=0.25,
                  c2f_channels=128,
+                 # Agri-AMoE replaces the final MLP occupancy decode with a
+                 # lifted 3D, gradient-energy-routed expert decoder.
+                 use_agri_amoe_decoder=False,
+                 agri_amoe_channels=96,
+                 agri_amoe_use_gradient_energy=True,
+                 agri_amoe_use_saliency=True,
+                 agri_amoe_gate_temperature=1.0,
                  # ADHR is training-only agricultural dual-hardness mining.
                  # It is independent of the removed uncertainty-refinement path.
                  use_dual_hardness_refinement=False,
@@ -110,6 +213,12 @@ class WorldHeadV1(WorldHeadBase):
         self.use_selective_c2f = bool(use_selective_c2f)
         self.c2f_active_ratio = float(c2f_active_ratio)
         self.c2f_channels = int(c2f_channels)
+        self.use_agri_amoe_decoder = bool(use_agri_amoe_decoder)
+        self.agri_amoe_channels = int(agri_amoe_channels)
+        self.agri_amoe_use_gradient_energy = bool(
+            agri_amoe_use_gradient_energy)
+        self.agri_amoe_use_saliency = bool(agri_amoe_use_saliency)
+        self.agri_amoe_gate_temperature = float(agri_amoe_gate_temperature)
         self.use_dual_hardness_refinement = bool(use_dual_hardness_refinement)
         self.dual_hardness_active_ratio = float(dual_hardness_active_ratio)
         self.dual_hardness_gap_ratio = float(dual_hardness_gap_ratio)
@@ -201,6 +310,10 @@ class WorldHeadV1(WorldHeadBase):
             raise ValueError('c2f_active_ratio must be in (0, 1].')
         if self.c2f_channels < 8:
             raise ValueError('c2f_channels must be at least 8.')
+        if self.agri_amoe_channels < 8:
+            raise ValueError('agri_amoe_channels must be at least 8.')
+        if self.agri_amoe_gate_temperature <= 0:
+            raise ValueError('agri_amoe_gate_temperature must be positive.')
         if not 0.0 < self.dual_hardness_active_ratio <= 1.0:
             raise ValueError('dual_hardness_active_ratio must be in (0, 1].')
         if not 0.0 <= self.dual_hardness_gap_ratio <= 1.0:
@@ -236,6 +349,8 @@ class WorldHeadV1(WorldHeadBase):
         if self.use_selective_c2f and soft_weight:
             raise ValueError(
                 'Selective C2F refinement requires the direct 2D occupancy decoder.')
+        if self.use_agri_amoe_decoder and soft_weight:
+            raise ValueError('Agri-AMoE requires the direct 2D occupancy decoder.')
         if self.use_dual_hardness_refinement and soft_weight:
             raise ValueError(
                 'ADHR requires the direct 2D occupancy decoder.')
@@ -291,6 +406,20 @@ class WorldHeadV1(WorldHeadBase):
                           self.num_pred_height * self.num_classes))
             nn.init.zeros_(self.c2f_subquery_decoder[-1].weight)
             nn.init.zeros_(self.c2f_subquery_decoder[-1].bias)
+
+        if self.use_agri_amoe_decoder:
+            # Explicit BEV-to-3D lift followed by Agriculture-specific MoE.
+            # The final 1x1x1 decoder is the only semantic prediction layer
+            # for the last occupancy decoder stage.
+            self.agri_amoe_lift = nn.Linear(
+                self.embed_dims, self.agri_amoe_channels * self.num_pred_height)
+            self.agri_amoe = _AgriAMoE3D(
+                self.agri_amoe_channels,
+                use_gradient_energy=self.agri_amoe_use_gradient_energy,
+                use_saliency=self.agri_amoe_use_saliency,
+                gate_temperature=self.agri_amoe_gate_temperature)
+            self.agri_amoe_out = nn.Conv3d(
+                self.agri_amoe_channels, self.num_classes, 1)
 
         if self.use_dual_hardness_refinement:
             # HASSC-inspired, training-only voxel refinement. A crop/free
@@ -446,11 +575,16 @@ class WorldHeadV1(WorldHeadBase):
         crop_gap_boundary_logits = None
         final_level = next_bev_feats.shape[1] - 1
         for lvl in range(next_bev_feats.shape[1]):
-            #  ===> Lout, bs, h*w, d, num_frame
-            next_bev_pred = self.bev_pred_head[lvl](next_bev_feats[:, lvl]) # C -> d * num_cls
-            next_bev_pred = next_bev_pred.view(
-                *next_bev_pred.shape[:-1], self.num_pred_height,
-                self.num_classes)
+            if self.use_agri_amoe_decoder and lvl == final_level:
+                next_bev_pred = self._agri_amoe_decode(next_bev_feats[:, lvl])
+            else:
+                # Intermediate decoder layers keep their original auxiliary
+                # supervision; Agri-AMoE replaces (rather than post-processes)
+                # the final channel-to-height MLP prediction.
+                next_bev_pred = self.bev_pred_head[lvl](next_bev_feats[:, lvl])
+                next_bev_pred = next_bev_pred.view(
+                    *next_bev_pred.shape[:-1], self.num_pred_height,
+                    self.num_classes)
             if self.use_gap_residual_refiner and lvl == final_level:
                 self._gap_refiner_coarse_logits = next_bev_pred
                 next_bev_pred, self._gap_refiner_gate_logits = (
@@ -494,6 +628,21 @@ class WorldHeadV1(WorldHeadBase):
         boundary_gate = torch.sigmoid(boundary_logits).unsqueeze(-1)
         gate = boundary_gate * (0.25 + 0.75 * ambiguity.unsqueeze(-1))
         return logits + gate * residual, boundary_logits
+
+    def _agri_amoe_decode(self, features):
+        """Lift final BEV queries and decode them with hierarchical AMoE-3D."""
+        frames, batch, tokens, _ = features.shape
+        if tokens != self.bev_h * self.bev_w:
+            raise ValueError(
+                f'Agri-AMoE expected {self.bev_h * self.bev_w} BEV cells, '
+                f'got {tokens}.')
+        volume = self.agri_amoe_lift(features).view(
+            frames, batch, self.bev_h, self.bev_w, self.agri_amoe_channels,
+            self.num_pred_height).permute(0, 1, 4, 5, 2, 3).reshape(
+                frames * batch, self.agri_amoe_channels,
+                self.num_pred_height, self.bev_h, self.bev_w)
+        return self._volume_to_logits(self.agri_amoe_out(self.agri_amoe(volume)),
+                                      frames, batch)
 
     def _features_to_bev_volume(self, features):
         """Convert ``[T,B,HW,C]`` BEV features into a 3D feature volume."""

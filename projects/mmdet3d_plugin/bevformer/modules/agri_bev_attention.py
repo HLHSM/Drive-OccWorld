@@ -345,6 +345,67 @@ class GeometryVisibleAnchorDeformableAttention(BaseModule):
 
 
 @ATTENTION.register_module()
+class GeometryVisibleAnchorDeformableAttentionV2(
+        GeometryVisibleAnchorDeformableAttention):
+    """Late-layer GVAD with a zero-initialized anchor residual.
+
+    GVADV2 is intended for the dense tail of the BEV encoder.  It preserves
+    the TSA-style local deformable path, while a scalar initialized at zero
+    lets optimization start from the local-only solution before gradually
+    admitting the coarse geometry-visible anchor context.
+    """
+
+    def __init__(self, anchor_residual_init=0.0, **kwargs):
+        super().__init__(**kwargs)
+        self.anchor_residual_scale = nn.Parameter(torch.tensor(
+            float(anchor_residual_init)))
+
+    def forward(self,
+                query,
+                key=None,
+                value=None,
+                identity=None,
+                query_pos=None,
+                **kwargs):
+        del key, value
+        query = _as_batch_first(query, self.batch_first)
+        identity = query if identity is None else _as_batch_first(
+            identity, self.batch_first)
+        height, width = _bev_shape(
+            query, kwargs.get('bev_h'), kwargs.get('bev_w'))
+        sparse_layout = bool(kwargs.get('gvad_sparse_layout', False))
+        if sparse_layout:
+            raise ValueError(
+                'GVADV2 must run after NearFar restores the dense BEV grid.')
+        position = None if query_pos is None else _as_batch_first(
+            query_pos, self.batch_first)
+        feature = self.norm(query if position is None else query + position)
+        visibility = self._visibility_from_mask(
+            kwargs.get('bev_mask'), query.shape[0], query.shape[1],
+            query.device, feature.dtype)
+
+        if self.use_local_deformable:
+            local_output = self.local_deformable(
+                query, identity=None, query_pos=position, **kwargs)
+            local_delta = local_output - query
+        else:
+            local_delta = query.new_zeros(query.shape)
+
+        anchor_delta = self._anchor_context(
+            feature, visibility, height, width, sparse_layout=False)
+        anchor_gate = torch.sigmoid(self.anchor_gate(torch.cat(
+            (feature, visibility.unsqueeze(-1)), dim=-1)))
+        anchor_gate = anchor_gate * (1.0 - 0.75 * visibility.unsqueeze(-1))
+        # tanh keeps the learned residual bounded while retaining unit
+        # derivative at the exact zero-initialized local-only starting point.
+        anchor_scale = torch.tanh(self.anchor_residual_scale).to(
+            dtype=anchor_delta.dtype)
+        output = identity + self.dropout(
+            local_delta + anchor_scale * anchor_gate * anchor_delta)
+        return _restore_layout(output, self.batch_first)
+
+
+@ATTENTION.register_module()
 class DirectionalDecaySelectiveRetention(BaseModule):
     """Distance-decayed four-direction retention with selective local kernels."""
 

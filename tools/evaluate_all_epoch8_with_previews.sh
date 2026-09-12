@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Batch-evaluate compatible Drive-OccWorld tasks with epoch_8.pth.
+# Batch-evaluate compatible Drive-OccWorld tasks and save prediction previews.
 #
 # Each available GPU receives a serial queue of independent single-GPU test.py
 # jobs. This avoids distributed rendezvous and allows unrelated experiments to
@@ -23,9 +23,10 @@ BATCH_SIZE="${BATCH_SIZE:-}"
 MAX_USED_MEMORY_MIB="${MAX_USED_MEMORY_MIB:-1024}"
 MAX_PARALLEL_GPU="${MAX_PARALLEL_GPU:-0}"
 POLL_SECONDS="${POLL_SECONDS:-60}"
-MAX_POINTS="${MAX_POINTS:-16000}"
-PREVIEW_ELEV="${PREVIEW_ELEV:-22}"
-PREVIEW_AZIM="${PREVIEW_AZIM:--58}"
+MAX_POINTS="${MAX_POINTS:-30000}"
+PREVIEW_ELEV="${PREVIEW_ELEV:-26}"
+PREVIEW_AZIM="${PREVIEW_AZIM:--135}"
+RENDER_STYLE="${RENDER_STYLE:-auto}"
 GPU_IDS="${GPU_IDS:-}"
 DRY_RUN="${DRY_RUN:-0}"
 
@@ -44,17 +45,6 @@ fi
 if [[ "${SAVE_SAMPLING}" != "leading" && "${SAVE_SAMPLING}" != "per-sequence" ]]; then
     echo "SAVE_SAMPLING must be leading or per-sequence" >&2
     exit 2
-fi
-
-declare -a TASK_DIRS=()
-while IFS= read -r -d '' checkpoint; do
-    TASK_DIRS+=("$(dirname "${checkpoint}")")
-done < <(find "${WORK_DIRS_ROOT}" -mindepth 2 -maxdepth 2 -type f \
-    -name "${CHECKPOINT_NAME}" -print0 | sort -z)
-
-if (( ${#TASK_DIRS[@]} == 0 )); then
-    echo "No ${CHECKPOINT_NAME} files found directly under ${WORK_DIRS_ROOT}" >&2
-    exit 0
 fi
 
 find_config() {
@@ -95,10 +85,65 @@ evaluation_ann_file() {
     esac
 }
 
+# Keep the established epoch-8 sweep, then add ORAD-3D experiments that end
+# earlier (for example the p10/p25/p50/p100 fine-tunes at epoch_1 or epoch_4).
+# A run directory is evaluated only once: when multiple numeric epoch files are
+# present for an ORAD run, its highest epoch is selected.
+declare -a TASK_CHECKPOINTS=()
+declare -A SELECTED_RUNS=()
+while IFS= read -r -d '' checkpoint; do
+    TASK_CHECKPOINTS+=("${checkpoint}")
+    SELECTED_RUNS["$(dirname "${checkpoint}")"]=1
+done < <(find "${WORK_DIRS_ROOT}" -mindepth 2 -maxdepth 2 -type f \
+    -name "${CHECKPOINT_NAME}" -print0 | sort -z)
+
+declare -A ORAD_EPOCH_BY_RUN=()
+declare -A ORAD_CHECKPOINT_BY_RUN=()
+while IFS= read -r -d '' checkpoint; do
+    checkpoint_basename="$(basename "${checkpoint}")"
+    if [[ ! "${checkpoint_basename}" =~ ^epoch_([0-9]+)\.pth$ ]]; then
+        continue
+    fi
+    run_dir="$(dirname "${checkpoint}")"
+    if [[ -n "${SELECTED_RUNS[${run_dir}]+x}" ]]; then
+        continue
+    fi
+    config="$(find_config "${run_dir}")" || continue
+    if [[ "$(dataset_key "${config}")" != "orad3d" ]]; then
+        continue
+    fi
+    epoch="${BASH_REMATCH[1]}"
+    if [[ -z "${ORAD_EPOCH_BY_RUN[${run_dir}]+x}" ]] \
+        || (( epoch > ORAD_EPOCH_BY_RUN[${run_dir}] )); then
+        ORAD_EPOCH_BY_RUN["${run_dir}"]="${epoch}"
+        ORAD_CHECKPOINT_BY_RUN["${run_dir}"]="${checkpoint}"
+    fi
+done < <(find "${WORK_DIRS_ROOT}" -mindepth 2 -maxdepth 2 -type f \
+    -name 'epoch_*.pth' -print0 | sort -z)
+
+while IFS=$'\t' read -r run_dir checkpoint; do
+    TASK_CHECKPOINTS+=("${checkpoint}")
+done < <(
+    for run_dir in "${!ORAD_CHECKPOINT_BY_RUN[@]}"; do
+        printf '%s\t%s\n' "${run_dir}" "${ORAD_CHECKPOINT_BY_RUN[${run_dir}]}"
+    done | sort -t $'\t' -k1,1
+)
+
+if (( ${#TASK_CHECKPOINTS[@]} == 0 )); then
+    echo "No ${CHECKPOINT_NAME} or ORAD-3D epoch_N.pth files found directly under ${WORK_DIRS_ROOT}" >&2
+    exit 0
+fi
+
 run_task() {
-    local gpu="$1" run_dir="$2"
-    local checkpoint="${run_dir}/${CHECKPOINT_NAME}"
+    local gpu="$1" checkpoint="$2"
+    local run_dir checkpoint_stem
+    run_dir="$(dirname "${checkpoint}")"
+    checkpoint_stem="$(basename "${checkpoint%.pth}")"
     local config dataset ann_file prediction_dir visualization_dir gt_dir log_path metrics_path
+    if [[ ! -f "${checkpoint}" ]]; then
+        echo "[$(basename "${run_dir}")] skipped: checkpoint not found: ${checkpoint}" >&2
+        return 1
+    fi
     config="$(find_config "${run_dir}")" || return 1
     dataset="$(dataset_key "${config}")"
     if [[ "${dataset}" == "external-surroundocc" ]]; then
@@ -113,10 +158,10 @@ run_task() {
     prediction_dir="${run_dir}/${PREDICTION_DIR_NAME}"
     visualization_dir="${run_dir}/${VISUALIZATION_DIR_NAME}"
     gt_dir="${GT_CACHE_ROOT}/${dataset}"
-    log_path="${run_dir}/evaluation_${CHECKPOINT_NAME%.pth}.log"
-    metrics_path="${run_dir}/evaluation_${CHECKPOINT_NAME%.pth}_metrics.pkl"
+    log_path="${run_dir}/evaluation_${checkpoint_stem}.log"
+    metrics_path="${run_dir}/evaluation_${checkpoint_stem}_metrics.pkl"
 
-    echo "[$(date '+%F %T')] GPU ${gpu}: $(basename "${run_dir}") (${dataset})"
+    echo "[$(date '+%F %T')] GPU ${gpu}: $(basename "${run_dir}") (${dataset}, ${checkpoint_stem})"
     if [[ "${DRY_RUN}" == "1" ]]; then
         printf '  config=%s\n  checkpoint=%s\n  ann_file=%s\n  prediction=%s\n  visualization=%s\n' \
             "${config}" "${checkpoint}" "${ann_file}" "${prediction_dir}" "${visualization_dir}"
@@ -126,39 +171,44 @@ run_task() {
     mkdir -p "${prediction_dir}" "${visualization_dir}" "${gt_dir}"
     local existing_count
     existing_count="$(find "${prediction_dir}" -maxdepth 1 -type f -name '*.npz' | wc -l)"
-    if (( existing_count > 0 )); then
-        echo "  removing ${existing_count} previous prediction artifact(s) before re-evaluation"
-        find "${prediction_dir}" -maxdepth 1 -type f -name '*.npz' -delete
-    fi
-    find "${prediction_dir}" -maxdepth 1 -type f -name '.epoch8_batch_eval_manifest' -delete
+    if (( existing_count == PREDICTION_COUNT )); then
+        echo "  found ${existing_count} existing prediction artifacts; skipping inference"
+    else
+        if (( existing_count > 0 )); then
+            echo "  removing ${existing_count} incomplete/stale prediction artifact(s) before re-evaluation"
+            find "${prediction_dir}" -maxdepth 1 -type f -name '*.npz' -delete
+        fi
+        find "${prediction_dir}" -maxdepth 1 -type f -name '.epoch8_batch_eval_manifest' -delete
 
-    local command=("${PYTHON_BIN}" tools/test.py "${config}" "${checkpoint}"
-        --save-predictions "${prediction_dir}"
-        --save-prediction-count "${PREDICTION_COUNT}"
-        --save-prediction-sampling "${SAVE_SAMPLING}"
-        --cfg-options "data.test.ann_file=${ann_file}"
-        --out "${metrics_path}")
-    if [[ -n "${BATCH_SIZE}" ]]; then
-        command+=(--batch-size "${BATCH_SIZE}")
-    fi
-    echo "  running inference; log: ${log_path}"
-    if ! (cd "${REPO_ROOT}" && PYTHONPATH="${REPO_PYTHONPATH}" CUDA_VISIBLE_DEVICES="${gpu}" "${command[@]}") \
-            >"${log_path}" 2>&1; then
-        echo "  evaluation failed; inspect ${log_path}" >&2
-        return 1
-    fi
-    local saved_count
-    saved_count="$(find "${prediction_dir}" -maxdepth 1 -type f -name '*.npz' | wc -l)"
-    if (( saved_count != PREDICTION_COUNT )); then
-        echo "  expected ${PREDICTION_COUNT} artifacts, found ${saved_count}; see ${log_path}" >&2
-        return 1
+        local command=("${PYTHON_BIN}" tools/test.py "${config}" "${checkpoint}"
+            --save-predictions "${prediction_dir}"
+            --save-prediction-count "${PREDICTION_COUNT}"
+            --save-prediction-sampling "${SAVE_SAMPLING}"
+            --cfg-options "data.test.ann_file=${ann_file}"
+            --out "${metrics_path}")
+        if [[ -n "${BATCH_SIZE}" ]]; then
+            command+=(--batch-size "${BATCH_SIZE}")
+        fi
+        echo "  running inference; log: ${log_path}"
+        if ! (cd "${REPO_ROOT}" && PYTHONPATH="${REPO_PYTHONPATH}" CUDA_VISIBLE_DEVICES="${gpu}" "${command[@]}") \
+                >"${log_path}" 2>&1; then
+            echo "  evaluation failed; inspect ${log_path}" >&2
+            return 1
+        fi
+        local saved_count
+        saved_count="$(find "${prediction_dir}" -maxdepth 1 -type f -name '*.npz' | wc -l)"
+        if (( saved_count != PREDICTION_COUNT )); then
+            echo "  expected ${PREDICTION_COUNT} artifacts, found ${saved_count}; see ${log_path}" >&2
+            return 1
+        fi
     fi
 
     echo "  rendering ${PREDICTION_COUNT} prediction-only previews; GT cache: ${gt_dir}"
     local render_command=("${PYTHON_BIN}" "${REPO_ROOT}/tools/render_occ_prediction_previews.py"
         "${prediction_dir}" "${visualization_dir}" --shared-gt-dir "${gt_dir}"
         --count "${PREDICTION_COUNT}" --max-points "${MAX_POINTS}"
-        --elev "${PREVIEW_ELEV}" --azim "${PREVIEW_AZIM}")
+        --elev "${PREVIEW_ELEV}" --azim "${PREVIEW_AZIM}"
+        --style "${RENDER_STYLE}")
     render_command+=(--overwrite)
     if ! "${render_command[@]}"; then
         echo "  preview rendering failed" >&2
@@ -198,23 +248,23 @@ if (( MAX_PARALLEL_GPU > 0 && ${#AVAILABLE_GPUS[@]} > MAX_PARALLEL_GPU )); then
     AVAILABLE_GPUS=("${AVAILABLE_GPUS[@]:0:MAX_PARALLEL_GPU}")
 fi
 
-echo "Found ${#TASK_DIRS[@]} tasks and ${#AVAILABLE_GPUS[@]} available GPU(s): ${AVAILABLE_GPUS[*]}"
+echo "Found ${#TASK_CHECKPOINTS[@]} tasks and ${#AVAILABLE_GPUS[@]} available GPU(s): ${AVAILABLE_GPUS[*]}"
 echo "Each task saves ${PREDICTION_COUNT} ${SAVE_SAMPLING} samples. Shared GT cache: ${GT_CACHE_ROOT}"
 
 declare -a WORKER_TASKS
 for ((index = 0; index < ${#AVAILABLE_GPUS[@]}; index++)); do
     WORKER_TASKS[index]=''
 done
-for ((index = 0; index < ${#TASK_DIRS[@]}; index++)); do
+for ((index = 0; index < ${#TASK_CHECKPOINTS[@]}; index++)); do
     worker=$((index % ${#AVAILABLE_GPUS[@]}))
-    WORKER_TASKS[worker]+="${TASK_DIRS[index]}"$'\n'
+    WORKER_TASKS[worker]+="${TASK_CHECKPOINTS[index]}"$'\n'
 done
 
 worker() {
-    local gpu="$1" tasks="$2" run_dir failures=0
-    while IFS= read -r run_dir; do
-        [[ -z "${run_dir}" ]] && continue
-        run_task "${gpu}" "${run_dir}" || failures=$((failures + 1))
+    local gpu="$1" tasks="$2" checkpoint failures=0
+    while IFS= read -r checkpoint; do
+        [[ -z "${checkpoint}" ]] && continue
+        run_task "${gpu}" "${checkpoint}" || failures=$((failures + 1))
     done <<< "${tasks}"
     return "${failures}"
 }
@@ -233,4 +283,4 @@ if (( FAILURES > 0 )); then
     echo "Finished with ${FAILURES} worker(s) containing failed task(s)." >&2
     exit 1
 fi
-echo "All epoch-8 evaluation and preview tasks completed."
+echo "All selected evaluation and preview tasks completed."

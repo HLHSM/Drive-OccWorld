@@ -26,14 +26,14 @@ CONFIG="projects/configs/orad3d/orad3d_occ_mono.py"
 SPLIT_DIR="data/orad3d/splits"
 TEST_ANN_FILE="${TEST_ANN_FILE:-${SPLIT_DIR}/test.json}"
 GENERIC_PRETRAINED="${GENERIC_PRETRAINED:-$(pwd)/pretrained/r101_dcn_fcos3d_pretrain.pth}"
-FARMSIM_CHECKPOINT="${FARMSIM_CHECKPOINT:-work_dirs/front3_gvad_adhr_nearfar_r0.6_s2_nohis_ep8_20260904_163459/epoch_8.pth}"
+FARMSIM_CHECKPOINT="${FARMSIM_CHECKPOINT:-work_dirs/front3_gvad_agri_amoe_nearfar_r0.6_s2_ep8_20260911_105909/epoch_8.pth}"
 
 BATCH_SIZE="${BATCH_SIZE:-6}"
 TOTAL_BATCH_SIZE="${TOTAL_BATCH_SIZE:-24}"
 WORKERS_PER_GPU="${WORKERS_PER_GPU:-4}"
 IMAGE_WIDTH="${IMAGE_WIDTH:-512}"
 IMAGE_HEIGHT="${IMAGE_HEIGHT:-288}"
-EPOCHS="${EPOCHS:-8}"
+EPOCHS="${EPOCHS:-6}"
 SEED="${SEED:-20260904}"
 USE_FP16="${USE_FP16:-1}"
 
@@ -128,7 +128,7 @@ train_one() {
   local name="$1"
   local fraction="$2"
   local initialization="$3"
-  local work_dir="work_dirs/orad3d_${name}_p${fraction}_ep${EPOCHS}_$(date +%Y%m%d_%H%M%S)"
+  local work_dir="work_dirs/orad3d_${name}_with_AMoE_p${fraction}_ep${EPOCHS}_$(date +%Y%m%d_%H%M%S)"
   local train_manifest="${SPLIT_DIR}/train_$(printf '%03d' "${fraction}").json"
 
   PYTHONPATH="${REPO_ROOT}:${PYTHONPATH:-}" CUDA_VISIBLE_DEVICES="${CUDA_VISIBLE_DEVICES}" \
@@ -156,9 +156,9 @@ train_one() {
   fi
 }
 
-# if [[ "${RUN_SCRATCH_100}" == "1" ]]; then
-#   train_one scratch 100 "${GENERIC_PRETRAINED}"
-# fi
+if [[ "${RUN_SCRATCH_100}" == "1" ]]; then
+  train_one scratch 100 "${GENERIC_PRETRAINED}"
+fi
 
 EPOCHS=1
 [[ "${RUN_FINETUNE_10}" == "1" ]] && train_one farmsim_ft 10 "${adapted_checkpoint}"

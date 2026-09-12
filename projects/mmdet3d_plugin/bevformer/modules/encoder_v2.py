@@ -30,6 +30,7 @@ class CustomBEVFormerEncoder(BEVFormerEncoder):
                  use_nearfar_bev=False,
                  nearfar_near_ratio=0.6,
                  nearfar_far_stride=2,
+                 nearfar_dense_tail_layers=1,
                  use_acfs_bev=False,
                  acfs_active_ratio=0.5,
                  *args, **kwargs):
@@ -38,6 +39,7 @@ class CustomBEVFormerEncoder(BEVFormerEncoder):
         self.use_nearfar_bev = bool(use_nearfar_bev)
         self.nearfar_near_ratio = float(nearfar_near_ratio)
         self.nearfar_far_stride = int(nearfar_far_stride)
+        self.nearfar_dense_tail_layers = int(nearfar_dense_tail_layers)
         # Older dumped FarmSim configs always carried these ACF-S fields even
         # when the feature was disabled.  Keep that no-op configuration
         # loadable so checkpoint evaluation is not coupled to a stale config
@@ -56,6 +58,9 @@ class CustomBEVFormerEncoder(BEVFormerEncoder):
         if self.use_nearfar_bev:
             if len(self.layers) < 2:
                 raise ValueError('Near-far BEV requires at least two encoder layers.')
+            if not 1 <= self.nearfar_dense_tail_layers <= len(self.layers):
+                raise ValueError(
+                    'nearfar_dense_tail_layers must be in [1, num_layers].')
 
         self.keep_idx = keep_idx
         # remove latent rendering in previous layers.
@@ -188,10 +193,11 @@ class CustomBEVFormerEncoder(BEVFormerEncoder):
                 batch_size * 2, active_count, 1, 2)
 
         output = active_query
-        # Most layers operate on the geometry-selected tokens.  The final
-        # dense layer restores direct image cross-attention to every BEV cell,
-        # avoiding the old query-only completion of far-field semantics.
-        for layer in self.layers[:-1]:
+        sparse_layer_count = len(self.layers) - self.nearfar_dense_tail_layers
+        # Prefix layers operate on the geometry-selected tokens.  GVADV2 uses
+        # a two-layer dense tail so local deformable sampling and its guarded
+        # anchor residual see the real 2D BEV grid, not a packed sparse list.
+        for layer in self.layers[:sparse_layer_count]:
             output = layer(
                 output, key, value, *args, bev_pos=active_pos,
                 ref_2d=hybrid_ref_2d, ref_3d=ref_3d,
@@ -228,14 +234,17 @@ class CustomBEVFormerEncoder(BEVFormerEncoder):
             dense_hybrid_ref_2d = torch.stack(
                 [dense_ref_2d, dense_ref_2d], 1).reshape(
                     batch_size * 2, bev_h * bev_w, 1, 2)
-        return self.layers[-1](
-            restored, key, value, *args, bev_pos=dense_pos,
-            ref_2d=dense_hybrid_ref_2d, ref_3d=dense_ref_3d,
-            bev_h=bev_h, bev_w=bev_w, spatial_shapes=spatial_shapes,
-            level_start_index=level_start_index,
-            reference_points_cam=dense_reference_points_cam,
-            bev_mask=dense_bev_mask, prev_bev=dense_prev,
-            gvad_sparse_layout=False, **kwargs)
+        output = restored
+        for layer in self.layers[sparse_layer_count:]:
+            output = layer(
+                output, key, value, *args, bev_pos=dense_pos,
+                ref_2d=dense_hybrid_ref_2d, ref_3d=dense_ref_3d,
+                bev_h=bev_h, bev_w=bev_w, spatial_shapes=spatial_shapes,
+                level_start_index=level_start_index,
+                reference_points_cam=dense_reference_points_cam,
+                bev_mask=dense_bev_mask, prev_bev=dense_prev,
+                gvad_sparse_layout=False, **kwargs)
+        return output
 
 
 @TRANSFORMER_LAYER.register_module()

@@ -94,6 +94,19 @@ def parse_args():
                          help='fraction of uncertain crop/free BEV cells refined')
     farmsim.add_argument('--c2f-channels', type=int, default=128,
                          help='hidden width of the selective C2F subquery decoder')
+    farmsim.add_argument('--use-agri-amoe-decoder', type=int, choices=(0, 1),
+                         help='replace final occupancy MLP decode with Agri-AMoE 3D')
+    farmsim.add_argument('--agri-amoe-channels', type=int, default=96,
+                         help='lifted 3D width for the Agri-AMoE decoder')
+    farmsim.add_argument('--agri-amoe-use-gradient-energy', type=int,
+                         choices=(0, 1), default=1,
+                         help='route Agri-AMoE experts with 3D gradient energy')
+    farmsim.add_argument('--agri-amoe-use-saliency', type=int,
+                         choices=(0, 1), default=1,
+                         help='enable Agri-AMoE channel and spatial saliency')
+    farmsim.add_argument('--agri-amoe-gate-temperature', type=float,
+                         default=1.0,
+                         help='positive softmax temperature for Agri-AMoE routing')
     farmsim.add_argument('--use-dual-hardness-refinement', type=int,
                          choices=(0, 1),
                          help='enable ADHR training-only agricultural hard-voxel refinement')
@@ -163,6 +176,10 @@ def parse_args():
                               'pretrained/r50_fcos3d_pretrain.pth when omitted')
     farmsim.add_argument('--use-gvad-attention', type=int, choices=(0, 1),
                          help='replace no-history TSA with geometry-visible anchor deformable attention')
+    farmsim.add_argument('--use-gvadv2-attention', type=int, choices=(0, 1),
+                         help='use zero-start GVAD only in the dense encoder tail')
+    farmsim.add_argument('--gvadv2-num-layers', type=int, default=2,
+                         help='number of final dense BEV encoder layers using GVADV2')
     farmsim.add_argument('--gvad-use-visibility', type=int, choices=(0, 1),
                          default=1,
                          help='use calibrated BEV projection visibility for GVAD anchors')
@@ -288,6 +305,10 @@ def apply_farmsim_options(cfg, args):
         raise ValueError('--c2f-active-ratio must be in (0, 1].')
     if args.c2f_channels < 8:
         raise ValueError('--c2f-channels must be at least 8.')
+    if args.agri_amoe_channels < 8:
+        raise ValueError('--agri-amoe-channels must be at least 8.')
+    if args.agri_amoe_gate_temperature <= 0:
+        raise ValueError('--agri-amoe-gate-temperature must be positive.')
     if not 0.0 < args.dual_hardness_active_ratio <= 1.0:
         raise ValueError('--dual-hardness-active-ratio must be in (0, 1].')
     if not 0.0 <= args.dual_hardness_gap_ratio <= 1.0:
@@ -338,18 +359,20 @@ def apply_farmsim_options(cfg, args):
     spatial_mixer_count = sum(flag == 1 for flag in (
         args.disable_temporal_self_attention,
         args.use_gvad_attention,
+        args.use_gvadv2_attention,
         args.use_directional_decay_retention))
     if spatial_mixer_count > 1:
         raise ValueError('Choose only one of --disable-temporal-self-attention, '
-                         '--use-gvad-attention, and '
+                         '--use-gvad-attention, --use-gvadv2-attention, and '
                          '--use-directional-decay-retention.')
     if ((args.use_gvad_attention == 1 or
+         args.use_gvadv2_attention == 1 or
          args.use_directional_decay_retention == 1) and
             args.history_frames != 0):
         raise ValueError('The no-history BEV spatial mixers require '
                          '--history-frames=0; otherwise they would discard '
                          'the available prev_bev.')
-    if args.use_gvad_attention == 1:
+    if args.use_gvad_attention == 1 or args.use_gvadv2_attention == 1:
         if args.gvad_num_heads < 1 or 256 % args.gvad_num_heads:
             raise ValueError('--gvad-num-heads must be a positive divisor of 256.')
         if (args.gvad_anchor_grid_height < 1 or
@@ -358,6 +381,8 @@ def apply_farmsim_options(cfg, args):
         if not (args.gvad_use_visibility or args.gvad_use_local_deformable):
             raise ValueError('GVAD requires visibility anchors or the local '
                              'deformable path.')
+    if args.use_gvadv2_attention == 1 and args.gvadv2_num_layers < 1:
+        raise ValueError('--gvadv2-num-layers must be positive.')
     if args.use_directional_decay_retention == 1:
         if args.ddsr_retention_radius < 2:
             raise ValueError('--ddsr-retention-radius must be at least 2.')
@@ -415,11 +440,13 @@ def apply_farmsim_options(cfg, args):
         args.epochs, args.history_frames, args.predict_future_occ,
         args.predict_future_traj, args.use_fp16, args.use_crop_gap_refinement,
         args.use_selective_c2f, args.use_dual_hardness_refinement,
+        args.use_agri_amoe_decoder,
         args.use_gap_residual_refiner,
         args.use_nearfar_bev,
         args.disable_temporal_self_attention,
         args.use_r50_image_encoder,
         args.use_gvad_attention,
+        args.use_gvadv2_attention,
         args.use_directional_decay_retention,
         args.use_efficient_baseline,
         args.num_gpus, args.train_ann_file, args.val_ann_file,
@@ -532,6 +559,16 @@ def apply_farmsim_options(cfg, args):
             args.use_selective_c2f)
         cfg.model.future_pred_head.c2f_active_ratio = args.c2f_active_ratio
         cfg.model.future_pred_head.c2f_channels = args.c2f_channels
+    if args.use_agri_amoe_decoder is not None:
+        cfg.model.future_pred_head.use_agri_amoe_decoder = bool(
+            args.use_agri_amoe_decoder)
+        cfg.model.future_pred_head.agri_amoe_channels = args.agri_amoe_channels
+        cfg.model.future_pred_head.agri_amoe_use_gradient_energy = bool(
+            args.agri_amoe_use_gradient_energy)
+        cfg.model.future_pred_head.agri_amoe_use_saliency = bool(
+            args.agri_amoe_use_saliency)
+        cfg.model.future_pred_head.agri_amoe_gate_temperature = (
+            args.agri_amoe_gate_temperature)
     if args.use_dual_hardness_refinement is not None:
         cfg.model.future_pred_head.use_dual_hardness_refinement = bool(
             args.use_dual_hardness_refinement)
@@ -598,6 +635,60 @@ def apply_farmsim_options(cfg, args):
         layer_cfg.attn_cfgs = attn_cfgs[1:]
         layer_cfg.operation_order = ('cross_attn', 'norm', 'ffn', 'norm')
         cfg.farmsim_temporal_self_attention = False
+    elif args.use_gvadv2_attention == 1:
+        encoder_cfg = cfg.model.pts_bbox_head.transformer.encoder
+        layer_cfg = encoder_cfg.transformerlayers
+        temporal_order = ('self_attn', 'norm', 'cross_attn', 'norm', 'ffn',
+                          'norm')
+        if not isinstance(layer_cfg, dict):
+            raise ValueError('GVADV2 expects one shared encoder layer config.')
+        if tuple(layer_cfg.operation_order) != temporal_order:
+            raise ValueError('The configured BEV encoder does not use the '
+                             'standard TemporalSelfAttention layout.')
+        attn_cfgs = list(layer_cfg.attn_cfgs)
+        if (len(attn_cfgs) != 2 or
+                attn_cfgs[0].get('type') != 'TemporalSelfAttention'):
+            raise ValueError('Expected TemporalSelfAttention as the first '
+                             'BEV encoder attention configuration.')
+        num_layers = int(encoder_cfg.num_layers)
+        if args.gvadv2_num_layers > num_layers:
+            raise ValueError('--gvadv2-num-layers cannot exceed the BEV '
+                             f'encoder depth ({num_layers}).')
+        use_nearfar = bool(encoder_cfg.get('use_nearfar_bev', False))
+        if use_nearfar and args.gvadv2_num_layers == num_layers:
+            raise ValueError('GVADV2+NearFar needs at least one sparse prefix '
+                             'layer; reduce --gvadv2-num-layers.')
+
+        prefix_cfg = copy.deepcopy(layer_cfg)
+        if use_nearfar:
+            # Packed NearFar tokens are not a rectangular feature map.  Keep
+            # the sparse prefix cheap and geometry-correct, then restore the
+            # dense grid before the complete GVADV2 tail.
+            prefix_cfg.attn_cfgs = list(prefix_cfg.attn_cfgs)[1:]
+            prefix_cfg.operation_order = ('cross_attn', 'norm', 'ffn', 'norm')
+
+        tail_cfg = copy.deepcopy(layer_cfg)
+        tail_attn_cfgs = list(tail_cfg.attn_cfgs)
+        tail_mixer_cfg = dict(tail_attn_cfgs[0])
+        tail_mixer_cfg.update(
+            type='GeometryVisibleAnchorDeformableAttentionV2',
+            num_heads=args.gvad_num_heads,
+            anchor_grid_height=args.gvad_anchor_grid_height,
+            anchor_grid_width=args.gvad_anchor_grid_width,
+            use_visibility=bool(args.gvad_use_visibility),
+            use_local_deformable=bool(args.gvad_use_local_deformable),
+            anchor_residual_init=0.0)
+        tail_attn_cfgs[0] = tail_mixer_cfg
+        tail_cfg.attn_cfgs = tail_attn_cfgs
+        prefix_count = num_layers - args.gvadv2_num_layers
+        encoder_cfg.transformerlayers = [
+            copy.deepcopy(prefix_cfg) for _ in range(prefix_count)
+        ] + [copy.deepcopy(tail_cfg) for _ in range(args.gvadv2_num_layers)]
+        if use_nearfar:
+            encoder_cfg.nearfar_dense_tail_layers = args.gvadv2_num_layers
+        cfg.farmsim_bev_spatial_mixer = (
+            f'gvadv2_tail{args.gvadv2_num_layers}')
+        cfg.farmsim_gvadv2_zero_start = True
     elif (args.use_gvad_attention == 1 or
           args.use_directional_decay_retention == 1):
         layer_cfg = cfg.model.pts_bbox_head.transformer.encoder.transformerlayers

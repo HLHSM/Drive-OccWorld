@@ -220,7 +220,7 @@ CUDA_VISIBLE_DEVICES=0 PYTHONPATH="$PWD" \
 ```bash
 /home/HL/.conda/envs/dow2/bin/python \
   tools/visualize_farmsim_predictions.py \
-  work_dirs/front3_base_nohis_ep8_20260828_043722/predictions
+  work_dirs/front3_gvad_adhr_nearfar_r0.6_s2_nohis_ep8_20260904_163459/prediction
 ```
 
 命令会先预加载全部 `.npz` 并显示进度，随后输出类似 `http://127.0.0.1:8000/` 的地址；在浏览器打开它后，可通过样本下拉框或 `Previous`/`Next` 逐条查看保存的结果。浏览器也会在后台预取全部样本，因此预加载完成后切换样本无需再等待 NPZ 读取或体素转换；代价是启动会变慢且服务端、浏览器会占用更多内存。页面左侧固定显示标签（GT），右侧固定显示预测结果；预测会使用同一帧 GT 的有效区域（非 ignore）掩码，避免未标注区域占用绘制点数，状态栏会显示两侧有效非 free 体素数。底部图例标明 6 类 FarmSim taxonomy 的颜色，其中 crop 为黄绿色、drivable 为天蓝色。存在未来占用时可切换未来时间步，存在轨迹时会自动叠加 GT 与预测轨迹。为控制浏览器性能，每侧默认最多显示 30,000 个有效非 free 体素；可通过 `--max-points 50000` 调大。需要自动打开浏览器时添加 `--open-browser`；默认仅本机可访问，需让局域网其他机器访问时可添加 `--host 0.0.0.0`。按 `Ctrl-C` 停止服务。页面仍使用 Plotly CDN，浏览器首次打开时需要可访问该 CDN。

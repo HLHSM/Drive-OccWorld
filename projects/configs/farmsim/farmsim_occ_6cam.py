@@ -29,6 +29,12 @@ model = dict(
         use_selective_c2f=False,
         c2f_active_ratio=0.25,
         c2f_channels=128,
+        # Agricultural Structure-Adaptive MoE 3D occupancy decoder.
+        use_agri_amoe_decoder=False,
+        agri_amoe_channels=96,
+        agri_amoe_use_gradient_energy=True,
+        agri_amoe_use_saliency=True,
+        agri_amoe_gate_temperature=1.0,
         # ADHR is a training-only hard-voxel auxiliary branch; it does not
         # alter the public occupancy output at inference.
         use_dual_hardness_refinement=False,
@@ -68,6 +74,7 @@ model = dict(
             use_nearfar_bev=False,
             nearfar_near_ratio=0.6,
             nearfar_far_stride=2,
+            nearfar_dense_tail_layers=1,
             transformerlayers=dict(attn_cfgs=[
                 dict(type='TemporalSelfAttention', embed_dims=256, num_levels=1),
                 dict(type='SpatialCrossAttention', pc_range=point_cloud_range,
