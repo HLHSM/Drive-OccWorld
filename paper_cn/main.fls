@@ -2,7 +2,7 @@ PWD /data/HL/Drive-OccWorld/paper_cn
 INPUT /data/HL/texlive/2026/texmf.cnf
 INPUT /data/HL/texlive/2026/texmf-dist/web2c/texmf.cnf
 INPUT /data/HL/texlive/2026/texmf-var/web2c/xetex/xelatex.fmt
-INPUT main.tex
+INPUT /data/HL/Drive-OccWorld/paper_cn/main.tex
 OUTPUT main.log
 INPUT /data/HL/texlive/2026/texmf-dist/tex/latex/elsarticle/elsarticle.cls
 INPUT /data/HL/texlive/2026/texmf-dist/tex/latex/elsarticle/elsarticle.cls
@@ -430,12 +430,12 @@ INPUT /data/HL/texlive/2026/texmf-dist/fonts/tfm/public/amsfonts/cmextra/cmbsy7.
 INPUT /data/HL/texlive/2026/texmf-dist/fonts/tfm/public/cm/cmr12.tfm
 INPUT /data/HL/texlive/2026/texmf-dist/fonts/tfm/public/cm/cmr8.tfm
 INPUT /data/HL/texlive/2026/texmf-dist/fonts/tfm/public/cm/cmr6.tfm
-OUTPUT main.xdv
 INPUT ./sections/1_introduction.tex
 INPUT ./sections/1_introduction.tex
 INPUT ./sections/1_introduction.tex
 INPUT ./sections/1_introduction.tex
 INPUT sections/1_introduction.tex
+OUTPUT main.xdv
 INPUT ./sections/2_related_work.tex
 INPUT ./sections/2_related_work.tex
 INPUT ./sections/2_related_work.tex
