@@ -162,6 +162,10 @@ def parse_args():
                          help='selected-cell quota for confident crop regions')
     farmsim.add_argument('--freeze-gap-refiner-base', action='store_true',
                          help='freeze every non-GapRef parameter for diagnostic training')
+    farmsim.add_argument(
+        '--freeze-resolution-transfer-base', action='store_true',
+        help='freeze the transferred base and train only resolution-adaptation '
+             'parameters (interpolated BEV queries/positions or the 2x head)')
     farmsim.add_argument('--use-nearfar-bev', type=int, choices=(0, 1),
                          help='enable deterministic near-far sparse BEV encoding')
     farmsim.add_argument('--nearfar-near-ratio', type=float, default=0.6,
@@ -915,6 +919,47 @@ def main():
         setattr(model, model_flag, True)
         logger.info('%s diagnostic freeze enabled; trainable parameters: %s',
                     label, ', '.join(trainable_names))
+
+    if args.freeze_resolution_transfer_base:
+        if getattr(model.future_pred_head, 'use_occupancy_2x_refiner', False):
+            # The 100x100 source BEV encoder is unchanged.  Only the newly
+            # introduced learned 2x output adapter needs optimisation.
+            label = '2x occupancy head'
+            parameter_prefixes = ('future_pred_head.occupancy_2x_',)
+            trainable_modules = (
+                'future_pred_head.occupancy_2x_bev_proj',
+                'future_pred_head.occupancy_2x_refiner',
+            )
+        else:
+            # Native 0.1 m encoding changes only the BEV query lattice.  The
+            # source 0.2 m BEV queries and XY positional embeddings were
+            # interpolated by the checkpoint adapter and are the sole
+            # trainable spatial adaptation parameters in this protocol.
+            label = '0.1 m BEV query lattice'
+            parameter_prefixes = (
+                'pts_bbox_head.bev_embedding.',
+                'pts_bbox_head.positional_encoding.',
+            )
+            trainable_modules = (
+                'pts_bbox_head.bev_embedding',
+                'pts_bbox_head.positional_encoding',
+            )
+
+        trainable_names = []
+        for name, parameter in model.named_parameters():
+            trainable = name.startswith(parameter_prefixes)
+            parameter.requires_grad_(trainable)
+            if trainable:
+                trainable_names.append(name)
+        if not trainable_names:
+            raise RuntimeError(
+                f'Resolution-transfer freeze requested but no {label} '
+                'parameters exist.')
+        model.freeze_resolution_transfer_base = True
+        model.resolution_transfer_trainable_modules = trainable_modules
+        logger.info(
+            'Resolution-transfer freeze enabled for %s; trainable parameters: %s',
+            label, ', '.join(trainable_names))
 
     trainable_params = sum(p.numel() for p in model.parameters()
                            if p.requires_grad)

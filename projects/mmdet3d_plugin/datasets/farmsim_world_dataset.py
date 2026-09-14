@@ -107,6 +107,10 @@ class FarmSimWorldDataset(torch.utils.data.Dataset):
         if self.future_pred_frame_num < 0 or self.future_traj_frame_num < 0:
             raise ValueError('future prediction frame counts must be non-negative')
         self.camera_names = FRONT_RGB_CAMERAS if camera_mode == 'front' else RGB_CAMERAS
+        # Occupancy exports can use different voxel resolutions.  Cache the
+        # [x, y, z] shape declared by each sequence rather than assuming the
+        # original v9 0.2 m ``200 x 100 x 25`` surround grid.
+        self._occupancy_shape_cache = {}
 
         ann_file = Path(ann_file).expanduser()
         with ann_file.open('r', encoding='utf-8') as f:
@@ -244,20 +248,56 @@ class FarmSimWorldDataset(torch.utils.data.Dataset):
             images.append(image)
         return images, sx, sy
 
+    def _occupancy_shape(self, seq_path):
+        """Read the dense occupancy dimensions declared by a UE5 sequence.
+
+        FarmSim v9 records only one isotropic voxel size, while v10 exports
+        anisotropic voxel sizes and explicitly stores the grid dimensions.
+        Both versions expose a ``regions`` record, which makes the data
+        loader independent of the output resolution used during capture.
+        """
+        seq_path = Path(seq_path)
+        cached = self._occupancy_shape_cache.get(seq_path)
+        if cached is not None:
+            return cached
+
+        schema_path = seq_path / 'occupancy_schema.json'
+        with schema_path.open('r', encoding='utf-8') as f:
+            schema = json.load(f)
+        region_mode = schema.get('region_mode')
+        region = next(
+            (item for item in schema.get('regions', [])
+             if item.get('id') == region_mode),
+            None)
+        if region is None:
+            raise RuntimeError(
+                f'{schema_path}: no dimensions for region {region_mode!r}')
+        dimensions = tuple(int(value) for value in region.get('dimensions_xyz', ()))
+        if len(dimensions) != 3 or min(dimensions) <= 0:
+            raise RuntimeError(
+                f'{schema_path}: invalid dimensions_xyz={dimensions!r}')
+        self._occupancy_shape_cache[seq_path] = dimensions
+        return dimensions
+
     def _load_occupancy(self, seq, frame_id):
         seq_path = self._sequence_path(seq)
         raw = np.fromfile(seq_path / 'occupancy' / f'{frame_id}.bin', dtype=np.uint8)
         valid = np.fromfile(seq_path / 'occupancy_valid' / f'{frame_id}.bin', dtype=np.uint8)
-        expected = 25 * 100 * 200
+        size_x, size_y, size_z = self._occupancy_shape(seq_path)
+        expected = size_x * size_y * size_z
         if raw.size != expected or valid.size != expected:
             raise RuntimeError(f'{seq_path}: unexpected occupancy byte count for frame {frame_id}')
         # FarmSim storage [z,y,x] -> model supervision [x,y,z].
-        raw = raw.reshape(25, 100, 200).transpose(2, 1, 0)
-        valid = valid.reshape(25, 100, 200).transpose(2, 1, 0)
+        raw = raw.reshape(size_z, size_y, size_x).transpose(2, 1, 0)
+        valid = valid.reshape(size_z, size_y, size_x).transpose(2, 1, 0)
         raw[valid == 0] = 255
         raw = FARMSIM_LABEL_REMAP[raw]
         if self.front_only:
-            raw = raw[100:, :, :]
+            if size_x % 2:
+                raise RuntimeError(
+                    f'{seq_path}: front-only cropping requires an even x dimension, '
+                    f'got {size_x}')
+            raw = raw[size_x // 2:, :, :]
         return torch.from_numpy(raw.astype(np.int64, copy=False))
 
     def __getitem__(self, index):

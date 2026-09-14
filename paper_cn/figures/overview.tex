@@ -9,16 +9,15 @@
 \node[box] (cams) {左前 / 正前 / 右前\\RGB 图像};
 \node[module, right=of cams] (fpn) {预训练 ResNet-101\\+ 多尺度 FPN};
 \node[module, right=of fpn] (bev) {GVAD 增强的\\6 层 BEV 编码器};
-\node[module, right=of bev] (decoder) {3 层占用解码器\\$100\!\times\!100\!\times\!25\!\times\!6$};
+\node[module, right=of bev] (decoder) {3 层占用解码器 +\\Agri-AMoE 三维解码};
 \node[box, right=of decoder] (out) {当前三维\\语义占用};
 \draw[arr] (cams)--(fpn);
 \draw[arr] (fpn)--(bev);
 \draw[arr] (bev)--(decoder);
 \draw[arr] (decoder)--(out);
-\node[box, below=8mm of bev] (nearfar) {近场稠密 + 远场稀疏\\恢复后最终稠密交叉注意力};
+\node[box, text width=27mm, below=8mm of bev] (nearfar) {近场稠密 + 远场稀疏\\恢复后最终稠密交叉注意力};
 \draw[arr] (nearfar)--(bev);
-\node[train, below=8mm of decoder] (adhr) {训练期 ADHR：不确定体素 +\\作物/自由空间困难间隙};
-\draw[arr] (decoder)--(adhr);
+\node[train, text width=27mm, below=8mm of decoder] (amoe) {最终 BEV 提升为 $Z\!\times\!H\!\times\!W$\\梯度能量路由三类 3D 专家};
+\draw[arr] (decoder)--(amoe);
 \node[align=left, below=1mm of cams, text width=43mm] {\footnotesize GVAD：局部可变形采样 + 基于相机投影有效掩码的 32 个可见锚点。};
 \end{tikzpicture}
-

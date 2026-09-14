@@ -1,18 +1,18 @@
 # Fdb version 4
-["bibtex main"] 1788762770.45661 "main.aux" "main.bbl" "main" 1788765431.57877 0
+["bibtex main"] 1789348802.80825 "main.aux" "main.bbl" "main" 1789348825.15492 0
   "./references.bib" 1788759199.15182 12467 97eaf38b4c666dfe45e03224ef199c2c ""
   "/data/HL/texlive/2026/texmf-dist/bibtex/bst/elsarticle/elsarticle-num.bst" 1767996394 29462 dde4ec39bf78fded04ea32048bba0a74 ""
-  "main.aux" 1788765408.6309 11738 d8d73454f964b940ea65533d97551d77 "xelatex"
+  "main.aux" 1789348804.33883 12699 145e6f9a4a39ba61cb16edbdef3c38c6 "xelatex"
   (generated)
   "main.bbl"
   "main.blg"
   (rewritten before read)
-["xdvipdfmx"] 1788765408.81481 "main.xdv" "main.pdf" "main" 1788765431.5822 0
-  "main.xdv" 1788765408.6329 292124 e3c0b59d349121c6a6966375be219eb8 "xelatex"
+["xdvipdfmx"] 1789348804.55321 "main.xdv" "main.pdf" "main" 1789348825.15965 0
+  "main.xdv" 1789348804.33983 310600 720d3649e8ad61e3735a08ff59cffe2e "xelatex"
   (generated)
   "main.pdf"
   (rewritten before read)
-["xelatex"] 1788765407.17031 "main.tex" "main.xdv" "main" 1788765431.57892 0
+["xelatex"] 1789348802.8386 "main.tex" "main.xdv" "main" 1789348825.15516 0
   "/data/HL/texlive/2026/texmf-dist/fonts/tfm/adobe/zapfding/pzdr.tfm" 1136768653 1528 f853c4d1b4e0550255e02831fdc8496f ""
   "/data/HL/texlive/2026/texmf-dist/fonts/tfm/public/amsfonts/cmextra/cmbsy5.tfm" 1246382020 1120 1e8878807317373affa7f7bba4cf2f6a ""
   "/data/HL/texlive/2026/texmf-dist/fonts/tfm/public/amsfonts/cmextra/cmbsy7.tfm" 1246382020 1120 7f9f170e8aa57527ad6c49feafd45d54 ""
@@ -199,23 +199,23 @@
   "/data/HL/texlive/2026/texmf-dist/web2c/texmf.cnf" 1782667392 43815 bcd8835056a2dfac260166a1c9541261 ""
   "/data/HL/texlive/2026/texmf-var/web2c/xetex/xelatex.fmt" 1788148809 5432384 bbc3148b974cd45059e6359faf95b24e ""
   "/data/HL/texlive/2026/texmf.cnf" 1788148239.46057 528 5ccd4bd474fbdf310d7f1b20d93c0470 ""
-  "figures/adhr_module_ai_v2.png" 1788765292.0992 1281920 9b9dbdf61232644a31662c21c28427f0 ""
-  "figures/agriocc_overview_ai_v2.png" 1788765292.0952 1001644 7944dd58dde04b9e76348e83874da984 ""
+  "figures/agri_amoe_module_imagegen.png" 1789215443.43352 1047367 179e86e3a9e59180c386a8d36f5945e3 ""
+  "figures/agriocc_overview_imagegen.png" 1789215443.42752 1018439 43b00ef643f920193969c716e81fd3d9 ""
   "figures/gvad_module_ai.png" 1788762767.02861 1254443 218c783f515048eb7c034e7d5e06e325 ""
-  "figures/nearfar_module_ai_v2.png" 1788765292.1042 1011220 08853f1ba8af622fb21110a4ebb9a8ae ""
-  "main.aux" 1788765408.6309 11738 d8d73454f964b940ea65533d97551d77 "xelatex"
-  "main.bbl" 1788762770.47969 9891 08efdc1eff59fa7329ee6bcb4f9db8c0 "bibtex main"
-  "main.out" 1788765408.6319 1856 e7f7d1a25510cf038e8e6df448f05579 "xelatex"
-  "main.spl" 1788765407.43487 0 d41d8cd98f00b204e9800998ecf8427e "xelatex"
+  "figures/nearfar_module_imagegen.png" 1789216214.34865 1068613 a5d3caf5bf7884d1f82b37d43dc51a40 ""
+  "main.aux" 1789348804.33883 12699 145e6f9a4a39ba61cb16edbdef3c38c6 "xelatex"
+  "main.bbl" 1789348802.83183 9891 08efdc1eff59fa7329ee6bcb4f9db8c0 "bibtex main"
+  "main.out" 1789348804.33983 2058 4e60814711ab19c37cc7c90ced411402 "xelatex"
+  "main.spl" 1789348803.10683 0 d41d8cd98f00b204e9800998ecf8427e "xelatex"
   "main.tex" 1788761080.45547 1308 d7273666c1ca5be256868c5db692ef78 ""
   "math_commands.tex" 1788754414.7258 428 185c6ca76755b156e9548d6539b93ca1 ""
-  "sections/0_abstract.tex" 1788761080.45647 1489 65e18b985db69f2f805f6b0fa4c4d9de ""
-  "sections/1_introduction.tex" 1788761080.45747 3968 17e21db74c06c07fe168812077ccfe39 ""
+  "sections/0_abstract.tex" 1789213353.88705 1656 1fe224f8bbe74befa75f6cb5e401107d ""
+  "sections/1_introduction.tex" 1789213354.11005 4104 47a865c5d3a24f496a8eef9e22c15b17 ""
   "sections/2_related_work.tex" 1788761080.45847 5186 c6c4081622f6ed86ba95dd2a422ad431 ""
-  "sections/3_method.tex" 1788765377.37118 8340 5af57d98b47b5de5f7530548fc16f7dd ""
-  "sections/4_experiments.tex" 1788761100.50593 8842 39e2b13a397c04a1f71370d648bcf800 ""
-  "sections/5_conclusion.tex" 1788761080.46147 1562 35aae7942bc950b83af7e42ba3fd0064 ""
-  "sections/A_appendix.tex" 1788761080.46147 969 c0305da4a97820c2c784e96e64a4be9c ""
+  "sections/3_method.tex" 1789216219.88073 9245 91535fef9ad48e39d56a01636dbd3713 ""
+  "sections/4_experiments.tex" 1789348763.76579 10714 b38b768cb5b38c796bd2563f2798e1be ""
+  "sections/5_conclusion.tex" 1789213355.01206 1624 b21ab218b0af8296db9cb344219aa043 ""
+  "sections/A_appendix.tex" 1789213482.93974 1146 cd3ca9b1942de677388cbbf8c39baa4d ""
   (generated)
   "main.aux"
   "main.log"

@@ -66,32 +66,3 @@ work_dir="work_dirs/front3_agri_amoe_gvadv2_tail${GVADV2_NUM_LAYERS}_nearfar_r${
 #   --nearfar-far-stride "${NEARFAR_FAR_STRIDE}" \
 #   --history-frames 0 --predict-future-occ 0 --future-occ-steps 0 \
 #   --predict-future-traj 0 --future-traj-steps 6 --epochs "${EPOCHS}"
-
-work_dir="work_dirs/front3_agri_amoe_gvadv2_tail${GVADV2_NUM_LAYERS}_ep${EPOCHS}_$(date +%Y%m%d_%H%M%S)"
-
-PYTHONPATH="$(pwd):${PYTHONPATH:-}" CUDA_VISIBLE_DEVICES="${CUDA_VISIBLE_DEVICES}" \
-  "${PYTHON_BIN}" -m torch.distributed.run --standalone \
-  --nproc_per_node="${NUM_GPUS}" tools/train.py "${CONFIG}" \
-  --launcher pytorch --deterministic --work-dir "${work_dir}" \
-  --load-from "${PRETRAINED_FROM}" \
-  --num-gpus "${NUM_GPUS}" --data-root "${DATA_ROOT}" \
-  --batch-size "${BATCH_SIZE}" --total-batch-size "${TOTAL_BATCH_SIZE}" \
-  --image-width "${IMAGE_WIDTH}" --image-height "${IMAGE_HEIGHT}" \
-  --use-fp16 "${USE_FP16}" \
-  --use-crop-gap-refinement 0 --use-selective-c2f 0 \
-  --use-gap-residual-refiner 0 --use-dual-hardness-refinement 0 \
-  --use-gvad-attention 0 --use-gvadv2-attention 1 \
-  --gvadv2-num-layers "${GVADV2_NUM_LAYERS}" \
-  --gvad-use-visibility 1 --gvad-use-local-deformable 1 \
-  --gvad-num-heads "${GVAD_NUM_HEADS}" \
-  --gvad-anchor-grid-height "${GVAD_ANCHOR_GRID_HEIGHT}" \
-  --gvad-anchor-grid-width "${GVAD_ANCHOR_GRID_WIDTH}" \
-  --use-agri-amoe-decoder 1 \
-  --agri-amoe-channels "${AGRI_AMOE_CHANNELS}" \
-  --agri-amoe-use-gradient-energy "${AGRI_AMOE_USE_GRADIENT_ENERGY}" \
-  --agri-amoe-use-saliency "${AGRI_AMOE_USE_SALIENCY}" \
-  --agri-amoe-gate-temperature "${AGRI_AMOE_GATE_TEMPERATURE}" \
-  --use-nearfar-bev 0 --nearfar-near-ratio "${NEARFAR_NEAR_RATIO}" \
-  --nearfar-far-stride "${NEARFAR_FAR_STRIDE}" \
-  --history-frames 0 --predict-future-occ 0 --future-occ-steps 0 \
-  --predict-future-traj 0 --future-traj-steps 6 --epochs "${EPOCHS}"

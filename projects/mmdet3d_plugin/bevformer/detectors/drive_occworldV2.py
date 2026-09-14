@@ -188,7 +188,9 @@ class Drive_OccWorld_V2(BEVFormer):
         """
         super().train(mode)
         freeze_gap = getattr(self, 'freeze_gap_refiner_base', False)
-        if not (mode and freeze_gap):
+        freeze_resolution_transfer = getattr(
+            self, 'freeze_resolution_transfer_base', False)
+        if not (mode and (freeze_gap or freeze_resolution_transfer)):
             return self
         for module in self.children():
             module.eval()
@@ -199,8 +201,15 @@ class Drive_OccWorld_V2(BEVFormer):
                 'gap_refiner_blocks_module', 'gap_refiner_gate',
                 'gap_refiner_delta', 'gap_refiner_image_proj',
                 'gap_refiner_image_view_attn', 'gap_refiner_image_fuse'))
+        if freeze_resolution_transfer:
+            trainable_names.extend(getattr(
+                self, 'resolution_transfer_trainable_modules', ()))
         for name in trainable_names:
-            module = getattr(self.future_pred_head, name, None)
+            module = self
+            for component in name.split('.'):
+                module = getattr(module, component, None)
+                if module is None:
+                    break
             if module is not None:
                 module.train()
         return self
@@ -528,17 +537,36 @@ class Drive_OccWorld_V2(BEVFormer):
         # preds [Lout, inter_num, bs, bev_h * bev_w, d, num_cls]    Lout = cur + future_select
         occ_preds = occ_preds.permute(1, 0, 2, 5, 3, 4)
         inter_num, select_frames, bs, num_cls, hw, d = occ_preds.shape
+        pred_h, pred_w = self._occupancy_prediction_hw(hw)
         # permute above makes this tensor non-contiguous when both time and
         # batch dimensions have size > 1.  reshape preserves the intended
         # [time, batch] flattening and materializes contiguous storage only
         # when required.
         occ_preds = occ_preds.reshape(
             inter_num, select_frames * bs, num_cls,
-            self.bev_w, self.bev_h, d).transpose(3, 4)
+            pred_w, pred_h, d).transpose(3, 4)
         # gts; preserve every sample when BATCH_SIZE > 1.
         occ_gts = self._format_occ_targets(occ_gts, select_frames, bs)
         # occ loss
         return self.future_pred_head.loss_occ(occ_preds, occ_gts)
+
+    def _occupancy_prediction_hw(self, token_count):
+        """Return the public occupancy grid dimensions for a token tensor.
+
+        Most models emit one logit column per BEV query.  The efficient 0.1 m
+        head-refinement variant keeps its 100x100 encoder queries but emits a
+        200x200 output grid, so all loss/evaluation reshapes must follow the
+        world head's output contract rather than the encoder's BEV size.
+        """
+        pred_h = int(getattr(
+            self.future_pred_head, 'occupancy_output_bev_h', self.bev_h))
+        pred_w = int(getattr(
+            self.future_pred_head, 'occupancy_output_bev_w', self.bev_w))
+        if token_count != pred_h * pred_w:
+            raise ValueError(
+                f'Occupancy prediction has {token_count} tokens, expected '
+                f'{pred_h}x{pred_w}={pred_h * pred_w}.')
+        return pred_h, pred_w
 
     def current_occ_prediction(self, ref_bev, img_feats=None, img_metas=None):
         """Run only the semantic-occupancy heads for the current frame."""
@@ -580,8 +608,9 @@ class Drive_OccWorld_V2(BEVFormer):
         # preds
         occ_preds = occ_preds.permute(1, 0, 2, 5, 3, 4)
         inter_num, select_frames, bs, num_cls, hw, d = occ_preds.shape
+        pred_h, pred_w = self._occupancy_prediction_hw(hw)
         occ_preds = occ_preds.reshape(
-            inter_num, select_frames * bs, num_cls, self.bev_w, self.bev_h, d
+            inter_num, select_frames * bs, num_cls, pred_w, pred_h, d
         ).transpose(3, 4)
         # gts; preserve every sample when BATCH_SIZE > 1.
         occ_gts = self._format_occ_targets(occ_gts, select_frames, bs)
@@ -796,9 +825,10 @@ class Drive_OccWorld_V2(BEVFormer):
         """Convert occupancy logits into compact per-sample CPU artifacts."""
         # [Lout, inter, B, HW, Z, C] -> final decoder [T*B, C, X, Y, Z].
         occ_preds = occ_preds.permute(1, 0, 2, 5, 3, 4)
-        _, num_frames, batch_size, num_classes, _, depth = occ_preds.shape
+        _, num_frames, batch_size, num_classes, tokens, depth = occ_preds.shape
+        pred_h, pred_w = self._occupancy_prediction_hw(tokens)
         logits = occ_preds[-1].reshape(
-            num_frames * batch_size, num_classes, self.bev_w, self.bev_h,
+            num_frames * batch_size, num_classes, pred_w, pred_h,
             depth).transpose(2, 3)
         targets = self._format_occ_targets(segmentation, num_frames,
                                             batch_size)

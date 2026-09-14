@@ -154,6 +154,10 @@ class WorldHeadV1(WorldHeadBase):
                  agri_amoe_use_gradient_energy=True,
                  agri_amoe_use_saliency=True,
                  agri_amoe_gate_temperature=1.0,
+                 # Keep a 0.2 m BEV encoder and learn only the final 2x
+                 # occupancy-grid refinement for 0.1 m supervision.
+                 use_occupancy_2x_refiner=False,
+                 occupancy_2x_refiner_channels=32,
                  # ADHR is training-only agricultural dual-hardness mining.
                  # It is independent of the removed uncertainty-refinement path.
                  use_dual_hardness_refinement=False,
@@ -219,6 +223,13 @@ class WorldHeadV1(WorldHeadBase):
             agri_amoe_use_gradient_energy)
         self.agri_amoe_use_saliency = bool(agri_amoe_use_saliency)
         self.agri_amoe_gate_temperature = float(agri_amoe_gate_temperature)
+        self.use_occupancy_2x_refiner = bool(use_occupancy_2x_refiner)
+        self.occupancy_2x_refiner_channels = int(
+            occupancy_2x_refiner_channels)
+        self.occupancy_output_bev_h = self.bev_h * (
+            2 if self.use_occupancy_2x_refiner else 1)
+        self.occupancy_output_bev_w = self.bev_w * (
+            2 if self.use_occupancy_2x_refiner else 1)
         self.use_dual_hardness_refinement = bool(use_dual_hardness_refinement)
         self.dual_hardness_active_ratio = float(dual_hardness_active_ratio)
         self.dual_hardness_gap_ratio = float(dual_hardness_gap_ratio)
@@ -314,6 +325,8 @@ class WorldHeadV1(WorldHeadBase):
             raise ValueError('agri_amoe_channels must be at least 8.')
         if self.agri_amoe_gate_temperature <= 0:
             raise ValueError('agri_amoe_gate_temperature must be positive.')
+        if self.occupancy_2x_refiner_channels < 8:
+            raise ValueError('occupancy_2x_refiner_channels must be at least 8.')
         if not 0.0 < self.dual_hardness_active_ratio <= 1.0:
             raise ValueError('dual_hardness_active_ratio must be in (0, 1].')
         if not 0.0 <= self.dual_hardness_gap_ratio <= 1.0:
@@ -420,6 +433,25 @@ class WorldHeadV1(WorldHeadBase):
                 gate_temperature=self.agri_amoe_gate_temperature)
             self.agri_amoe_out = nn.Conv3d(
                 self.agri_amoe_channels, self.num_classes, 1)
+
+        if self.use_occupancy_2x_refiner:
+            # The coarse 0.2 m semantic logits are trilinearly lifted to the
+            # 0.1 m XY grid.  A lightweight BEV-conditioned 3D residual head
+            # then restores detail while preserving the pretrained coarse
+            # prediction exactly at initialization.
+            channels = self.occupancy_2x_refiner_channels
+            self.occupancy_2x_bev_proj = nn.Conv2d(
+                self.embed_dims, channels, 1)
+            self.occupancy_2x_refiner = nn.Sequential(
+                nn.Conv3d(self.num_classes + channels, channels, 1,
+                          bias=False),
+                nn.GroupNorm(8 if channels % 8 == 0 else 1, channels),
+                nn.ReLU(inplace=True),
+                _AnisotropicDepthwise3DBlock(channels),
+                nn.Conv3d(channels, self.num_classes, 1),
+            )
+            nn.init.zeros_(self.occupancy_2x_refiner[-1].weight)
+            nn.init.zeros_(self.occupancy_2x_refiner[-1].bias)
 
         if self.use_dual_hardness_refinement:
             # HASSC-inspired, training-only voxel refinement. A crop/free
@@ -597,6 +629,10 @@ class WorldHeadV1(WorldHeadBase):
             if self.use_selective_c2f and lvl == final_level:
                 next_bev_pred = self._selective_c2f_refine(
                     next_bev_feats[:, lvl], next_bev_pred)
+            if self.use_occupancy_2x_refiner:
+                next_bev_pred = self._occupancy_2x_refine(
+                    next_bev_feats[:, lvl], next_bev_pred,
+                    learned=(lvl == final_level))
             next_bev_preds.append(next_bev_pred)
         self._crop_gap_boundary_logits = crop_gap_boundary_logits
         if self.use_dual_hardness_refinement:
@@ -644,6 +680,42 @@ class WorldHeadV1(WorldHeadBase):
         return self._volume_to_logits(self.agri_amoe_out(self.agri_amoe(volume)),
                                       frames, batch)
 
+    def _occupancy_2x_refine(self, features, logits, learned):
+        """Lift 0.2 m logits to a 0.1 m XY grid with an optional residual.
+
+        Intermediate decoder layers are deterministically interpolated for
+        deep supervision.  The final layer receives a learned residual that
+        is conditioned on its 0.2 m BEV feature; zero initialization makes
+        the first training step exactly equal to trilinear upsampling.
+        """
+        frames, batch, tokens, channels = features.shape
+        if tokens != self.bev_h * self.bev_w or channels != self.embed_dims:
+            raise ValueError('Unexpected BEV feature shape for 2x occupancy refinement.')
+        coarse = self._logits_to_volume(logits)
+        coarse_up = F.interpolate(
+            coarse,
+            size=(self.num_pred_height, self.bev_h * 2, self.bev_w * 2),
+            mode='trilinear', align_corners=False)
+        if not learned:
+            return self._volume_to_logits(
+                coarse_up, frames, batch,
+                bev_h=self.bev_h * 2, bev_w=self.bev_w * 2)
+
+        feature_map = features.reshape(
+            frames * batch, self.bev_h, self.bev_w, self.embed_dims).permute(
+                0, 3, 1, 2).contiguous()
+        feature_map = F.interpolate(
+            self.occupancy_2x_bev_proj(feature_map),
+            size=(self.bev_h * 2, self.bev_w * 2), mode='bilinear',
+            align_corners=False)
+        feature_volume = feature_map.unsqueeze(2).expand(
+            -1, -1, self.num_pred_height, -1, -1)
+        refined = coarse_up + self.occupancy_2x_refiner(
+            torch.cat((coarse_up, feature_volume), dim=1))
+        return self._volume_to_logits(
+            refined, frames, batch,
+            bev_h=self.bev_h * 2, bev_w=self.bev_w * 2)
+
     def _features_to_bev_volume(self, features):
         """Convert ``[T,B,HW,C]`` BEV features into a 3D feature volume."""
         frames, batch, tokens, channels = features.shape
@@ -666,12 +738,18 @@ class WorldHeadV1(WorldHeadBase):
         return logits.permute(0, 1, 4, 3, 2).reshape(
             frames * batch, classes, depth, self.bev_h, self.bev_w)
 
-    def _volume_to_logits(self, volume, frames, batch):
+    def _volume_to_logits(self, volume, frames, batch, bev_h=None, bev_w=None):
         """Restore ``[T,B,HW,Z,C]`` from ``[T*B,C,Z,H,W]``."""
+        bev_h = self.bev_h if bev_h is None else int(bev_h)
+        bev_w = self.bev_w if bev_w is None else int(bev_w)
+        if volume.shape[-2:] != (bev_h, bev_w):
+            raise ValueError(
+                f'Expected occupancy volume XY {(bev_h, bev_w)}, got '
+                f'{tuple(volume.shape[-2:])}.')
         return volume.reshape(
             frames, batch, self.num_classes, self.num_pred_height,
-            self.bev_h, self.bev_w).permute(0, 1, 4, 5, 3, 2).reshape(
-                frames, batch, self.bev_h * self.bev_w,
+            bev_h, bev_w).permute(0, 1, 4, 5, 3, 2).reshape(
+                frames, batch, bev_h * bev_w,
                 self.num_pred_height, self.num_classes)
 
     @staticmethod

@@ -1,6 +1,16 @@
 \section{补充实现与复现协议}\label{app:implementation}
 
 \subsection{数据与运行记录}
-FarmSim 主结果来自以下运行目录：当前帧 TSA 基线为 \url{work_dirs/front3_base_nohis_ep8_20260828_043722}，移除 TSA 为 \url{work_dirs/front3_base_no_tsa_nohis_ep8_20260902_004114}，GVAD 为 \url{work_dirs/front3_base_gvad_nohis_ep8_20260903_151318}，GVAD+ADHR 为 \url{work_dirs/front3_gvad_adhr_nohis_ep8_20260904_082018}，完整模型为 \url{work_dirs/front3_gvad_adhr_nearfar_r0.6_s2_nohis_ep8_20260904_163459}。每个目录的 \texttt{*.log.json} 最后一个 \texttt{mode=val} 记录用于表\ref{tab:main}和表\ref{tab:ablation}。
+FarmSim 主结果的运行目录如下：
+{\footnotesize
+\begin{itemize}[leftmargin=1.8em,noitemsep]
+  \item 当前帧 TSA 基线：\url{work_dirs/front3_base_nohis_ep8_20260828_043722}；
+  \item 移除 TSA：\url{work_dirs/front3_base_no_tsa_nohis_ep8_20260902_004114}；
+  \item GVAD：\url{work_dirs/front3_base_gvad_nohis_ep8_20260903_151318}；
+  \item Agri-AMoE：\url{work_dirs/front3_base_agri_amoe96_ep8_20260909_232435}；
+  \item 完整模型（GVAD+Agri-AMoE+NearFar）：\url{work_dirs/front3_gvad_agri_amoe_nearfar_r0.6_s2_ep8_20260911_105909}。
+\end{itemize}
+}
+每个目录的 \texttt{*.log.json} 最后一个 \texttt{mode=val} 记录用于表\ref{tab:main}和表\ref{tab:ablation}；尚未完成的组合不填入表格。
 
 ORAD-3D 数字来自 \url{work_dirs/orad3d_evaluations/orad3d_eval_summary.csv}，该汇总由 \url{tools/evaluate_orad3d_experiments.py} 对 checkpoint 在 \texttt{test.json} 与 \texttt{farm\_all.json} 上独立评估生成。本文不把训练日志中的验证结果与此独立测试汇总混合。
