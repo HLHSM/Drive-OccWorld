@@ -131,4 +131,7 @@ M.~Chen, J.~Mei, H.~Zhai, S.~Wang, T.~Sun, F.~Kong, H.~Li, F.~Mao, F.~Liu, S.~Wa
 \bibitem{zhu2021deformable}
 X.~Zhu, W.~Su, L.~Lu, B.~Li, X.~Wang, J.~Dai, Deformable detr: Deformable transformers for end-to-end object detection, in: International Conference on Learning Representations, 2021.
 
+\bibitem{shi2026oneocc}
+H.~Shi, Z.~Wang, S.~Guo, M.~Duan, S.~Wang, T.~Chen, K.~Yang, L.~Wang, K.~Wang, Oneocc: Semantic occupancy prediction for legged robots with a single panoramic camera, in: Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition, 2026, pp. 14229--14240.
+
 \end{thebibliography}

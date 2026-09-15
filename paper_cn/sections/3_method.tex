@@ -74,54 +74,98 @@ GVAD 在各编码层中更新 BEV token，NearFar 在前五层保留近场稠密
 \end{figure}
 
 \subsubsection{几何可见锚点可变形注意力}\label{sec:gvad}
-GVAD 是 GeoVis-BEV 编码器中每层图像条件更新前的 BEV 查询增强单元，
+GVAD 位于每个 GeoVis-BEV 编码层的开头，在图像空间交叉注意力之前增强 BEV 查询。
 用于在保留局部投影细节的同时，按单元可见性读取可靠的长程上下文。
-局部可变形采样与 Deformable DETR\cite{zhu2021deformable}
-的稀疏参考点聚合、以及 DETR3D\cite{wang2022detr3d} 的三维查询投影机制一脉相承，
-但后两者对观测可靠性的利用仍是隐式的。GVAD 在保持 BEV token 输入输出尺寸不变的前提下，
-将局部可变形路径与可见性加权的全局锚点路径耦合，使弱可见单元获得可靠上下文，
-同时使直接可见区域仍以局部投影证据为主。
+其输入包括第 $l$ 层的 BEV token $\bm{Q}^{l}=[\bm{q}_1,\ldots,\bm{q}_{N}]\in\R^{B\times N\times d}$、
+对应的位置编码 $\bm{E}^{l}=[\bm{e}_1,\ldots,\bm{e}_{N}]$，以及由相机标定投影得到的有效掩码
+$\bm{M}\in\{0,1\}^{C_{\mathrm{cam}}\times B\times N\times Z}$。
+其中，$B$、$N=HW$ 和 $d$ 分别为批量大小、BEV token 数与通道维度，$H\times W$ 为 BEV 网格尺寸，
+$C_{\mathrm{cam}}$ 为相机数，$Z$ 为每个 BEV 柱投影的高度参考点数。
+掩码元素 $M_{c,b,i,z}=1$ 表示第 $b$ 个样本中第 $i$ 个 BEV 柱的第 $z$ 个参考点可投影至第 $c$ 个相机，
+由此将多相机、多高度的投影有效性归约为 token 级可见性
+\begin{equation}
+m_{b,i}=\frac{1}{C_{\mathrm{cam}}Z}\sum_{c=1}^{C_{\mathrm{cam}}}\sum_{z=1}^{Z}M_{c,b,i,z}\in[0,1].
+\end{equation}
+后文为简洁起见省略批量索引 $b$。GVAD 首先对带位置编码的输入执行层归一化，记为
+$\tilde{\bm{q}}_i=\operatorname{LN}(\bm{q}_i+\bm{e}_i)$；
+随后从该表征出发并行计算局部可变形分支和几何可见锚点分支，最后以可见性门控的残差形式融合二者。
+局部可变形采样继承了 BEVFormer 的查询自适应注意力骨架\cite{li2022bevformer}，
+而锚点路径结合 Deformable DETR\cite{zhu2021deformable} 的稀疏聚合思想和
+ DETR3D\cite{wang2022detr3d} 的几何查询机制，显式度量观测可靠性。
 
-设第 $l$ 层的 BEV token 为 $\bm{q}_i\in\R^d$，由相机投影有效掩码得到其可见性 $m_i\in[0,1]$。
-将 BEV 均匀划分为 $H_a\times W_a$ 个 tile；本文采用 $H_a=4,W_a=8$，共 32 个锚点。
-对第 $a$ 个 tile 内的 token，先根据特征置信度和可见性计算归一化权重：
+\paragraph{局部可变形分支。}
+该分支等价于对 BEV token的可变形自注意力。
+它以 $(\bm{Q}^{l},\bm{E}^{l})$ 为输入，为每个查询预测少量采样偏移与注意力权重，
+并在 BEV 特征图的局部邻域内进行多头可变形聚合，得到局部更新 $\bm{d}_i$。记该操作为 $\mathcal{D}$，则
 \begin{equation}
-\alpha_{ia}=\softmax_{i\in a}\left(\bm{w}_c^\top\bm{q}_i+\gamma\log(m_i+\epsilon)\right),\quad
-\bm{z}_a=\sum_{i\in a}\alpha_{ia}\bm{q}_i .
+\bm{d}_i=\mathcal{D}(\bm{q}_i,\bm{e}_i)-\bm{q}_i.
 \end{equation}
-锚点坐标也由同一权重聚合。每个查询随后对所有锚点作多头注意力，
-并使用可学习的非负距离衰减 $\rho_h$ 约束远距离读取：
-\begin{equation}
- A_{i,a}^{(h)}=\frac{(W_q^{(h)}\bm{q}_i)^\top(W_k^{(h)}\bm{z}_a)}{\sqrt{d_h}}
- -\rho_h\|\bm{p}_i-\bm{p}_a\|_2^2 .
-\end{equation}
-锚点上下文 $\bm{g}_i$ 与原始局部可变形分支增量 $\bm{d}_i$ 通过门控残差融合：
-\begin{equation}
-\bm{q}_i'=\bm{q}_i+\bm{d}_i+\sigma\left(f_g([\bm{q}_i,m_i])\right)(1-0.75m_i)\bm{g}_i.
-\end{equation}
-因此，弱可见 BEV 单元在编码过程中更倾向读取可靠锚点，而直接可见区域仍以局部投影证据为主。
-去可见性消融将锚点替换为普通平均池化；去局部路径消融仅保留锚点上下文。
+它保留了局部相邻 token 的结构连续性，并为随后图像空间交叉注意力提供更稳定的 BEV 查询。
 
-图\ref{fig:gvad} 展示 GVAD 的双路径结构：局部可变形路径保持细粒度投影证据，
-可见锚点路径提供可靠区域的长程上下文，门控融合根据单元可见性完成自适应组合；
-图\ref{fig:geovis-bev-encoder} 则给出该组件在 GeoVis-BEV 编码器内的位置。
+\paragraph{几何可见锚点分支。}
+为从可靠区域补偿弱可见查询，首先将 BEV 平面均匀划分为 $H_a\times W_a$ 个 tile；
+本文取 $H_a=4$、$W_a=8$，因而得到 $K=H_aW_a=32$ 个锚点。
+对于第 $a$ 个 tile 内的第 $i$ 个 token，锚点权重由内容置信度和可见性共同决定：
+\begin{equation}
+s_{ia}=\bm{w}_c^\top\tilde{\bm{q}}_i+\gamma\log(m_i+\epsilon),\qquad
+\alpha_{ia}=\softmax_{i\in a}(s_{ia}),\qquad
+\bm{z}_a=\sum_{i\in a}\alpha_{ia}\tilde{\bm{q}}_i .
+\end{equation}
+其中，$\bm{w}_c$ 为可学习的置信度投影，$\gamma$ 为可学习的可见性尺度，$\epsilon$ 为数值稳定常数，
+$\alpha_{ia}$ 在 tile 内归一化，$\bm{z}_a\in\R^d$ 为第 $a$ 个可见锚点特征。
+之后以相同权重对 token 的归一化二维 BEV 中心坐标 $\bm{r}_i\in[0,1]^2$ 加权，得到锚点坐标
+$\bm{r}_a=\sum_{i\in a}\alpha_{ia}\bm{r}_i$。接着，每个查询通过带距离偏置的多头注意力读取所有锚点：
+\begin{equation}
+A_{i,a}^{(h)}=\frac{(W_q^{(h)}\tilde{\bm{q}}_i)^\top(W_k^{(h)}\bm{z}_a)}{\sqrt{d_h}}
+-\rho_h\|\bm{r}_i-\bm{r}_a\|_2^2,\qquad
+\pi_{i,a}^{(h)}=\softmax_a\left(A_{i,a}^{(h)}\right),
+\end{equation}
+\begin{equation}
+\bm{g}_i=W_o\operatorname{Concat}_{h=1}^{H_{\mathrm{head}}}
+\left(\sum_{a=1}^{K}\pi_{i,a}^{(h)}W_v^{(h)}\bm{z}_a\right).
+\end{equation}
+其中，$h$ 为注意力头索引，$H_{\mathrm{head}}$ 为头数，$d_h=d/H_{\mathrm{head}}$；
+$W_q^{(h)}$、$W_k^{(h)}$、$W_v^{(h)}$ 和 $W_o$ 均为可学习线性投影。
+$\rho_h=\operatorname{softplus}(\delta_h)\geq0$ 是第 $h$ 个头的可学习距离衰减系数，$\delta_h$ 为其无约束参数；
+因此该路径允许全局读取，但优先聚合几何上较近的可靠锚点。
+
+\paragraph{可见性门控融合。}
+两分支的输出与原始查询以残差形式融合。具体地，
+门控系数 $\eta_i$ 由归一化特征和 token 可见性预测，并随可见性升高而减小：
+\begin{equation}
+\eta_i=\sigma\left(f_g([\tilde{\bm{q}}_i,m_i])\right)(1-\beta m_i),\qquad
+\bm{q}_i'=\bm{q}_i+\bm{d}_i+\eta_i\bm{g}_i,
+\end{equation}
+其中，$f_g$ 为可学习的门控投影，$[\cdot,\cdot]$ 表示通道拼接，$\sigma$ 为 Sigmoid 函数，
+$\beta=0.75$ 为固定可见性衰减系数，$\bm{q}_i'$ 为 GVAD 输出 token。
+因此，弱可见单元获得更大的锚点上下文校正，直接可见区域则以局部分支为主，避免全局信息覆盖其精细边界。
+图\ref{fig:gvad} 展示了 GVAD 的双路径结构。
 
 \begin{figure}[t]
 \centering
 \includegraphics[width=\linewidth]{figures/gvad_detailed_architecture_v2.png}
-\caption{(b) GVAD 详细架构。相机投影掩码首先归约为每个 BEV token 的可见性；局部可变形路径根据查询预测采样位置和权重，形成局部更新；几何可见锚点路径将 BEV 平面划分为 $4\times8$ 个 tile，以特征置信度和可见性加权构建 32 个锚点，并通过距离偏置的多头注意力形成锚点上下文。两条路径经可见性门控和残差连接融合为增强 BEV token。}
+\caption{GVAD 架构。相机投影掩码首先归约为每个 BEV token 的可见性；局部可变形分支根据查询预测采样位置和权重，形成局部 BEV 更新；几何可见锚点分支将 BEV 平面划分为 $4\times8$ 个 tile，以特征置信度和可见性加权构建 32 个锚点，并通过距离偏置的多头注意力形成锚点上下文。两条分支经可见性门控和残差连接融合为增强 BEV token。}
 \label{fig:gvad}
 \end{figure}
 
 \subsubsection{近远场 BEV 查询布局}\label{sec:nearfar}
-近远场查询布局将编码早期的计算优先分配给对规划与避障更关键、且具有更充分图像证据的近场区域，同时保持最终占用输出为稠密网格。
-设 BEV 宽度方向对应前向距离，将前 $60\%$ 列作为近场，保留全部查询；其余远场每隔 2 个单元在二维规则网格保留一个查询。前五个编码层只处理这些 active token。对于未激活远场位置，使用其四个相邻 active token 的双线性权重恢复特征；最后一个编码层恢复为完整 $100\times100$ 网格并执行一次稠密、图像条件的交叉注意力。该安排避免仅由查询插值补全远场语义，同时使已有占用解码头保持不变。GVAD 在稀疏层中按 token 的原始稠密 BEV 坐标分箱生成锚点，而不是把非均匀 token 序列误当作一维图像。
+近远场查询布局将编码早期的计算优先分配给对规划与避障更关键、
+且具有更充分图像证据的近场区域，同时保持最终占用输出为稠密网格。
+设 BEV 宽度方向对应前向距离，将前 $60\%$ 列作为近场，保留全部查询；
+其余远场每隔 2 个单元在二维规则网格保留一个查询。
+前五个编码层只处理这些 active token。对于未激活远场位置，
+使用其四个相邻 active token 的双线性权重恢复特征；
+最后一个编码层恢复为完整 $100\times100$ 网格并执行一次稠密、图像条件的交叉注意力。
+该安排避免仅由查询插值补全远场语义，同时使已有占用解码头保持不变。
+GVAD 在稀疏层中仍按 token 的原始稠密 BEV 坐标分箱生成锚点。
 
 图\ref{fig:nearfar} 给出了近远场布局。它保留近场的完整网格以表达作物、垄沟和障碍物的细粒度几何，同时对远场执行规则稀疏采样，并在进入最终稠密图像交叉注意力前恢复完整特征图。
 \begin{figure}[t]
 \centering
 \includegraphics[width=\linewidth]{figures/nearfar_detailed_architecture_v2.png}
-\caption{(c) NearFar 详细架构。输入稠密 BEV 网格沿前向距离划分为近场与远场：前 $60\%$ 的近场保留全部查询，后 $40\%$ 的远场按步长 2 规则激活。所有 active token 保留其原始稠密网格坐标，并在前五层进行稀疏编码；随后，未激活远场位置由相邻四个 active token 的双线性权重恢复为完整网格，再送入最终稠密图像条件细化层。}
+\caption{NearFar 架构。输入稠密 BEV 网格沿前向距离划分为近场与远场，远场按步长 2 下采样激活。
+所有 active token 保留其原始稠密网格坐标，并在前五层进行稀疏编码；
+随后，未激活远场位置由相邻四个 active token 的双线性权重恢复为完整网格。}
 \label{fig:nearfar}
 \end{figure}
 
@@ -133,27 +177,38 @@ GVAD 是 GeoVis-BEV 编码器中每层图像条件更新前的 BEV 查询增强�
 解码器难以协调相邻位置的平面细节与垂直结构，预测容易在细粒度区域发生过度平滑。
 因而，最终占用头不仅需要恢复高度维度，还应按局部三维结构的复杂度自适应地选择合适的感受野与方向建模方式。
 
-基于这一考虑，本文设计农业结构自适应混合专家三维占用解码器（Agri-AMoE）.
+受文献\cite{shi2026oneocc}启发，本文设计农业结构自适应混合专家三维占用解码器（Agri-AMoE）。
 对于最终层 BEV 特征 $\bm{Q}\in\R^{B\times HW\times C}$，先经线性映射并重排为通道数为 $C_a$ 的三维体积
 \begin{equation}
 \bm{F}_0=\operatorname{reshape}(W_{\mathrm{lift}}\bm{Q})\in\R^{B\times C_a\times Z\times H\times W}.
 \end{equation}
+其中，$C$ 为输入 BEV token 的通道数，$H$、$W$ 为 BEV 网格的两个平面维度，$Z$ 为高度 bin 数，
+$W_{\mathrm{lift}}$ 为可学习的 lifting 映射，$\operatorname{reshape}(\cdot)$ 仅将映射后的 token 重排为三维体积。
 本文使用 $C_a=96$、$Z=25$。通道显著性由全局三维池化后的两层 $1\times1\times1$ 变换产生，并先调制体积特征；空间显著性由该特征的通道均值和最大值生成，作为路由的空间线索：
 \begin{equation}
 \bm{F}=\bm{F}_0\odot\sigma\!\left(f_c(\operatorname{GAP}(\bm{F}_0))\right),\qquad
 \bm{S}=\sigma\!\left(f_s([\operatorname{mean}_c(\bm{F}),\operatorname{max}_c(\bm{F})])\right).
 \end{equation}
+这里，$\operatorname{GAP}$ 表示在 $Z$、$H$、$W$ 维度上的全局平均池化，$f_c$ 与 $f_s$ 分别为可学习的通道映射和空间映射，
+$\odot$ 为逐元素乘法，$\operatorname{mean}_c$ 与 $\operatorname{max}_c$ 分别表示沿通道维度的平均与最大聚合，
+$\bm{S}$ 为逐体素空间显著性图。
 
 为使专家选择与三维结构复杂度对齐，Agri-AMoE 计算体积特征在三个空间方向的有限差分能量：
 \begin{equation}
 \bm{E}=\operatorname{mean}_c\!\left((\nabla_x\bm{F})^2+(\nabla_y\bm{F})^2+(\nabla_z\bm{F})^2\right).
 \end{equation}
-逐体素路由器以 $[\log(1+\bm{E}),\bm{S}]$ 为输入，在温度 $\tau=1$ 下输出三个专家权重 $\bm{\alpha}=\operatorname{Softmax}(g([\log(1+\bm{E}),\bm{S}])/\tau)$。三个轻量深度可分离专家分别采用 $1\times3\times3$ 卷积编码株间平面细节、$3\times1\times1$ 卷积编码垂直结构、以及膨胀率为 2 的 $1\times3\times3$ 卷积编码较大范围平面上下文。最终的残差混合为
+其中，$\nabla_x$、$\nabla_y$ 和 $\nabla_z$ 分别为三个空间方向的一阶有限差分，$\operatorname{mean}_c$ 仍表示通道平均，
+故 $\bm{E}$ 为逐体素的局部结构变化强度。逐体素路由器以 $[\log(1+\bm{E}),\bm{S}]$ 为输入，
+在温度 $\tau=1$ 下输出三个归一化专家权重
+$\bm{\alpha}=\operatorname{Softmax}(g([\log(1+\bm{E}),\bm{S}])/\tau)$，其中 $g$ 为可学习的路由映射，
+$\alpha_k$ 为第 $k$ 个专家在每个体素处的权重。三个轻量深度可分离专家 $\mathcal{E}_k$ 分别采用 $1\times3\times3$ 卷积编码株间平面细节、
+$3\times1\times1$ 卷积编码垂直结构、以及膨胀率为 2 的 $1\times3\times3$ 卷积编码较大范围平面上下文。最终的残差混合为
 \begin{equation}
 \bm{F}'=\operatorname{ReLU}\!\left(\bm{F}+\operatorname{GN}\!\left(\sum_{k=1}^{3}\alpha_k\mathcal{E}_k(\bm{F})\right)\right),\qquad
 \bm{O}=W_o\bm{F}',
 \end{equation}
-其中 $W_o$ 为 $1\times1\times1$ 分类卷积，$\bm{O}\in\R^{B\times6\times Z\times H\times W}$ 为最终语义 logits。该模块在推理时参与主预测，而不是训练期辅助细化分支，因此真正改变了最终占用头读取和融合三维视觉表征的方式。
+其中，$\operatorname{GN}$ 为组归一化，$\operatorname{ReLU}$ 为非线性激活，$W_o$ 为 $1\times1\times1$ 分类卷积，
+$\bm{O}\in\R^{B\times6\times Z\times H\times W}$ 为最终语义 logits。该模块在推理时参与主预测，而不是训练期辅助细化分支，因此真正改变了最终占用头读取和融合三维视觉表征的方式。
 
 图\ref{fig:agri-amoe}以结构示意展示该解码过程：二维 BEV token 经 lifting 形成三维体积，通道/空间显著性和三方向梯度能量共同驱动逐体素路由，三个各向异性专家的输出经残差混合后用于最终分类。
 \begin{figure}[t]
@@ -164,8 +219,5 @@ GVAD 是 GeoVis-BEV 编码器中每层图像条件更新前的 BEV 查询增强�
 \end{figure}
 
 \subsection{总体优化目标}\label{sec:loss}
-占用主损失沿用多层解码器监督，包含类别交叉熵、语义尺度损失、几何尺度损失和 Lov\'{a}sz-Softmax 项。记该损失为 $\mathcal{L}_{\mathrm{occ}}$，则训练目标为
-\begin{equation}
-\mathcal{L}=\mathcal{L}_{\mathrm{occ}}.
-\end{equation}
-GVAD、Agri-AMoE 和近远场模块均不引入额外标签或额外损失；Agri-AMoE 通过改变最终层的预测参数化学习三维结构，而非依赖训练期专用监督。
+占用主损失遵循 SurroundOcc 与 OpenOccupancy 的多层体素监督范式\cite{wei2023surroundocc,wang2023openoccupancy}，
+由类别交叉熵、语义尺度损失、几何尺度损失和 Lov\'{a}sz-Softmax 项组成；其具体计算与上述工作一致，故不再重复推导。
