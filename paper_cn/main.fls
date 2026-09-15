@@ -449,9 +449,9 @@ INPUT sections/3_method.tex
 INPUT ./figures/crop_distribution.pdf
 INPUT ./figures/crop_distribution.pdf
 INPUT ./figures/crop_distribution.pdf
-INPUT ./figures/agriocc_overview_imagegen.png
-INPUT ./figures/agriocc_overview_imagegen.png
-INPUT ./figures/agriocc_overview_imagegen.png
+INPUT ./figures/agriocc_overview_geovis_v2.png
+INPUT ./figures/agriocc_overview_geovis_v2.png
+INPUT ./figures/agriocc_overview_geovis_v2.png
 INPUT /data/HL/texlive/2026/texmf-dist/fonts/tfm/public/amsfonts/cmextra/cmex7.tfm
 INPUT /data/HL/texlive/2026/texmf-dist/fonts/tfm/public/amsfonts/cmextra/cmex7.tfm
 INPUT /data/HL/texlive/2026/texmf-dist/fonts/tfm/public/amsfonts/symbols/msam10.tfm
