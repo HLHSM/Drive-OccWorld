@@ -1,49 +1,26 @@
 \section{相关工作}\label{sec:related}
 
 \paragraph{多相机 BEV 感知}
-以 BEV 为中间表征的视觉感知方法通过预定义空间查询把多相机图像特征对齐到机器人或车辆坐标系。
+鸟瞰（bird's-eye-view, BEV）表征将多相机图像中的视觉证据映射到机器人或车辆坐标系的俯视平面，使不同视角的观测能够在统一空间网格中进行融合、推理和规划。
+以 BEV 为中间表征的视觉感知方法通过预定义空间查询把多相机图像特征对齐到该统一坐标系。
 显式提升范式将图像特征沿深度分布投影至 BEV，代表性工作包括 Lift--Splat--Shoot、BEVDet、
 BEVDepth 和 BEVStereo\cite{philion2020lift,huang2021bevdet,li2022bevdepth,li2022bevstereo}；
 MatrixVT 则进一步讨论了高效的多相机到 BEV 变换\cite{zhou2022matrixvt}。
-查询式范式中，DETR3D 使用三维参考点读取相机特征\cite{wang2022detr3d}，
-PETR/PETRv2 以三维位置嵌入统一多相机任务\cite{li2022petr,liu2023petrv2}，
-FB-BEV 融合前向和反向视图变换\cite{li2023fbbev}，BEVFusion 在共享 BEV 中对齐多模态
-信息\cite{liu2023bevfusion}。BEVFormer 使用空间交叉注意力从多视角图像读取与 BEV 查询对应的区域，
-并以时序自注意力融合历史 BEV\cite{li2022bevformer}。这些方法为统一坐标系下的视觉感知奠定基础，
-但多数面向六相机城市环视；我们的AgriOcc 则限定为三前视相机和前向作业区域，
-并针对可见性不均与远场冗余重新设计编码器。
+查询式方法则利用三维参考点、位置嵌入或跨视图变换直接读取相机特征\cite{wang2022detr3d,li2022petr,liu2023petrv2,li2023fbbev}，
+并可在共享 BEV 中融合多模态信息\cite{liu2023bevfusion}。
+BEVFormer 进一步以空间交叉注意力和时序自注意力建立 BEV 查询之间的几何关联\cite{li2022bevformer}。
+这些方法为统一坐标系下的视觉感知奠定基础。
 
-\paragraph{视觉三维占用与语义场景补全}
-单目语义场景补全方法 MonoScene 将二维特征投影到三维并以场景关系约束补全不可见区域\cite{cao2022monoscene}。
-面向多相机输入，TPVFormer 以三个正交平面压缩三维体素表征\cite{huang2023tpvformer}，
-VoxFormer 从可见稀疏体素出发再进行稠密化\cite{li2023voxformer}，
-SurroundOcc 通过二维到三维注意力预测稠密占用\cite{wei2023surroundocc}，
-OpenOccupancy 则给出了环视占用标注与基准\cite{wang2023openoccupancy}。
-OccFormer 用局部/全局双路径处理三维体素\cite{zhang2023occformer}，
-COTR 通过紧凑表征和语义分组解码器缓解三维特征成本\cite{ma2024cotr}，
-PanoOcc 使用由粗到细的体素查询统一语义和全景输出\cite{wang2024panoocc}。
-这些工作表明占用可表达任意形状物体和自由空间，因而比仅依赖三维框更适合开放场景；
-但它们的类别体系、相机覆盖和动态交通先验与农业场景仍存在显著差异。
-
-\noindent\textbf{高效和稀疏占用表示}\par
-稠密三维体积会带来显著的内存与计算成本。SparseOcc 以稀疏查询、
-稀疏特征交互和稀疏三维表征避免在大量空体素上计算\cite{liu2024sparseocc}；
-另一项同名工作也从稀疏潜变量与稀疏插值角度降低稠密三维表征的开销\cite{tang2024sparseocc}。
-FlashOcc 将高度维重排为通道以降低解码开销\cite{yu2023flashocc}，
-而 RenderOcc 使用二维渲染监督减少对完整三维占用标签的依赖\cite{pan2024renderocc}。
-AgriOcc 从农业前向感知的空间非均匀性出发，在保持统一稠密预测接口的同时实施近远场查询布局：
-前 $60\%$ 的前向范围保留稠密 BEV 查询，远场以步长 $2$ 规则采样，
-随后由双线性恢复和最终的稠密图像交叉注意力完成特征重建。
-该设计将稀疏计算与作业区空间分辨率需求直接对齐。
-
-\paragraph{占用世界模型与时序预测}
-BEVDet4D 和 PanoOcc 均利用相邻帧或由粗到细的查询提升时空 BEV 特征\cite{huang2022bevdet4d,wang2024panoocc}。
-OccWorld 将三维占用压缩为离散场景 token，并以生成式时空模型预测场景与自车运动\cite{zheng2024occworld}。
-IR-WM 通过当前 BEV 和历史 BEV 的残差演化建模未来占用与规划\cite{mei2025irwm}；
-ForecastOcc 则直接从历史相机观测预测未来语义占用\cite{mohan2026forecastocc}。
-AgriOcc 面向当前帧前向作业感知，强调单帧多视角信息的可靠聚合。
-GVAD 沿用局部可变形采样的高效思想\cite{zhu2021deformable}，
-并引入几何可见锚点，使弱可见 BEV 单元能够从可靠观测区域获得长程上下文。
+\paragraph{三维占用预测与高效表征}
+视觉三维占用将自由空间和语义实体编码为稠密或压缩的体素场。MonoScene、TPVFormer 和 VoxFormer 分别从单目特征提升、
+三平面表征和可见稀疏体素出发完成场景补全\cite{cao2022monoscene,huang2023tpvformer,li2023voxformer}；
+SurroundOcc 与 OpenOccupancy 推动了多相机稠密占用预测和环视基准的发展\cite{wei2023surroundocc,wang2023openoccupancy}。
+由于三维体素的计算代价随空间分辨率快速增长，后续工作从局部--全局结构、
+紧凑或由粗到细的查询、稀疏交互，以及高效解码和渲染监督等方向降低开销\cite{zhang2023occformer,ma2024cotr,wang2024panoocc,liu2024sparseocc,tang2024sparseocc,yu2023flashocc,pan2024renderocc}。
+占用表征也进一步扩展为时序世界模型：BEVDet4D、OccWorld、IR-WM 与 ForecastOcc 分别
+利用跨帧 BEV、离散场景 token 或历史图像观测预测动态环境和未来状态\cite{huang2022bevdet4d,zheng2024occworld,mei2025irwm,mohan2026forecastocc}。
+这些研究验证了占用作为统一空间接口的价值，但其普遍面向全向交通环境，
+依赖更广的相机覆盖或历史运动信息。
 
 \paragraph{农业与越野三维感知数据}
 城市三维感知的常用数据集包括 KITTI\cite{geiger2012kitti}、SemanticKITTI\cite{behley2019semantickitti} 和 nuScenes\cite{caesar2020nuscenes}，
@@ -55,4 +32,3 @@ GVAD 沿用局部可变形采样的高效思想\cite{zhu2021deformable}，
 耗时久的痛点，尤其是在农业场景。
 在真实越野方向，ORAD-3D 提供涵盖农田、林地、草地和道路等场景的三维占用
 基准\cite{chen2025orad3d},为本文提供了真实场景下的验证途径。
-

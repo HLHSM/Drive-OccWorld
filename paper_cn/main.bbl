@@ -98,9 +98,6 @@ J.~Huang, G.~Huang, Bevdet4d: Exploit temporal cues in multi-camera 3d object de
 \bibitem{mohan2026forecastocc}
 R.~Mohan, J.~V. Hurtado, R.~Mohan, A.~Valada, Forecastocc: Vision-based semantic occupancy forecasting, arXiv preprint arXiv:2602.08006 (2026).
 
-\bibitem{zhu2021deformable}
-X.~Zhu, W.~Su, L.~Lu, B.~Li, X.~Wang, J.~Dai, Deformable detr: Deformable transformers for end-to-end object detection, in: International Conference on Learning Representations, 2021.
-
 \bibitem{geiger2012kitti}
 A.~Geiger, P.~Lenz, R.~Urtasun, Are we ready for autonomous driving? the kitti vision benchmark suite, in: Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition, 2012, pp. 3354--3361.
 
@@ -130,5 +127,8 @@ J.~Hoffman, E.~Tzeng, T.~Park, J.-Y. Zhu, P.~Isola, K.~Saenko, A.~Efros, T.~Darr
 
 \bibitem{chen2025orad3d}
 M.~Chen, J.~Mei, H.~Zhai, S.~Wang, T.~Sun, F.~Kong, H.~Li, F.~Mao, F.~Liu, S.~Wang, Y.~Nie, Q.~Zhu, L.~Xiao, D.~Zhao, Y.~Hu, Advancing off-road autonomous driving: The large-scale orad-3d dataset and comprehensive benchmarks, arXiv preprint arXiv:2510.16500 (2025).
+
+\bibitem{zhu2021deformable}
+X.~Zhu, W.~Su, L.~Lu, B.~Li, X.~Wang, J.~Dai, Deformable detr: Deformable transformers for end-to-end object detection, in: International Conference on Learning Representations, 2021.
 
 \end{thebibliography}

@@ -1,13 +1,24 @@
 \section{方法}\label{sec:method}
 
 \subsection{任务定义与总体结构}\label{sec:task}
-给定时刻 $t$ 的三路同步图像 $\I_t=\{I_t^{\mathrm{FL}},I_t^{\mathrm{F}},I_t^{\mathrm{FR}}\}$、相机内外参和机器人坐标系，目标是在前向空间
+本文聚焦农业机器人最常见的前向作业视野：输入正前、左前和右前三路相机，预测前方 $20\,$m 的三维语义占用。
+给定时刻 $t$ 的三路同步图像 $\I_t=\{I_t^{\mathrm{FL}},I_t^{\mathrm{F}},I_t^{\mathrm{FR}}\}$、
+相机内外参和机器人坐标系，目标是在前向空间
 \begin{equation}
 \B=[0,20]\times[-10,10]\times[-2,3]~\mathrm{m}
 \end{equation}
-中预测语义占用。体素分辨率为 $0.2~\mathrm{m}$，因此输出网格为 $100\times100\times25$。每个有效体素 $v\in\V$ 的标签 $y_v\in\{0,\ldots,5\}$ 分别表示自由空间、作物、土壤地面、可通行区域、其他植被与其他障碍物；未标注体素记为 ignore，不参与损失和指标。
+中预测语义占用。体素分辨率为 $0.2~\mathrm{m}$，因此输出网格为 $100\times100\times25$。
+每个有效体素 $v\in\V$ 的标签 $y_v\in\{0,\ldots,5\}$ 分别表示自由空间、
+作物、土壤地面、道路、其他植被与其他障碍物；
 
-图\ref{fig:overview}给出 AgriOcc。图像编码器使用 ImageNet/FCOS3D 预训练的 ResNet-101 与 FPN 提取四级二维特征。每个 BEV 查询根据相机投影关系，通过空间交叉注意力从多尺度图像中聚合几何对齐的视觉证据。六层 BEV 编码器输出 $100\times100$、通道数为 256 的 BEV token；三层占用解码器提供多层监督，其中最后一层由 Agri-AMoE 将 BEV token 提升为三维特征体并预测 25 个高度位置上的六类 logits。AgriOcc 以 GVAD 建模可见性驱动的全局上下文，以 Agri-AMoE 自适应建模三维局部结构，并以近远场布局将早期编码计算聚焦于近场精细结构。
+图\ref{fig:overview}给出 AgriOcc的总体架构。
+图像编码器使用 ImageNet/FCOS3D 预训练的 ResNet-101 与 FPN 提取四级二维特征。
+每个 BEV 查询根据相机投影关系，通过空间交叉注意力从多尺度图像中聚合几何对齐的视觉证据。
+六层 BEV 编码器输出 $100\times100$、通道数为 256 的 BEV token；
+三层占用解码器提供多层监督，其中最后一层由 Agri-AMoE 将 BEV token 提升为
+三维特征体并预测 25 个高度位置上的六类 logits。
+AgriOcc 以 GVAD 建模可见性驱动的全局上下文，以 Agri-AMoE 自适应建模三维局部结构，
+并以近远场布局将早期编码计算聚焦于近场精细结构。
 
 \begin{figure}[t]
 \centering
