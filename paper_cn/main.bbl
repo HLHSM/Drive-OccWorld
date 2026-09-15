@@ -6,129 +6,226 @@
   \def\href#1#2{#2} \def\path#1{#1}\fi
 
 \bibitem{nkwochaComprehensiveReviewSensing2025}
-C.~L. Nkwocha, A.~Adewumi, S.~O. Folorunsho, C.~Eze, P.~Jjagwe, J.~Kemeshi, N.~Wang, A {{Comprehensive Review}} of {{Sensing}}, {{Control}}, and {{Networking}} in {{Agricultural Robots}}: {{From Perception}} to {{Coordination}}, Robotics 14~(11) (2025) 159.
-\newblock \href {https://doi.org/10.3390/robotics14110159} {\path{doi:10.3390/robotics14110159}}.
+C.~L. Nkwocha, A.~Adewumi, S.~O. Folorunsho, C.~Eze, P.~Jjagwe, J.~Kemeshi,
+  N.~Wang, A {{Comprehensive Review}} of {{Sensing}}, {{Control}}, and
+  {{Networking}} in {{Agricultural Robots}}: {{From Perception}} to
+  {{Coordination}}, Robotics 14~(11) (2025) 159.
+\newblock \href {https://doi.org/10.3390/robotics14110159}
+  {\path{doi:10.3390/robotics14110159}}.
 
 \bibitem{baiVisionbasedNavigationGuidance2023}
-Y.~Bai, B.~Zhang, N.~Xu, J.~Zhou, J.~Shi, Z.~Diao, Vision-based navigation and guidance for agricultural autonomous vehicles and robots: {{A}} review, Computers and Electronics in Agriculture 205 (2023) 107584.
-\newblock \href {https://doi.org/10.1016/j.compag.2022.107584} {\path{doi:10.1016/j.compag.2022.107584}}.
+Y.~Bai, B.~Zhang, N.~Xu, J.~Zhou, J.~Shi, Z.~Diao, Vision-based navigation and
+  guidance for agricultural autonomous vehicles and robots: {{A}} review,
+  Computers and Electronics in Agriculture 205 (2023) 107584.
+\newblock \href {https://doi.org/10.1016/j.compag.2022.107584}
+  {\path{doi:10.1016/j.compag.2022.107584}}.
 
 \bibitem{philion2020lift}
-J.~Philion, S.~Fidler, Lift, splat, shoot: Encoding images from arbitrary camera rigs by implicitly unprojecting to 3d, in: Computer Vision -- ECCV 2020, 2020, pp. 194--210.
+J.~Philion, S.~Fidler, Lift, splat, shoot: Encoding images from arbitrary
+  camera rigs by implicitly unprojecting to 3d, in: Computer Vision -- ECCV
+  2020, 2020, pp. 194--210.
 
 \bibitem{huang2021bevdet}
-J.~Huang, G.~Huang, Z.~Zhu, Y.~Ye, D.~Du, Bevdet: High-performance multi-camera 3d object detection in bird-eye-view, arXiv preprint arXiv:2112.11790 (2021).
+J.~Huang, G.~Huang, Z.~Zhu, Y.~Ye, D.~Du, Bevdet: High-performance multi-camera
+  3d object detection in bird-eye-view, arXiv preprint arXiv:2112.11790 (2021).
 
 \bibitem{li2022bevdepth}
-Y.~Li, Z.~Ge, G.~Yu, J.~Yang, Z.~Wang, Y.~Shi, J.~Sun, Z.~Li, Bevdepth: Acquisition of reliable depth for multi-view 3d object detection, arXiv preprint arXiv:2206.10092 (2022).
+Y.~Li, Z.~Ge, G.~Yu, J.~Yang, Z.~Wang, Y.~Shi, J.~Sun, Z.~Li, Bevdepth:
+  Acquisition of reliable depth for multi-view 3d object detection, arXiv
+  preprint arXiv:2206.10092 (2022).
 
 \bibitem{wang2022detr3d}
-Y.~Wang, V.~C. Guizilini, T.~Zhang, Y.~Wang, H.~Zhao, J.~Solomon, Detr3d: 3d object detection from multi-view images via 3d-to-2d queries, in: Proceedings of the 5th Conference on Robot Learning, 2022, pp. 180--191.
+Y.~Wang, V.~C. Guizilini, T.~Zhang, Y.~Wang, H.~Zhao, J.~Solomon, Detr3d: 3d
+  object detection from multi-view images via 3d-to-2d queries, in: Proceedings
+  of the 5th Conference on Robot Learning, 2022, pp. 180--191.
 
 \bibitem{li2022petr}
-Y.~Liu, T.~Wang, X.~Zhang, J.~Sun, Petr: Position embedding transformation for multi-view 3d object detection, in: Computer Vision -- ECCV 2022, 2022, pp. 531--548.
-\newblock \href {https://doi.org/10.1007/978-3-031-19812-0_31} {\path{doi:10.1007/978-3-031-19812-0_31}}.
+Y.~Liu, T.~Wang, X.~Zhang, J.~Sun, Petr: Position embedding transformation for
+  multi-view 3d object detection, in: Computer Vision -- ECCV 2022, 2022, pp.
+  531--548.
+\newblock \href {https://doi.org/10.1007/978-3-031-19812-0_31}
+  {\path{doi:10.1007/978-3-031-19812-0_31}}.
 
 \bibitem{li2022bevformer}
-Z.~Li, W.~Wang, H.~Li, E.~Xie, C.~Sima, T.~Lu, Q.~Yu, J.~Dai, Bevformer: Learning bird's-eye-view representation from multi-camera images via spatiotemporal transformers, in: Proceedings of the European Conference on Computer Vision, 2022.
+Z.~Li, W.~Wang, H.~Li, E.~Xie, C.~Sima, T.~Lu, Q.~Yu, J.~Dai, Bevformer:
+  Learning bird's-eye-view representation from multi-camera images via
+  spatiotemporal transformers, in: Proceedings of the European Conference on
+  Computer Vision, 2022.
 
 \bibitem{wei2023surroundocc}
-Y.~Wei, L.~Zhao, W.~Zheng, Z.~Zhu, J.~Zhou, J.~Lu, Surroundocc: Multi-camera 3d occupancy prediction for autonomous driving, in: Proceedings of the IEEE/CVF International Conference on Computer Vision, 2023.
+Y.~Wei, L.~Zhao, W.~Zheng, Z.~Zhu, J.~Zhou, J.~Lu, Surroundocc: Multi-camera 3d
+  occupancy prediction for autonomous driving, in: Proceedings of the IEEE/CVF
+  International Conference on Computer Vision, 2023.
 
 \bibitem{wang2023openoccupancy}
-X.~Wang, Z.~Zhu, W.~Xu, Y.~Zhang, Y.~Wei, X.~Chi, Y.~Ye, D.~Du, J.~Lu, X.~Wang, Openoccupancy: A large scale benchmark for surrounding semantic occupancy perception, in: Proceedings of the IEEE/CVF International Conference on Computer Vision, 2023.
+X.~Wang, Z.~Zhu, W.~Xu, Y.~Zhang, Y.~Wei, X.~Chi, Y.~Ye, D.~Du, J.~Lu, X.~Wang,
+  Openoccupancy: A large scale benchmark for surrounding semantic occupancy
+  perception, in: Proceedings of the IEEE/CVF International Conference on
+  Computer Vision, 2023.
 
 \bibitem{zheng2024occworld}
-W.~Zheng, W.~Chen, Y.~Huang, B.~Zhang, Y.~Duan, J.~Lu, Occworld: Learning a 3d occupancy world model for autonomous driving, in: Proceedings of the European Conference on Computer Vision, 2024.
-\newblock \href {https://doi.org/10.1007/978-3-031-72624-8_4} {\path{doi:10.1007/978-3-031-72624-8_4}}.
+W.~Zheng, W.~Chen, Y.~Huang, B.~Zhang, Y.~Duan, J.~Lu, Occworld: Learning a 3d
+  occupancy world model for autonomous driving, in: Proceedings of the European
+  Conference on Computer Vision, 2024.
+\newblock \href {https://doi.org/10.1007/978-3-031-72624-8_4}
+  {\path{doi:10.1007/978-3-031-72624-8_4}}.
 
 \bibitem{mei2025irwm}
-J.~Mei, Y.~Yang, X.~Yang, L.~Wen, J.~Lv, B.~Shi, Y.~Liu, Vision-centric 4d occupancy forecasting and planning via implicit residual world models, arXiv preprint arXiv:2510.16729 (2025).
+J.~Mei, Y.~Yang, X.~Yang, L.~Wen, J.~Lv, B.~Shi, Y.~Liu, Vision-centric 4d
+  occupancy forecasting and planning via implicit residual world models, arXiv
+  preprint arXiv:2510.16729 (2025).
 
 \bibitem{li2022bevstereo}
-Y.~Li, H.~Bao, Z.~Ge, J.~Yang, J.~Sun, Z.~Li, Bevstereo: Enhancing depth estimation in multi-view 3d object detection with dynamic temporal stereo, arXiv preprint arXiv:2209.10248 (2022).
+Y.~Li, H.~Bao, Z.~Ge, J.~Yang, J.~Sun, Z.~Li, Bevstereo: Enhancing depth
+  estimation in multi-view 3d object detection with dynamic temporal stereo,
+  arXiv preprint arXiv:2209.10248 (2022).
 
 \bibitem{zhou2022matrixvt}
-H.~Zhou, Z.~Ge, Z.~Li, X.~Zhang, Matrixvt: Efficient multi-camera to bev transformation for 3d perception, arXiv preprint arXiv:2211.10593 (2022).
+H.~Zhou, Z.~Ge, Z.~Li, X.~Zhang, Matrixvt: Efficient multi-camera to bev
+  transformation for 3d perception, arXiv preprint arXiv:2211.10593 (2022).
 
 \bibitem{liu2023petrv2}
-Y.~Liu, J.~Yan, F.~Jia, S.~Li, Q.~Gao, T.~Wang, X.~Zhang, J.~Sun, Petrv2: A unified framework for 3d perception from multi-camera images, in: Proceedings of the IEEE/CVF International Conference on Computer Vision, 2023.
+Y.~Liu, J.~Yan, F.~Jia, S.~Li, Q.~Gao, T.~Wang, X.~Zhang, J.~Sun, Petrv2: A
+  unified framework for 3d perception from multi-camera images, in: Proceedings
+  of the IEEE/CVF International Conference on Computer Vision, 2023.
 
 \bibitem{li2023fbbev}
-Z.~Li, Z.~Yu, W.~Wang, A.~Anandkumar, T.~Lu, J.~M. Alvarez, Fb-bev: Bev representation from forward-backward view transformations, in: Proceedings of the IEEE/CVF International Conference on Computer Vision, 2023, pp. 6919--6928.
+Z.~Li, Z.~Yu, W.~Wang, A.~Anandkumar, T.~Lu, J.~M. Alvarez, Fb-bev: Bev
+  representation from forward-backward view transformations, in: Proceedings of
+  the IEEE/CVF International Conference on Computer Vision, 2023, pp.
+  6919--6928.
 
 \bibitem{liu2023bevfusion}
-Z.~Liu, H.~Tang, A.~Amini, X.~Yang, H.~Mao, D.~Rus, S.~Han, Bevfusion: Multi-task multi-sensor fusion with unified bird's-eye view representation, in: 2023 IEEE International Conference on Robotics and Automation, 2023, pp. 2774--2781.
+Z.~Liu, H.~Tang, A.~Amini, X.~Yang, H.~Mao, D.~Rus, S.~Han, Bevfusion:
+  Multi-task multi-sensor fusion with unified bird's-eye view representation,
+  in: 2023 IEEE International Conference on Robotics and Automation, 2023, pp.
+  2774--2781.
 
 \bibitem{cao2022monoscene}
-A.-Q. Cao, R.~de~Charette, Monoscene: Monocular 3d semantic scene completion, in: Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition, 2022, pp. 3991--4001.
+A.-Q. Cao, R.~de~Charette, Monoscene: Monocular 3d semantic scene completion,
+  in: Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern
+  Recognition, 2022, pp. 3991--4001.
 
 \bibitem{huang2023tpvformer}
-Y.~Huang, W.~Zheng, Y.~Zhang, J.~Zhou, J.~Lu, Tri-perspective view for vision-based 3d semantic occupancy prediction, in: Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition, 2023, pp. 9223--9232.
+Y.~Huang, W.~Zheng, Y.~Zhang, J.~Zhou, J.~Lu, Tri-perspective view for
+  vision-based 3d semantic occupancy prediction, in: Proceedings of the
+  IEEE/CVF Conference on Computer Vision and Pattern Recognition, 2023, pp.
+  9223--9232.
 
 \bibitem{li2023voxformer}
-Y.~Li, Z.~Yu, C.~Choy, C.~Xiao, J.~M. Alvarez, S.~Fidler, C.~Feng, A.~Anandkumar, Voxformer: Sparse voxel transformer for camera-based 3d semantic scene completion, in: Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition, 2023, pp. 9087--9098.
-\newblock \href {https://doi.org/10.1109/CVPR52729.2023.00877} {\path{doi:10.1109/CVPR52729.2023.00877}}.
+Y.~Li, Z.~Yu, C.~Choy, C.~Xiao, J.~M. Alvarez, S.~Fidler, C.~Feng,
+  A.~Anandkumar, Voxformer: Sparse voxel transformer for camera-based 3d
+  semantic scene completion, in: Proceedings of the IEEE/CVF Conference on
+  Computer Vision and Pattern Recognition, 2023, pp. 9087--9098.
+\newblock \href {https://doi.org/10.1109/CVPR52729.2023.00877}
+  {\path{doi:10.1109/CVPR52729.2023.00877}}.
 
 \bibitem{zhang2023occformer}
-Y.~Zhang, Z.~Zhu, D.~Du, Occformer: Dual-path transformer for vision-based 3d semantic occupancy prediction, in: Proceedings of the IEEE/CVF International Conference on Computer Vision, 2023, pp. 9433--9443.
+Y.~Zhang, Z.~Zhu, D.~Du, Occformer: Dual-path transformer for vision-based 3d
+  semantic occupancy prediction, in: Proceedings of the IEEE/CVF International
+  Conference on Computer Vision, 2023, pp. 9433--9443.
 
 \bibitem{ma2024cotr}
-Q.~Ma, X.~Tan, Y.~Qu, L.~Ma, Z.~Zhang, Y.~Xie, Cotr: Compact occupancy transformer for vision-based 3d occupancy prediction, in: Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition, 2024, pp. 19936--19945.
-\newblock \href {https://doi.org/10.1109/CVPR52733.2024.01884} {\path{doi:10.1109/CVPR52733.2024.01884}}.
+Q.~Ma, X.~Tan, Y.~Qu, L.~Ma, Z.~Zhang, Y.~Xie, Cotr: Compact occupancy
+  transformer for vision-based 3d occupancy prediction, in: Proceedings of the
+  IEEE/CVF Conference on Computer Vision and Pattern Recognition, 2024, pp.
+  19936--19945.
+\newblock \href {https://doi.org/10.1109/CVPR52733.2024.01884}
+  {\path{doi:10.1109/CVPR52733.2024.01884}}.
 
 \bibitem{wang2024panoocc}
-Y.~Wang, Y.~Chen, X.~Liao, L.~Fan, Z.~Zhang, Panoocc: Unified occupancy representation for camera-based 3d panoptic segmentation, in: Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition, 2024, pp. 17158--17168.
+Y.~Wang, Y.~Chen, X.~Liao, L.~Fan, Z.~Zhang, Panoocc: Unified occupancy
+  representation for camera-based 3d panoptic segmentation, in: Proceedings of
+  the IEEE/CVF Conference on Computer Vision and Pattern Recognition, 2024, pp.
+  17158--17168.
 
 \bibitem{liu2024sparseocc}
-H.~Liu, Y.~Chen, H.~Wang, Z.~Yang, T.~Li, J.~Zeng, L.~Chen, H.~Li, L.~Wang, Fully sparse 3d occupancy prediction, in: Proceedings of the European Conference on Computer Vision, 2024.
+H.~Liu, Y.~Chen, H.~Wang, Z.~Yang, T.~Li, J.~Zeng, L.~Chen, H.~Li, L.~Wang,
+  Fully sparse 3d occupancy prediction, in: Proceedings of the European
+  Conference on Computer Vision, 2024.
 
 \bibitem{tang2024sparseocc}
-P.~Tang, Z.~Wang, G.~Wang, J.~Zheng, X.~Ren, B.~Feng, C.~Ma, Sparseocc: Rethinking sparse latent representation for vision-based semantic occupancy prediction, in: Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition, 2024.
+P.~Tang, Z.~Wang, G.~Wang, J.~Zheng, X.~Ren, B.~Feng, C.~Ma, Sparseocc:
+  Rethinking sparse latent representation for vision-based semantic occupancy
+  prediction, in: Proceedings of the IEEE/CVF Conference on Computer Vision and
+  Pattern Recognition, 2024.
 
 \bibitem{yu2023flashocc}
-Z.~Yu, C.~Shu, J.~Deng, K.~Lu, Z.~Liu, J.~Yu, D.~Yang, H.~Li, Y.~Chen, Flashocc: Fast and memory-efficient occupancy prediction via channel-to-height plugin, arXiv preprint arXiv:2311.12058 (2023).
+Z.~Yu, C.~Shu, J.~Deng, K.~Lu, Z.~Liu, J.~Yu, D.~Yang, H.~Li, Y.~Chen,
+  Flashocc: Fast and memory-efficient occupancy prediction via
+  channel-to-height plugin, arXiv preprint arXiv:2311.12058 (2023).
 
 \bibitem{pan2024renderocc}
-M.~Pan, J.~Liu, R.~Zhang, P.~Huang, X.~Li, B.~Wang, H.~Xie, L.~Liu, S.~Zhang, Renderocc: Vision-centric 3d occupancy prediction with 2d rendering supervision, in: 2024 IEEE International Conference on Robotics and Automation, 2024, pp. 12404--12411.
+M.~Pan, J.~Liu, R.~Zhang, P.~Huang, X.~Li, B.~Wang, H.~Xie, L.~Liu, S.~Zhang,
+  Renderocc: Vision-centric 3d occupancy prediction with 2d rendering
+  supervision, in: 2024 IEEE International Conference on Robotics and
+  Automation, 2024, pp. 12404--12411.
 
 \bibitem{huang2022bevdet4d}
-J.~Huang, G.~Huang, Bevdet4d: Exploit temporal cues in multi-camera 3d object detection, arXiv preprint arXiv:2203.17054 (2022).
+J.~Huang, G.~Huang, Bevdet4d: Exploit temporal cues in multi-camera 3d object
+  detection, arXiv preprint arXiv:2203.17054 (2022).
 
 \bibitem{mohan2026forecastocc}
-R.~Mohan, J.~V. Hurtado, R.~Mohan, A.~Valada, Forecastocc: Vision-based semantic occupancy forecasting, arXiv preprint arXiv:2602.08006 (2026).
+R.~Mohan, J.~V. Hurtado, R.~Mohan, A.~Valada, Forecastocc: Vision-based
+  semantic occupancy forecasting, arXiv preprint arXiv:2602.08006 (2026).
 
 \bibitem{geiger2012kitti}
-A.~Geiger, P.~Lenz, R.~Urtasun, Are we ready for autonomous driving? the kitti vision benchmark suite, in: Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition, 2012, pp. 3354--3361.
+A.~Geiger, P.~Lenz, R.~Urtasun, Are we ready for autonomous driving? the kitti
+  vision benchmark suite, in: Proceedings of the IEEE Conference on Computer
+  Vision and Pattern Recognition, 2012, pp. 3354--3361.
 
 \bibitem{behley2019semantickitti}
-J.~Behley, M.~Garbade, A.~Milioto, J.~Quenzel, S.~Behnke, C.~Stachniss, J.~Gall, Semantickitti: A dataset for semantic scene understanding of lidar sequences, in: Proceedings of the IEEE/CVF International Conference on Computer Vision, 2019, pp. 9296--9306.
+J.~Behley, M.~Garbade, A.~Milioto, J.~Quenzel, S.~Behnke, C.~Stachniss,
+  J.~Gall, Semantickitti: A dataset for semantic scene understanding of lidar
+  sequences, in: Proceedings of the IEEE/CVF International Conference on
+  Computer Vision, 2019, pp. 9296--9306.
 
 \bibitem{caesar2020nuscenes}
-H.~Caesar, V.~Bankiti, A.~H. Lang, S.~Vora, V.~E. Liong, Q.~Xu, A.~Krishnan, Y.~Pan, G.~Baldan, O.~Beijbom, nuscenes: A multimodal dataset for autonomous driving, in: Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition, 2020, pp. 11621--11631.
+H.~Caesar, V.~Bankiti, A.~H. Lang, S.~Vora, V.~E. Liong, Q.~Xu, A.~Krishnan,
+  Y.~Pan, G.~Baldan, O.~Beijbom, nuscenes: A multimodal dataset for autonomous
+  driving, in: Proceedings of the IEEE/CVF Conference on Computer Vision and
+  Pattern Recognition, 2020, pp. 11621--11631.
 
 \bibitem{jiang2020rellis}
-P.~Jiang, P.~Osteen, M.~Wigness, S.~Saripalli, Rellis-3d dataset: Data, benchmarks and analysis (2020).
+P.~Jiang, P.~Osteen, M.~Wigness, S.~Saripalli, Rellis-3d dataset: Data,
+  benchmarks and analysis (2020).
 \newblock \href {http://arxiv.org/abs/2011.12954} {\path{arXiv:2011.12954}}.
 
 \bibitem{dosovitskiy2017carla}
-A.~Dosovitskiy, G.~Ros, F.~Codevilla, A.~M. Lopez, V.~Koltun, Carla: An open urban driving simulator, in: Proceedings of the 1st Conference on Robot Learning, 2017, pp. 1--16.
+A.~Dosovitskiy, G.~Ros, F.~Codevilla, A.~M. Lopez, V.~Koltun, Carla: An open
+  urban driving simulator, in: Proceedings of the 1st Conference on Robot
+  Learning, 2017, pp. 1--16.
 
 \bibitem{tobin2017domainrandomization}
-J.~Tobin, R.~Fong, A.~Ray, J.~Schneider, W.~Zaremba, P.~Abbeel, Domain randomization for transferring deep neural networks from simulation to the real world, in: 2017 IEEE/RSJ International Conference on Intelligent Robots and Systems, 2017, pp. 23--30.
-\newblock \href {https://doi.org/10.1109/IROS.2017.8202133} {\path{doi:10.1109/IROS.2017.8202133}}.
+J.~Tobin, R.~Fong, A.~Ray, J.~Schneider, W.~Zaremba, P.~Abbeel, Domain
+  randomization for transferring deep neural networks from simulation to the
+  real world, in: 2017 IEEE/RSJ International Conference on Intelligent Robots
+  and Systems, 2017, pp. 23--30.
+\newblock \href {https://doi.org/10.1109/IROS.2017.8202133}
+  {\path{doi:10.1109/IROS.2017.8202133}}.
 
 \bibitem{peng2018sim2real}
-X.~B. Peng, M.~Andrychowicz, W.~Zaremba, P.~Abbeel, Sim-to-real transfer of robotic control with dynamics randomization, in: 2018 IEEE International Conference on Robotics and Automation, 2018, pp. 3803--3810.
-\newblock \href {https://doi.org/10.1109/ICRA.2018.8460528} {\path{doi:10.1109/ICRA.2018.8460528}}.
+X.~B. Peng, M.~Andrychowicz, W.~Zaremba, P.~Abbeel, Sim-to-real transfer of
+  robotic control with dynamics randomization, in: 2018 IEEE International
+  Conference on Robotics and Automation, 2018, pp. 3803--3810.
+\newblock \href {https://doi.org/10.1109/ICRA.2018.8460528}
+  {\path{doi:10.1109/ICRA.2018.8460528}}.
 
 \bibitem{hoffman2018cycada}
-J.~Hoffman, E.~Tzeng, T.~Park, J.-Y. Zhu, P.~Isola, K.~Saenko, A.~Efros, T.~Darrell, Cycada: Cycle-consistent adversarial domain adaptation, in: Proceedings of the 35th International Conference on Machine Learning, 2018, pp. 1989--1998.
+J.~Hoffman, E.~Tzeng, T.~Park, J.-Y. Zhu, P.~Isola, K.~Saenko, A.~Efros,
+  T.~Darrell, Cycada: Cycle-consistent adversarial domain adaptation, in:
+  Proceedings of the 35th International Conference on Machine Learning, 2018,
+  pp. 1989--1998.
 
 \bibitem{chen2025orad3d}
-M.~Chen, J.~Mei, H.~Zhai, S.~Wang, T.~Sun, F.~Kong, H.~Li, F.~Mao, F.~Liu, S.~Wang, Y.~Nie, Q.~Zhu, L.~Xiao, D.~Zhao, Y.~Hu, Advancing off-road autonomous driving: The large-scale orad-3d dataset and comprehensive benchmarks, arXiv preprint arXiv:2510.16500 (2025).
+M.~Chen, J.~Mei, H.~Zhai, S.~Wang, T.~Sun, F.~Kong, H.~Li, F.~Mao, F.~Liu,
+  S.~Wang, Y.~Nie, Q.~Zhu, L.~Xiao, D.~Zhao, Y.~Hu, Advancing off-road
+  autonomous driving: The large-scale orad-3d dataset and comprehensive
+  benchmarks, arXiv preprint arXiv:2510.16500 (2025).
 
 \bibitem{zhu2021deformable}
-X.~Zhu, W.~Su, L.~Lu, B.~Li, X.~Wang, J.~Dai, Deformable detr: Deformable transformers for end-to-end object detection, in: International Conference on Learning Representations, 2021.
+X.~Zhu, W.~Su, L.~Lu, B.~Li, X.~Wang, J.~Dai, Deformable detr: Deformable
+  transformers for end-to-end object detection, in: International Conference on
+  Learning Representations, 2021.
 
 \end{thebibliography}

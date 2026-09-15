@@ -2,7 +2,7 @@
 
 \subsection{数据集与评价协议}\label{sec:data}
 \paragraph{AgriOcc-Dataset。}
-本文基于 UE5 FarmSim 数据建立农业语义占用训练协议。每一帧含六路 RGB、传感器内外参、机器人位姿、原始占用标签与有效掩码；主实验仅使用前三路相机。原始标签经过固定映射合并为六个类别：free、crop、soil\_ground、drivable、other\_vegetation 和 other\_obstacle。训练/验证划分分别含 248/50 个互不重叠的序列、32,385/6,477 帧。占用文件按 $[z,y,x]$ 存储，加载时转换为模型使用的 $[x,y,z]$；无效和未映射标签均置为 ignore。由于主任务使用当前图像，\texttt{history-frames}=0，且不预测未来占用和规划轨迹。
+AgriOcc-Dataset 的构建过程、数据组成和序列级划分见第\ref{sec:dataset_construction}节。主实验仅使用正前、左前和右前三路相机，并预测机器人前方区域的当前时刻占用；\texttt{history-frames}=0，且不预测未来占用或规划轨迹。占用文件按 $[z,y,x]$ 存储，加载时转换为模型使用的 $[x,y,z]$；无效和未映射标签均置为 ignore。
 
 \paragraph{ORAD-3D。}
 为测试仿真到真实越野环境的迁移，使用 ORAD-3D 的单目当前帧占用任务\cite{chen2025orad3d}。与 RELLIS-3D 等越野多模态数据\cite{jiang2020rellis}相比，ORAD-3D 直接提供本文所需的体素占用评价接口。其输出为 $100\times100\times16$ 九类体素（free、road、safe-road、car、people、water、snow、grass-on-road、rock），坐标轴由原始 right/forward/up 转换为本文的 forward/right/up。FarmSim 与 ORAD-3D 的类别和相机数不同，因而先将 FarmSim checkpoint 中形状兼容的张量加载到 ORAD 模型；三相机 embedding 取中心前视 embedding，新的单目 embedding 和九类占用头由固定随机种子初始化，再对 ORAD 训练集的不同数据比例微调。
