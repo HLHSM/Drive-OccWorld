@@ -113,6 +113,37 @@ preview_count() {
         -name '*_prediction.png' 2>/dev/null | wc -l
 }
 
+# Some September 2026 dumped configs predate removal of the experimental
+# SCAFQ branch.  The affected runs explicitly set it to False, so its five
+# options neither created modules nor produced checkpoint tensors.  Produce a
+# private evaluation-only config with those obsolete, disabled fields removed.
+# This keeps the source model schema clean while allowing the historical
+# checkpoint to be reconstructed faithfully.  An enabled SCAFQ run must use
+# the matching historical implementation and is therefore rejected clearly.
+evaluation_config() {
+    local run_dir="$1" config="$2" checkpoint_stem="$3"
+    local compat_dir compat_config
+    if ! grep -Eq '^[[:space:]]*use_scafq[[:space:]]*=' "${config}"; then
+        printf '%s\n' "${config}"
+        return 0
+    fi
+    if grep -Eq '^[[:space:]]*use_scafq[[:space:]]*=[[:space:]]*True[[:space:]]*[,)]?' "${config}"; then
+        echo "[$(basename "${run_dir}")] skipped: its checkpoint requires the removed enabled SCAFQ implementation" >&2
+        return 1
+    fi
+    compat_dir="${run_dir}/.evaluation_configs"
+    compat_config="${compat_dir}/${checkpoint_stem}_without_scafq.py"
+    mkdir -p "${compat_dir}"
+    sed -E \
+        -e '/^[[:space:]]*use_scafq[[:space:]]*=/d' \
+        -e '/^[[:space:]]*scafq_active_ratio[[:space:]]*=/d' \
+        -e '/^[[:space:]]*scafq_crop_ratio[[:space:]]*=/d' \
+        -e '/^[[:space:]]*scafq_channels[[:space:]]*=/d' \
+        -e '/^[[:space:]]*scafq_fpn_levels[[:space:]]*=/d' \
+        "${config}" > "${compat_config}"
+    printf '%s\n' "${compat_config}"
+}
+
 # A run directory is queued at most once, using its highest epoch_N.pth.
 # Existing preview images are the completion marker because they represent the
 # user-visible result requested by this evaluator; prediction NPZ files alone
@@ -142,12 +173,13 @@ run_task() {
     local run_dir checkpoint_stem
     run_dir="$(dirname "${checkpoint}")"
     checkpoint_stem="$(basename "${checkpoint%.pth}")"
-    local config dataset ann_file prediction_dir visualization_dir gt_dir log_path metrics_path
+    local config eval_config dataset ann_file prediction_dir visualization_dir gt_dir log_path metrics_path
     if [[ ! -f "${checkpoint}" ]]; then
         echo "[$(basename "${run_dir}")] skipped: checkpoint not found: ${checkpoint}" >&2
         return 1
     fi
     config="$(find_config "${run_dir}")" || return 1
+    eval_config="$(evaluation_config "${run_dir}" "${config}" "${checkpoint_stem}")" || return 0
     dataset="$(dataset_key "${config}")"
     if [[ "$(basename "${run_dir}")" == simdata_* ]]; then
         dataset="simdata-occ0p1"
@@ -169,8 +201,8 @@ run_task() {
 
     echo "[$(date '+%F %T')] GPU ${gpu}: $(basename "${run_dir}") (${dataset}, ${checkpoint_stem})"
     if [[ "${DRY_RUN}" == "1" ]]; then
-        printf '  config=%s\n  checkpoint=%s\n  ann_file=%s\n  prediction=%s\n  visualization=%s\n' \
-            "${config}" "${checkpoint}" "${ann_file}" "${prediction_dir}" "${visualization_dir}"
+        printf '  config=%s\n  eval_config=%s\n  checkpoint=%s\n  ann_file=%s\n  prediction=%s\n  visualization=%s\n' \
+            "${config}" "${eval_config}" "${checkpoint}" "${ann_file}" "${prediction_dir}" "${visualization_dir}"
         return 0
     fi
 
@@ -186,7 +218,7 @@ run_task() {
         fi
         find "${prediction_dir}" -maxdepth 1 -type f -name '.epoch8_batch_eval_manifest' -delete
 
-        local command=("${PYTHON_BIN}" tools/test.py "${config}" "${checkpoint}"
+        local command=("${PYTHON_BIN}" tools/test.py "${eval_config}" "${checkpoint}"
             --save-predictions "${prediction_dir}"
             --save-prediction-count "${PREDICTION_COUNT}"
             --save-prediction-sampling "${SAVE_SAMPLING}"
