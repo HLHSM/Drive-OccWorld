@@ -1,6 +1,11 @@
 #!/usr/bin/env bash
 # Batch-evaluate compatible Drive-OccWorld tasks and save prediction previews.
 #
+# Every direct child run under work_dirs is considered.  For each run, the
+# numerically largest regular ``epoch_N.pth`` checkpoint is evaluated (EMA
+# checkpoints are deliberately ignored).  Runs with a complete set of preview
+# PNGs are skipped by default, so this script can safely be rerun.
+#
 # Each available GPU receives a serial queue of independent single-GPU test.py
 # jobs. This avoids distributed rendezvous and allows unrelated experiments to
 # evaluate concurrently. See the editable settings below or override them as
@@ -13,7 +18,6 @@ REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 REPO_PYTHONPATH="${REPO_ROOT}${PYTHONPATH:+:${PYTHONPATH}}"
 PYTHON_BIN="${PYTHON_BIN:-/home/HL/.conda/envs/dow2/bin/python}"
 WORK_DIRS_ROOT="${WORK_DIRS_ROOT:-${REPO_ROOT}/work_dirs}"
-CHECKPOINT_NAME="${CHECKPOINT_NAME:-epoch_8.pth}"
 PREDICTION_COUNT="${PREDICTION_COUNT:-100}"
 PREDICTION_DIR_NAME="${PREDICTION_DIR_NAME:-prediction}"
 VISUALIZATION_DIR_NAME="${VISUALIZATION_DIR_NAME:-visualization}"
@@ -29,6 +33,7 @@ PREVIEW_AZIM="${PREVIEW_AZIM:--135}"
 RENDER_STYLE="${RENDER_STYLE:-auto}"
 GPU_IDS="${GPU_IDS:-}"
 DRY_RUN="${DRY_RUN:-0}"
+SKIP_EXISTING_PREVIEWS="${SKIP_EXISTING_PREVIEWS:-1}"
 
 if [[ ! -x "${PYTHON_BIN}" ]]; then
     echo "PYTHON_BIN is not executable: ${PYTHON_BIN}" >&2
@@ -80,57 +85,55 @@ dataset_key() {
 evaluation_ann_file() {
     case "$1" in
         farmsim) printf 'data/farmsim/splits/val.json\n' ;;
+        simdata-occ0p1) printf 'data/simdata_occ0p1/splits/val.json\n' ;;
         orad3d) printf 'data/orad3d/splits/test.json\n' ;;
         *) return 1 ;;
     esac
 }
 
-# Keep the established epoch-8 sweep, then add ORAD-3D experiments that end
-# earlier (for example the p10/p25/p50/p100 fine-tunes at epoch_1 or epoch_4).
-# A run directory is evaluated only once: when multiple numeric epoch files are
-# present for an ORAD run, its highest epoch is selected.
+# Return the most recent regular training checkpoint in a run directory.  Do
+# not select epoch_N_ema.pth: it is a different checkpoint format and test.py
+# should receive the ordinary epoch_N.pth produced by the training run.
+latest_checkpoint() {
+    local run_dir="$1" checkpoint basename epoch=-1 latest=''
+    while IFS= read -r -d '' checkpoint; do
+        basename="$(basename "${checkpoint}")"
+        if [[ "${basename}" =~ ^epoch_([0-9]+)\.pth$ ]] \
+            && (( 10#${BASH_REMATCH[1]} > epoch )); then
+            epoch=$((10#${BASH_REMATCH[1]}))
+            latest="${checkpoint}"
+        fi
+    done < <(find "${run_dir}" -maxdepth 1 -type f -name 'epoch_*.pth' -print0)
+    [[ -n "${latest}" ]] && printf '%s\n' "${latest}"
+}
+
+preview_count() {
+    local run_dir="$1"
+    find "${run_dir}/${VISUALIZATION_DIR_NAME}" -maxdepth 1 -type f \
+        -name '*_prediction.png' 2>/dev/null | wc -l
+}
+
+# A run directory is queued at most once, using its highest epoch_N.pth.
+# Existing preview images are the completion marker because they represent the
+# user-visible result requested by this evaluator; prediction NPZ files alone
+# are intentionally not sufficient to suppress re-rendering.
 declare -a TASK_CHECKPOINTS=()
-declare -A SELECTED_RUNS=()
-while IFS= read -r -d '' checkpoint; do
+SKIPPED_EXISTING_PREVIEWS=0
+while IFS= read -r -d '' run_dir; do
+    checkpoint="$(latest_checkpoint "${run_dir}")"
+    [[ -z "${checkpoint}" ]] && continue
+    existing_previews="$(preview_count "${run_dir}")"
+    if [[ "${SKIP_EXISTING_PREVIEWS}" == "1" ]] \
+        && (( existing_previews >= PREDICTION_COUNT )); then
+        echo "[$(basename "${run_dir}")] skipped: ${existing_previews} existing preview image(s)"
+        SKIPPED_EXISTING_PREVIEWS=$((SKIPPED_EXISTING_PREVIEWS + 1))
+        continue
+    fi
     TASK_CHECKPOINTS+=("${checkpoint}")
-    SELECTED_RUNS["$(dirname "${checkpoint}")"]=1
-done < <(find "${WORK_DIRS_ROOT}" -mindepth 2 -maxdepth 2 -type f \
-    -name "${CHECKPOINT_NAME}" -print0 | sort -z)
-
-declare -A ORAD_EPOCH_BY_RUN=()
-declare -A ORAD_CHECKPOINT_BY_RUN=()
-while IFS= read -r -d '' checkpoint; do
-    checkpoint_basename="$(basename "${checkpoint}")"
-    if [[ ! "${checkpoint_basename}" =~ ^epoch_([0-9]+)\.pth$ ]]; then
-        continue
-    fi
-    run_dir="$(dirname "${checkpoint}")"
-    if [[ -n "${SELECTED_RUNS[${run_dir}]+x}" ]]; then
-        continue
-    fi
-    config="$(find_config "${run_dir}")" || continue
-    if [[ "$(dataset_key "${config}")" != "orad3d" ]]; then
-        continue
-    fi
-    epoch="${BASH_REMATCH[1]}"
-    if [[ -z "${ORAD_EPOCH_BY_RUN[${run_dir}]+x}" ]] \
-        || (( epoch > ORAD_EPOCH_BY_RUN[${run_dir}] )); then
-        ORAD_EPOCH_BY_RUN["${run_dir}"]="${epoch}"
-        ORAD_CHECKPOINT_BY_RUN["${run_dir}"]="${checkpoint}"
-    fi
-done < <(find "${WORK_DIRS_ROOT}" -mindepth 2 -maxdepth 2 -type f \
-    -name 'epoch_*.pth' -print0 | sort -z)
-
-while IFS=$'\t' read -r run_dir checkpoint; do
-    TASK_CHECKPOINTS+=("${checkpoint}")
-done < <(
-    for run_dir in "${!ORAD_CHECKPOINT_BY_RUN[@]}"; do
-        printf '%s\t%s\n' "${run_dir}" "${ORAD_CHECKPOINT_BY_RUN[${run_dir}]}"
-    done | sort -t $'\t' -k1,1
-)
+done < <(find "${WORK_DIRS_ROOT}" -mindepth 1 -maxdepth 1 -type d -print0 | sort -z)
 
 if (( ${#TASK_CHECKPOINTS[@]} == 0 )); then
-    echo "No ${CHECKPOINT_NAME} or ORAD-3D epoch_N.pth files found directly under ${WORK_DIRS_ROOT}" >&2
+    echo "No unevaluated epoch_N.pth checkpoints found directly under ${WORK_DIRS_ROOT}." >&2
     exit 0
 fi
 
@@ -146,6 +149,9 @@ run_task() {
     fi
     config="$(find_config "${run_dir}")" || return 1
     dataset="$(dataset_key "${config}")"
+    if [[ "$(basename "${run_dir}")" == simdata_* ]]; then
+        dataset="simdata-occ0p1"
+    fi
     if [[ "${dataset}" == "external-surroundocc" ]]; then
         echo "[$(basename "${run_dir}")] skipped: external SurroundOcc needs its own Pkl-based evaluator and does not emit Drive-OccWorld NPZ artifacts"
         return 0
@@ -248,7 +254,7 @@ if (( MAX_PARALLEL_GPU > 0 && ${#AVAILABLE_GPUS[@]} > MAX_PARALLEL_GPU )); then
     AVAILABLE_GPUS=("${AVAILABLE_GPUS[@]:0:MAX_PARALLEL_GPU}")
 fi
 
-echo "Found ${#TASK_CHECKPOINTS[@]} tasks and ${#AVAILABLE_GPUS[@]} available GPU(s): ${AVAILABLE_GPUS[*]}"
+echo "Found ${#TASK_CHECKPOINTS[@]} unevaluated task(s), skipped ${SKIPPED_EXISTING_PREVIEWS} with existing previews, and ${#AVAILABLE_GPUS[@]} available GPU(s): ${AVAILABLE_GPUS[*]}"
 echo "Each task saves ${PREDICTION_COUNT} ${SAVE_SAMPLING} samples. Shared GT cache: ${GT_CACHE_ROOT}"
 
 declare -a WORKER_TASKS

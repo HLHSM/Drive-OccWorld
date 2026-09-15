@@ -2,7 +2,7 @@ PWD /data/HL/Drive-OccWorld/paper_cn
 INPUT /data/HL/texlive/2026/texmf.cnf
 INPUT /data/HL/texlive/2026/texmf-dist/web2c/texmf.cnf
 INPUT /data/HL/texlive/2026/texmf-var/web2c/xetex/xelatex.fmt
-INPUT main.tex
+INPUT /data/HL/Drive-OccWorld/paper_cn/main.tex
 OUTPUT main.log
 INPUT /data/HL/texlive/2026/texmf-dist/tex/latex/elsarticle/elsarticle.cls
 INPUT /data/HL/texlive/2026/texmf-dist/tex/latex/elsarticle/elsarticle.cls

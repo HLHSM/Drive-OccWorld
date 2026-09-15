@@ -1,18 +1,19 @@
 # Fdb version 4
-["bibtex main"] 1789441182.32864 "main.aux" "main.bbl" "main" 1789441203.25205 0
+["bibtex main"] 1789452540.56291 "main.aux" "main.bbl" "main" 1789452561.72959 0
   "./references.bib" 1789436981.58088 14190 91b2b01266af735acaa2baccdd5d52e9 ""
   "/data/HL/texlive/2026/texmf-dist/bibtex/bst/elsarticle/elsarticle-num.bst" 1767996394 29462 dde4ec39bf78fded04ea32048bba0a74 ""
-  "main.aux" 1789441183.79479 13422 ab92d64d743caee7c3e072e3d5c58a30 "xelatex"
+  "main.aux" 1789452541.76327 13426 ab4af951b6b8e4b86254535c7c02f40c "xelatex"
   (generated)
   "main.bbl"
   "main.blg"
   (rewritten before read)
-["xdvipdfmx"] 1789441183.99422 "main.xdv" "main.pdf" "main" 1789441203.25611 0
-  "main.xdv" 1789441183.79679 317968 1e3113d2be2674346d77ed79a4aba2c6 "xelatex"
+["xdvipdfmx"] 1789452541.90536 "main.xdv" "main.pdf" "main" 1789452561.73396 0
+  "main.xdv" 1789452541.76427 328688 1053d5dfa73059dd662535b6a2665151 "xelatex"
   (generated)
   "main.pdf"
   (rewritten before read)
-["xelatex"] 1789441182.35844 "main.tex" "main.xdv" "main" 1789441203.25226 0
+["xelatex"] 1789452540.58664 "/data/HL/Drive-OccWorld/paper_cn/main.tex" "main.xdv" "main" 1789452561.72978 0
+  "/data/HL/Drive-OccWorld/paper_cn/main.tex" 1788761080.45547 1308 d7273666c1ca5be256868c5db692ef78 ""
   "/data/HL/texlive/2026/texmf-dist/fonts/tfm/adobe/zapfding/pzdr.tfm" 1136768653 1528 f853c4d1b4e0550255e02831fdc8496f ""
   "/data/HL/texlive/2026/texmf-dist/fonts/tfm/public/amsfonts/cmextra/cmbsy5.tfm" 1246382020 1120 1e8878807317373affa7f7bba4cf2f6a ""
   "/data/HL/texlive/2026/texmf-dist/fonts/tfm/public/amsfonts/cmextra/cmbsy7.tfm" 1246382020 1120 7f9f170e8aa57527ad6c49feafd45d54 ""
@@ -204,16 +205,16 @@
   "figures/crop_distribution.pdf" 1789441160.45672 14107 eead93223f93ffc27c0751da4b2aaa4c ""
   "figures/gvad_module_ai.png" 1788762767.02861 1254443 218c783f515048eb7c034e7d5e06e325 ""
   "figures/nearfar_module_imagegen.png" 1789216214.34865 1068613 a5d3caf5bf7884d1f82b37d43dc51a40 ""
-  "main.aux" 1789441183.79479 13422 ab92d64d743caee7c3e072e3d5c58a30 "xelatex"
-  "main.bbl" 1789441182.35179 10675 8b5c425542633bc63a3a5575602a84bf "bibtex main"
-  "main.out" 1789441183.79579 2308 3202dc099a492aa47dea25fb88c0ac7d "xelatex"
-  "main.spl" 1789441182.60879 0 d41d8cd98f00b204e9800998ecf8427e "xelatex"
+  "main.aux" 1789452541.76327 13426 ab4af951b6b8e4b86254535c7c02f40c "xelatex"
+  "main.bbl" 1789452540.58222 10481 94fe815c38566292c2876cb81255ace0 "bibtex main"
+  "main.out" 1789452541.76427 2308 3202dc099a492aa47dea25fb88c0ac7d "xelatex"
+  "main.spl" 1789452540.78623 0 d41d8cd98f00b204e9800998ecf8427e "xelatex"
   "main.tex" 1788761080.45547 1308 d7273666c1ca5be256868c5db692ef78 ""
   "math_commands.tex" 1788754414.7258 428 185c6ca76755b156e9548d6539b93ca1 ""
   "sections/0_abstract.tex" 1789396389.40497 1374 801ae638aefd527e0695b10e84c82bd7 ""
   "sections/1_introduction.tex" 1789441116.77658 4805 ce6e94fd44c6cd1e88f92e96dabd46af ""
   "sections/2_related_work.tex" 1789438507.8094 3400 dc1fe02936af61423d2317296a4db580 ""
-  "sections/3_method.tex" 1789441116.77858 11025 0b1296e9eb434e049e4412714b79376d ""
+  "sections/3_method.tex" 1789452536.69303 12827 03d277abdaa9c7dc1c0747c496eb338d ""
   "sections/4_experiments.tex" 1789441116.77958 10473 3dce4f66dad5c758b3e037c94023ee1c ""
   "sections/5_conclusion.tex" 1789213355.01206 1624 b21ab218b0af8296db9cb344219aa043 ""
   "sections/A_appendix.tex" 1789213482.93974 1146 cd3ca9b1942de677388cbbf8c39baa4d ""
