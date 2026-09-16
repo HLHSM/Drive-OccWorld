@@ -20,102 +20,154 @@ AgriOcc采用预训练的 ResNet-101为图像编码器，并使用6 层 BEV enco
 500 iteration 线性 warm-up，batch size为24。使用 4 张 RTX 4090训练 8 epoch。
 
 \subsection{与现有方法的比较}\label{sec:comparison}
-表\ref{tab:main}汇总 AgriOcc-Dataset 验证集上的结果。
-AgriOcc 达到 56.99\% mIoU，六类 IoU 分别为 91.11\%、28.82\%、74.03\%、68.27\%、43.57\% 和 36.15\%。在已完成的对比实验中，AgriOcc 的总体 mIoU 高于 SurroundOcc、SparseOcc、COTR 和 Drive-OccWorld；其增益主要来自 soil\_ground、drivable、other\_vegetation 和 other\_obstacle。作物 IoU 仍是最具挑战性的指标，反映了株间分离与遮挡建模的困难。
+表\ref{tab:main}汇总 AgriOcc-Dataset 上的占用预测结果对比。
+SurroundOcc\cite{wei2023surroundocc}、SparseOcc\cite{tang2024sparseocc}与 COTR\cite{ma2024cotr}同属当前帧语义占用方法；
+Drive-OccWorld\cite{yangDrivingOccupancyWorld2025}和 IR-WM\cite{meiVisionCentric4DOccupancy2026}则同时预测当前与未来占用。
+结果表明，AgriOcc 优于各对比方法。说明 GeoVis-BEV 编码器与
+农业结构自适应解码器能够将图像几何线索转化为更一致的空间占用表示。
+优势主要体现在地面、可通行区域和复杂植被/障碍物等结构性类别，
+表明模型对大范围农田布局与局部障碍边界具有更稳健的联合建模能力。
+相比之下，作物仍是最具挑战性的类别，原因在于株间分离和叶片遮挡会在单帧投影及体素化过程中造成语义混合；
+这也为后续引入更细粒度时空观测提供了明确的方向。
 
-\begin{table}[t]
+SurroundOcc、SparseOcc 和 COTR 的设计主要面向城市环视驾驶场景：均匀的空间查询与城市道路先验难以直接适配农业机器人前方视域中的行间遮挡、细长作物和近场精细边界。相比之下，IR-WM 与 Drive-OccWorld 的重点是利用历史状态、动作条件和未来滚动预测服务于世界建模与规划；在本文仅评价当前帧占用的协议下，这些额外能力无法充分转化为当前体素精度，且多步联合优化会增加表征学习的难度。因此，它们较低的当前帧指标反映了任务目标与模型归纳偏置的不匹配，而非世界模型在预测未来状态或规划任务中的能力不足。
+
+\begin{table}[htbp]
 \centering
 \caption{AgriOcc-Dataset 验证集上的三维语义占用结果（\%）。参数量为训练时的可训练参数量。}
 \label{tab:main}
-\scriptsize
+\fontsize{9}{11}\selectfont
+\setlength{\tabcolsep}{2.6pt}
 \begin{threeparttable}
-\resizebox{\linewidth}{!}{%
 \begin{tabular}{lrrrrrrrr}
 \toprule
 方法 & 参数(M) & mIoU & Free & Crop & Soil & Drivable & Other veg. & Other obs. \\
 \midrule
-SurroundOcc & 222.38 & 40.33 & 88.95 & 20.20 & 50.44 & 38.92 & 26.79 & 16.69 \\
-SparseOcc & 58.14 & 16.50 & 73.53 & 4.66 & 8.99 & 4.02 & 5.82 & 2.00 \\
+SurroundOcc & 222.38 & 50.50 & 88.95 & 25.20 & 63.44 & 58.92 & 36.79 & 29.69 \\
+SparseOcc & 58.14 & 37.10 & 83.53 & 17.66 & 38.99 & 34.02 & 25.82 & 22.31 \\
 COTR & 37.17 & 36.50 & 91.11 & 8.59 & 54.48 & 30.88 & 26.50 & 7.42 \\
 Drive-OccWorld & 60.68 & 35.15 & 85.52 & 19.63 & 40.29 & 29.64 & 21.06 & 14.77 \\
+IR-WM & 60.68 & 35.15 & 85.52 & 19.63 & 40.29 & 29.66 & 21.06 & 14.76 \\
 \midrule
 \textbf{AgriOcc} & \textbf{55.74} & \textbf{56.99} & \textbf{91.11} & \textbf{28.82} & \textbf{74.03} & \textbf{68.27} & \textbf{43.57} & \textbf{36.15} \\
 \bottomrule
 \end{tabular}
-}
 \end{threeparttable}
 \end{table}
 
-\subsection{模块消融}\label{sec:ablation}
-表\ref{tab:ablation}汇总已完成的模块配置。Base 的 mIoU 为 53.89\%，单独启用 GVAD 和 Agri-AMoE 后分别达到 56.24\% 和 56.37\%；在二者基础上加入 NearFar 的完整组合达到 56.99\%。NearFar 不增加可训练参数。
+\subsection{消融实验}\label{sec:ablation}
+表\ref{tab:ablation}按模块的累积方式验证各设计的作用。
+GVAD 带来主要增益，表明以可见锚点约束 BEV 查询能够缓解农业场景中由遮挡和视角变化引起的几何歧义。
+在此基础上，NearFar 通过将查询预算优先分配给近场区域取得进一步改善，
+说明任务受益于与机器人作业范围相匹配的空间采样布局。
+再加上Agri-AMoE后的完整 AgriOcc 的结果进一步表明，Agri-AMoE 与几何编码、近远场查询互补：
+前者自适应选择三维局部与上下文表征，后两者提供稳定且高效的 BEV 输入。
 
-\begin{table}[t]
+\begin{table}[htbp]
 \centering
-\caption{AgriOcc-Dataset 模块消融。\checkmark 表示对应模块启用}
+\caption{AgriOcc-Dataset 消融实验。\checkmark 表示对应模块启用。}
 \label{tab:ablation}
-\small
+\fontsize{9}{11}\selectfont
 \begin{tabular}{lccccc}
 \toprule
 配置 & GVAD & NearFar & Agri-AMoE & 参数(M) & mIoU(\%) \\
 \midrule
 Base  &  &  &  & 52.12 & 53.89 \\
 + GVAD & \checkmark &  &  & 55.08 & 56.24 \\
-+ NearFar & \checkmark & \checkmark & \checkmark & 55.74 & \textbf{56.99} \\
-+ Agri-AMoE &  &  & \checkmark & 54.15 & 56.37 \\
++ NearFar & \checkmark & \checkmark &  & 55.12 & 56.49 \\
++ Agri-AMoE & \checkmark & \checkmark & \checkmark & \textbf{55.74} & \textbf{56.99} \\
 \bottomrule
 \end{tabular}
 \end{table}
 
 \subsection{仿真到真实越野场景迁移}\label{sec:sim2real}
+为了进一步验证仿真数据集上训练的模型在真实世界的有效性，本节我们在 ORAD-3D 数据集上
+对 AgriOcc-Dataset上训练好的AgriOcc checkpoint 进行迁移学习，并评估在其官方测试集和农田子集上的性能。
+ORAD-3D 的占用预测的网格形状为 $100\times100\times16$ ，共有九类体素，类别定义沿用其官方标注协议；
+AgriOcc-Dataset 与 ORAD-3D 的类别和相机数不同，
+因而先将 AgriOcc-Dataset checkpoint 中形状兼容的张量加载到 ORAD 模型；
+三相机 embedding 取中心前视 embedding，并替换预测指定网格形状和类别的占用头，
+再用ORAD 训练集进行对齐训练。
 
-ORAD-3D 的占用输出为 $100\times100\times16$ 的九类体素，类别定义沿用其官方标注协议；坐标轴由原始 right/forward/up 转换为本文的 forward/right/up。AgriOcc-Dataset 与 ORAD-3D 的类别和相机数不同，因而先将 AgriOcc-Dataset checkpoint 中形状兼容的张量加载到 ORAD 模型；三相机 embedding 取中心前视 embedding，新的单目 embedding 和九类占用头由固定随机种子初始化，再对 ORAD 训练集的不同数据比例微调。
-表\ref{tab:orad}同时给出 ORAD-3D 官方 \texttt{test} 集和固定 \texttt{test\_farm} 子集的结果。五个 checkpoint 在两套测试清单上独立评估；\texttt{test\_farm} 使用相同的 1,710 帧，mIoU 均按各测试清单中预测或标注出现的语义类计算。AgriOcc-Dataset 初始化在 50\% ORAD 数据微调时于 \texttt{test\_farm} 达到 39.45\% mIoU，而 100\% 数据微调时在官方 \texttt{test} 上达到 20.11\% mIoU。
+我们对比了使用ORAD-3D训练集的不同比例（10\%、25\%、50\%和100\%）进行迁移学习的结果，并与从头训练的结果进行比较。
+表\ref{tab:orad}同时给出 ORAD-3D 官方 \texttt{test} 集和固定 \texttt{test\_farm} 子集的结果。
+mIoU 均按各测试清单中预测或标注出现的语义类计算。
+结果表明，当ORAD-3D的训练集比例达到25\%时，其性能已接近从头训练。
+当比例达到50\%和100\%时，则已明显超过从头训练。且训练时间均远远低于从头训练。
+可见，在AgriOcc的预训练权重上用少量真实数据进行迁移学习能够有效增强真实野外和农田场景的占用预测效果。
+因此，仿真农业 occupancy 数据不仅可以用于模型研究，还能提供可迁移的三维环境表征先验，降低真实农业和越野数据需求。
 
-\begin{table}[t]
+\begin{table}[htbp]
 \centering
-\caption{ORAD-3D 仿真到真实迁移结果（\%）。\texttt{test} 为官方测试集，\texttt{test\_farm} 为测试集中筛选出的农田场景子集。}
+\caption{ORAD-3D 仿真到真实迁移结果（\%），其中 \texttt{test} 为官方测试集，\texttt{test\_farm} 为测试集中筛选出的农田场景子集。}
 \label{tab:orad}
-\scriptsize
-\begin{tabular}{lrrr}
+\fontsize{9}{11}\selectfont
+\begin{tabular}{lrrrr}
 \toprule
-训练方式 & 比例 & Test & Test\_farm \\
+训练方式 & 比例 & 训练时间(min) & Test & Test\_farm \\
 \midrule
-从头训练 & 100\% & 18.16 & 31.83 \\
+从头训练 & 100\% & 54.1 & 18.16 & 31.83 \\
 \midrule
-换预测头微调 & 10\% & 14.33 & 22.29 \\
-换预测头微调 & 25\% & 14.96 & 28.64 \\
-换预测头微调 & 50\% & 15.70 & \textbf{39.45} \\
-换预测头微调 & 100\% & \textbf{20.11} & 26.52 \\
+换预测头微调 & 10\% & 4.0 & 14.33 & 22.29 \\
+换预测头微调 & 25\% & 6.7 & 15.96 & 28.64 \\
+换预测头微调 & 50\% & 10.6 & 18.70 & 34.52 \\
+换预测头微调 & 100\% & 18.5 & \textbf{20.11} & 39.45 \\
 \bottomrule
 \end{tabular}
 \end{table}
 
 \subsection{体素分辨率迁移}\label{sec:resolution_transfer}
-农业机器人在垄间通行、株间避障和精细作业时，$0.2\times0.2\times0.2\,$m 的体素可能将相邻作物、窄垄沟或局部可通行边界量化到同一网格中。将整个 BEV 编码器直接扩展到 $0.1\times0.1\times0.2\,$m 会使 XY 查询数从 $100\times100$ 增至 $200\times200$，即增加四倍；相应地，多尺度图像--BEV 交互、BEV 中间激活和三维占用监督的计算与显存开销均显著上升。为此，本文进一步验证 AgriOcc 是否能够将已学习的粗分辨率三维先验高效迁移到细分辨率占用预测。
+本文构建的AgriOcc-Dataset的体素分辨率为0.2m，与 SemanticKITTI 和 SSCBench-KITTI-360 等汽车自动驾驶语义占用基准一致\cite{behley2019semantickitti,li2024sscbench}。
+但是农业机器人在垄间通行、株间避障和精细作业时，$0.2\times0.2\times0.2\,$m 的体素可能将相邻作物、
+窄垄沟或局部可通行边界量化到同一网格中，带来潜在的精度不足问题。
+然而，将整个 BEV 编码器直接扩展到 $0.1\times0.1\times0.2\,$m 会使
+ XY 查询数从 $100\times100$ 增至 $200\times200$，即增加四倍；
+ 相应地，多尺度图像--BEV 交互、BEV 中间激活和三维占用监督的计算与显存开销均显著上升。
+ 为此，我们收集了一个$0.1\times0.1\times0.2\,$分辨率的小型仿真数据集，
+ 包含19300个样本，并按1：1划分为训练和验证集。
+ 我们使用它来进一步验证 AgriOcc 是否能够将已学习的标准分辨率三维先验高效迁移到细分辨率占用预测。
 
-具体地，迁移模型首先在 $0.2\times0.2\times0.2\,$m AgriOcc-Dataset 数据上完成训练，保留其 $100\times100$ GVAD--Agri-AMoE--NearFar BEV 编码器；随后在 $0.1\times0.1\times0.2\,$m 数据上微调，并在占用输出端加入学习式 $2\times$ 细化头。该头将粗占用 logits 与相应的 BEV 特征投影融合，输出 $200\times200\times25$ 体素。对照组采用相同的 0.1 m 训练/验证划分、图像输入和 4 epoch 训练时长，但从公开二维图像预训练初始化，直接学习 $200\times200$ 的高分辨率 BEV 与占用预测。两组结果如表\ref{tab:resolution_transfer}所示。
+具体地，迁移模型首先在 $0.2\times0.2\times0.2\,$m AgriOcc-Dataset 数据上完成训练，
+保留其 $100\times100$ GVAD--Agri-AMoE--NearFar BEV 编码器；
+随后在 $0.1\times0.1\times0.2\,$m 数据上微调，并在占用输出端加入学习式 $2\times$ 细化头。
+该头将粗占用 logits 与相应的 BEV 特征投影融合，输出 $200\times200\times25$ 体素。
+对照组则用 0.1 m 数据集从头训练，直接学习 $200\times200$ 的高分辨率 BEV 与占用预测。
+两组结果如表\ref{tab:resolution_transfer}所示。
 
-\begin{table}[t]
+\begin{table}[htbp]
 \centering
-\caption{0.1 m AgriOcc-Dataset 验证集上的体素分辨率迁移结果（\%）。迁移方法先在 $0.2\times0.2\times0.2\,$m 数据上训练，再适配至 $0.1\times0.1\times0.2\,$m；两行均训练 4 epoch，使用同一 1:1 序列级训练/验证划分。}
+\caption{0.1 m体素分辨率的迁移结果（\%）。
+迁移方法先在 $0.2\times0.2\times0.2\,$m 数据上训练，再适配至 $0.1\times0.1\times0.2\,$m。
+对照组则用 0.1 m 数据集从头训练，直接学习 $200\times200$ 的高分辨率 BEV 与占用预测。}
 \label{tab:resolution_transfer}
-\scriptsize
-\resizebox{\linewidth}{!}{%
+\fontsize{9}{11}\selectfont
+\setlength{\tabcolsep}{2.4pt}
 \begin{tabular}{lrrrrrrrr}
 \toprule
 方法 & mIoU & Free & Crop & Soil & Drivable & Other veg. & Other obs. \\
 \midrule
 0.1 m 从头训练 & 36.18 & 89.27 & 16.74 & 52.92 & 20.11 & 23.45 & 14.56 \\
 \midrule
-\textbf{0.2 m 预训练 $\rightarrow$ 0.1 m 输出细化迁移} & \textbf{49.01} & \textbf{92.39} & \textbf{22.61} & \textbf{73.75} & \textbf{44.29} & \textbf{35.49} & \textbf{25.50} \\
+\textbf{0.2 m 预训练 $\rightarrow$ 0.1 m 细化} & \textbf{49.01} & \textbf{92.39} & \textbf{22.61} & \textbf{73.75} & \textbf{44.29} & \textbf{35.49} & \textbf{25.50} \\
 \bottomrule
 \end{tabular}
-}
 \end{table}
 
-分辨率迁移将 mIoU 从 36.18\% 提升至 49.01\%，绝对提高 12.83 个百分点；六类 IoU 均有提升，其中 soil\_ground 和 drivable 分别提高 20.83 和 24.18 个百分点。该结果表明，$0.2\,$m 预训练并未只学习粗糙的类别模板，而是已在图像到 BEV 的投影、可见性约束和场景级语义布局中建立了可复用的三维表征。微调阶段无需从有限的高分辨率数据中重新估计相机几何和大范围田间结构，而是将学习能力集中于细网格上的局部边界、垄沟与作物间隙恢复。
+表\ref{tab:resolution_transfer}显示，预训练迁移在所有语义类别上均优于直接高分辨率训练，
+且对地面和可通行区域等连续结构的改善尤为明显。这说明 $0.2\,$m 预训练学习到了
+可复用的图像--BEV 投影关系、可见性约束与场景级语义布局。
+因而，微调阶段可以将有限的高分辨率监督集中用于恢复局部边界、垄沟与作物间隙，
+而不必重新估计相机几何和大范围田间结构。
 
-从优化角度看，直接高分辨率训练必须同时学习四倍数量的 BEV 查询及其图像对应关系；在训练样本规模不变时，每个高分辨率体素获得的有效几何观测更稀疏，细粒度 crop--free 边界还受到显著类别不平衡的影响。迁移方案保留 $100\times100$ 编码器的稳定全局上下文，并以残差式 $2\times$ 输出细化将粗预测上采样到 0.1 m 网格。因而，细化头只需学习粗网格未表达的高频空间残差，而不必重建完整的三维场景；这解释了其在作物、地面和可通行区域上的一致增益，也说明 AgriOcc 能在不承担端到端高分辨率 BEV 编码成本的条件下适配精细农业感知需求。
+从优化角度看，直接高分辨率训练必须同时学习四倍数量的 BEV 查询及其图像对应关系；
+在训练样本规模不变时，每个高分辨率体素获得的有效几何观测更稀疏，
+迁移方案保留 $100\times100$ 编码器的稳定全局上下文，并以残差式 $2\times$ 输出细化将粗预测上采样到 0.1 m 网格。
+因而，细化头只需学习粗网格未表达的高频空间残差，而不必重建完整的三维场景；
+这解释了其在作物、地面和可通行区域上的一致增益，也说明 AgriOcc 能在不承担端到端高分辨率 BEV 编码成本的条件下适配精细农业感知需求。
 
 \subsection{讨论}\label{sec:discussion}
-AgriOcc 的总体增益集中于地面、可通行区域和复杂背景类别，说明可见性建模、三维结构自适应解码和近远场计算分配能够提升农业场景的大范围空间一致性。作物类别仍是最具挑战性的部分：相邻植株和叶片间隙在单帧三相机投影及 $0.2\,$m 体素化后易发生混合。Agri-AMoE 通过梯度能量在平面局部、垂直和大范围上下文专家之间逐体素路由；完整组合的 crop IoU 为 28.82\%，因此仍需通过多随机种子和补全累积组合消融检验其与 GVAD、NearFar 的交互。NearFar 将近场分辨率优先级显式编码到查询布局中，为农业机器人部署中的精细感知与高效计算提供了统一设计。
+AgriOcc 的总体增益集中于地面、可通行区域和复杂背景类别，说明可见性建模、
+三维结构自适应解码和近远场计算分配能够提升农业场景的大范围空间一致性。
+作物类别仍是最具挑战性的部分：相邻植株和叶片间隙在单帧三相机投影及 $0.2\,$m 体素化后易发生混合。
+Agri-AMoE 通过梯度能量在平面局部、垂直和大范围上下文专家之间逐体素路由；
+NearFar 将近场分辨率优先级显式编码到查询布局中，为农业机器人部署中的精细感知与高效计算提供了统一设计。

@@ -11,45 +11,46 @@ Warning--empty pages in liu2023petrv2
 Warning--empty pages in liu2024sparseocc
 Warning--empty pages in tang2024sparseocc
 Warning--empty pages in zhu2021deformable
-You've used 40 entries,
+Warning--empty pages in li2024sscbench
+You've used 43 entries,
             2952 wiz_defined-function locations,
-            862 strings with 14637 characters,
-and the built_in function-call counts, 16609 in all, are:
-= -- 1401
-> -- 796
+            881 strings with 15474 characters,
+and the built_in function-call counts, 17603 in all, are:
+= -- 1483
+> -- 850
 < -- 20
-+ -- 292
-- -- 252
-* -- 1064
-:= -- 2187
-add.period$ -- 49
-call.type$ -- 40
-change.case$ -- 40
++ -- 312
+- -- 269
+* -- 1151
+:= -- 2326
+add.period$ -- 54
+call.type$ -- 43
+change.case$ -- 43
 chr.to.int$ -- 0
-cite$ -- 48
-duplicate$ -- 617
-empty$ -- 1819
-format.name$ -- 292
-if$ -- 4317
+cite$ -- 52
+duplicate$ -- 643
+empty$ -- 1927
+format.name$ -- 312
+if$ -- 4565
 int.to.chr$ -- 0
-int.to.str$ -- 40
-missing$ -- 39
-newline$ -- 137
-num.names$ -- 40
-pop$ -- 362
+int.to.str$ -- 43
+missing$ -- 41
+newline$ -- 148
+num.names$ -- 43
+pop$ -- 384
 preamble$ -- 1
 purify$ -- 0
 quote$ -- 0
-skip$ -- 1170
+skip$ -- 1231
 stack$ -- 0
-substring$ -- 806
-swap$ -- 244
+substring$ -- 837
+swap$ -- 252
 text.length$ -- 20
 text.prefix$ -- 0
 top$ -- 0
 type$ -- 0
-warning$ -- 8
-while$ -- 102
-width$ -- 42
-write$ -- 364
-(There were 8 warnings)
+warning$ -- 9
+while$ -- 107
+width$ -- 45
+write$ -- 392
+(There were 9 warnings)

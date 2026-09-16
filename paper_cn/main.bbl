@@ -134,4 +134,15 @@ X.~Zhu, W.~Su, L.~Lu, B.~Li, X.~Wang, J.~Dai, Deformable detr: Deformable transf
 \bibitem{shi2026oneocc}
 H.~Shi, Z.~Wang, S.~Guo, M.~Duan, S.~Wang, T.~Chen, K.~Yang, L.~Wang, K.~Wang, Oneocc: Semantic occupancy prediction for legged robots with a single panoramic camera, in: Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition, 2026, pp. 14229--14240.
 
+\bibitem{yangDrivingOccupancyWorld2025}
+Y.~Yang, J.~Mei, Y.~Ma, S.~Du, W.~Chen, Y.~Qian, Y.~Feng, Y.~Liu, Driving in the {{Occupancy World}}: {{Vision-Centric 4D Occupancy Forecasting}} and {{Planning}} via {{World Models}} for {{Autonomous Driving}}, Proceedings of the AAAI Conference on Artificial Intelligence 39~(9) (2025) 9327--9335.
+\newblock \href {https://doi.org/10.1609/aaai.v39i9.33010} {\path{doi:10.1609/aaai.v39i9.33010}}.
+
+\bibitem{meiVisionCentric4DOccupancy2026}
+J.~Mei, Y.~Yang, X.~Yang, L.~Wen, J.~Lv, B.~Shi, Y.~Liu, Vision-{{Centric 4D Occupancy Forecasting}} and {{Planning}} via {{Implicit Residual World Models}} (Feb. 2026).
+\newblock \href {http://arxiv.org/abs/2510.16729} {\path{arXiv:2510.16729}}, \href {https://doi.org/10.48550/arXiv.2510.16729} {\path{doi:10.48550/arXiv.2510.16729}}.
+
+\bibitem{li2024sscbench}
+Y.~Li, et~al., Sscbench: A large-scale 3d semantic scene completion benchmark for autonomous driving, in: 2024 IEEE/RSJ International Conference on Intelligent Robots and Systems (IROS), 2024.
+
 \end{thebibliography}
