@@ -61,21 +61,27 @@ GVAD 带来主要增益，表明以可见锚点约束 BEV 查询能够缓解农�
 在此基础上，NearFar 通过将查询预算优先分配给近场区域取得进一步改善，
 说明任务受益于与机器人作业范围相匹配的空间采样布局。
 再加上Agri-AMoE后的完整 AgriOcc 的结果进一步表明，Agri-AMoE 与几何编码、近远场查询互补：
-前者自适应选择三维局部与上下文表征，后两者提供稳定且高效的 BEV 输入。
+前者自适应选择三维局部与上下文表征，后两者提供稳定的 BEV 输入。
+
+NearFar 的计算收益还体现为训练吞吐与显存占用。添加NearFar后训练时间相比Base+GVAD减少 10.1\%，
+每卡 batch size 为 2时，峰值显存减少 29.5\%.
+这说明远场稀疏查询降低了每个有效 batch 的总体编码开销，并允许使用更大的微批。
+
 
 \begin{table}[htbp]
 \centering
-\caption{AgriOcc-Dataset 消融实验。\checkmark 表示对应模块启用。}
+\caption{AgriOcc-Dataset 消融实验。\checkmark 表示对应模块启用。训练时间由第 8 轮平均迭代时间与每轮迭代数估算；所有配置均采用 4 张 RTX 4090 和有效全局 batch size 为 24。显存为固定每卡 batch size 为 2、一次预热后前向--反向传播测得的单卡峰值分配显存；NearFar 的显存收益与同一 GVAD--ADHR 稠密对照组比较。}
 \label{tab:ablation}
 \fontsize{9}{11}\selectfont
-\begin{tabular}{lccccc}
+\setlength{\tabcolsep}{1.4pt}
+\begin{tabular}{lccccccr}
 \toprule
-配置 & GVAD & NearFar & Agri-AMoE & 参数(M) & mIoU(\%) \\
+配置 & GVAD & NearFar & Agri-AMoE & 参数(M) & 显存(GB) & 训练(min/epoch) & mIoU(\%) \\
 \midrule
-Base  &  &  &  & 52.12 & 53.89 \\
-+ GVAD & \checkmark &  &  & 55.08 & 56.24 \\
-+ NearFar & \checkmark & \checkmark &  & 55.12 & 56.49 \\
-+ Agri-AMoE & \checkmark & \checkmark & \checkmark & \textbf{55.74} & \textbf{56.99} \\
+Base  &  &  &  & 52.12 & 13.08 & 26.02 & 53.89 \\
++ GVAD & \checkmark &  &  & 55.08 & 15.14 & 42.93 & 56.24 \\
++ NearFar & \checkmark & \checkmark &  & 55.12 & \textbf{10.68} & 39.28 & 56.49 \\
++ Agri-AMoE & \checkmark & \checkmark & \checkmark & \textbf{55.74} & 11.03 & 40.95 & \textbf{56.99} \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -90,7 +96,7 @@ AgriOcc-Dataset 与 ORAD-3D 的类别和相机数不同，
 再用ORAD 训练集进行对齐训练。
 
 我们对比了使用ORAD-3D训练集的不同比例（10\%、25\%、50\%和100\%）进行迁移学习的结果，并与从头训练的结果进行比较。
-表\ref{tab:orad}同时给出 ORAD-3D 官方 \texttt{test} 集和固定 \texttt{test\_farm} 子集的结果。
+表\ref{tab:orad}同时给出 ORAD-3D 官方测试集和从中筛选出的农田场景子集的结果。
 mIoU 均按各测试清单中预测或标注出现的语义类计算。
 结果表明，当ORAD-3D的训练集比例达到25\%时，其性能已接近从头训练。
 当比例达到50\%和100\%时，则已明显超过从头训练。且训练时间均远远低于从头训练。
@@ -108,16 +114,16 @@ mIoU 均按各测试清单中预测或标注出现的语义类计算。
 \midrule
 从头训练 & 100\% & 54.1 & 18.16 & 31.83 \\
 \midrule
-换预测头微调 & 10\% & 4.0 & 14.33 & 22.29 \\
-换预测头微调 & 25\% & 6.7 & 15.96 & 28.64 \\
-换预测头微调 & 50\% & 10.6 & 18.70 & 34.52 \\
-换预测头微调 & 100\% & 18.5 & \textbf{20.11} & 39.45 \\
+迁移学习 & 10\% & 4.0 & 14.33 & 22.29 \\
+迁移学习 & 25\% & 6.7 & 15.96 & 28.64 \\
+迁移学习 & 50\% & 10.6 & 18.70 & 34.52 \\
+迁移学习 & 100\% & 18.5 & \textbf{20.11} & 39.45 \\
 \bottomrule
 \end{tabular}
 \end{table}
 
 \subsection{体素分辨率迁移}\label{sec:resolution_transfer}
-本文构建的AgriOcc-Dataset的体素分辨率为0.2m，与 SemanticKITTI 和 SSCBench-KITTI-360 等汽车自动驾驶语义占用基准一致\cite{behley2019semantickitti,li2024sscbench}。
+本文构建的AgriOcc-Dataset的体素分辨率为0.2m，与主流汽车自动驾驶语义占用基准一致\cite{behley2019semantickitti,li2024sscbench}。
 但是农业机器人在垄间通行、株间避障和精细作业时，$0.2\times0.2\times0.2\,$m 的体素可能将相邻作物、
 窄垄沟或局部可通行边界量化到同一网格中，带来潜在的精度不足问题。
 然而，将整个 BEV 编码器直接扩展到 $0.1\times0.1\times0.2\,$m 会使

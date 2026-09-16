@@ -91,8 +91,8 @@
 \newlabel{sec:ablation}{{4.4}{15}{消融实验}{subsection.4.4}{}}
 \@writefile{lot}{\contentsline {table}{\numberline {1}{\ignorespaces AgriOcc-Dataset 验证集上的三维语义占用结果（\%）。参数量为训练时的可训练参数量。}}{16}{table.1}\protected@file@percent }
 \newlabel{tab:main}{{1}{16}{AgriOcc-Dataset 验证集上的三维语义占用结果（\%）。参数量为训练时的可训练参数量。}{table.1}{}}
-\@writefile{lot}{\contentsline {table}{\numberline {2}{\ignorespaces AgriOcc-Dataset 消融实验。\text  {$\mathsurround \z@ \mathchar "458$}表示对应模块启用。}}{16}{table.2}\protected@file@percent }
-\newlabel{tab:ablation}{{2}{16}{AgriOcc-Dataset 消融实验。\checkmark 表示对应模块启用。}{table.2}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {2}{\ignorespaces AgriOcc-Dataset 消融实验。\text  {$\mathsurround \z@ \mathchar "458$}表示对应模块启用。训练时间由第 8 轮平均迭代时间与每轮迭代数估算；所有配置均采用 4 张 RTX 4090 和有效全局 batch size 为 24。显存为固定每卡 batch size 为 2、一次预热后前向--反向传播测得的单卡峰值分配显存；NearFar 的显存收益与同一 GVAD--ADHR 稠密对照组比较。}}{16}{table.2}\protected@file@percent }
+\newlabel{tab:ablation}{{2}{16}{AgriOcc-Dataset 消融实验。\checkmark 表示对应模块启用。训练时间由第 8 轮平均迭代时间与每轮迭代数估算；所有配置均采用 4 张 RTX 4090 和有效全局 batch size 为 24。显存为固定每卡 batch size 为 2、一次预热后前向--反向传播测得的单卡峰值分配显存；NearFar 的显存收益与同一 GVAD--ADHR 稠密对照组比较。}{table.2}{}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {4.5}仿真到真实越野场景迁移}{16}{subsection.4.5}\protected@file@percent }
 \newlabel{sec:sim2real}{{4.5}{16}{仿真到真实越野场景迁移}{subsection.4.5}{}}
 \citation{behley2019semantickitti,li2024sscbench}
@@ -102,13 +102,13 @@
 \newlabel{sec:resolution_transfer}{{4.6}{17}{体素分辨率迁移}{subsection.4.6}{}}
 \@writefile{lot}{\contentsline {table}{\numberline {4}{\ignorespaces 0.1 m体素分辨率的迁移结果（\%）。 迁移方法先在 $0.2\times 0.2\times 0.2\,$m 数据上训练，再适配至 $0.1\times 0.1\times 0.2\,$m。 对照组则用 0.1 m 数据集从头训练，直接学习 $200\times 200$ 的高分辨率 BEV 与占用预测。}}{18}{table.4}\protected@file@percent }
 \newlabel{tab:resolution_transfer}{{4}{18}{0.1 m体素分辨率的迁移结果（\%）。 迁移方法先在 $0.2\times 0.2\times 0.2\,$m 数据上训练，再适配至 $0.1\times 0.1\times 0.2\,$m。 对照组则用 0.1 m 数据集从头训练，直接学习 $200\times 200$ 的高分辨率 BEV 与占用预测。}{table.4}{}}
-\bibstyle{elsarticle-num}
-\bibdata{references}
-\bibcite{nkwochaComprehensiveReviewSensing2025}{{1}{}{{}}{{}}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {4.7}讨论}{19}{subsection.4.7}\protected@file@percent }
 \newlabel{sec:discussion}{{4.7}{19}{讨论}{subsection.4.7}{}}
 \@writefile{toc}{\contentsline {section}{\numberline {5}结论与展望}{19}{section.5}\protected@file@percent }
 \newlabel{sec:conclusion}{{5}{19}{结论与展望}{section.5}{}}
+\bibstyle{elsarticle-num}
+\bibdata{references}
+\bibcite{nkwochaComprehensiveReviewSensing2025}{{1}{}{{}}{{}}}
 \bibcite{baiVisionbasedNavigationGuidance2023}{{2}{}{{}}{{}}}
 \bibcite{philion2020lift}{{3}{}{{}}{{}}}
 \bibcite{huang2021bevdet}{{4}{}{{}}{{}}}
