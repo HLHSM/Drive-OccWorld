@@ -12,7 +12,7 @@
 作物、土壤地面、道路、其他植被与其他障碍物。
 
 \subsection{AgriOcc-Dataset 构建}\label{sec:dataset_construction}
-AgriOcc-Dataset 基于 Unreal Engine 5 的 FarmSim 环境构建，面向农业机器人前向作业时的多视角三维语义占用感知。每个序列包含六路同步 RGB 图像、相机内外参、机器人位姿、语义占用标签及有效体素掩码；本文的主任务从中选取正前、左前和右前三路图像。标签在加载阶段统一映射为 free、crop、soil\_ground、drivable、other\_vegetation 和 other\_obstacle 六类，并在机器人自身坐标系中生成前方体素监督。
+AgriOcc-Dataset 基于 Unreal Engine 5 构建，面向农业机器人前向作业时的多视角三维语义占用感知。每个序列包含六路同步 RGB 图像、相机内外参、机器人位姿、语义占用标签及有效体素掩码；本文的主任务从中选取正前、左前和右前三路图像。标签在加载阶段统一映射为 free、crop、soil\_ground、drivable、other\_vegetation 和 other\_obstacle 六类，并在机器人自身坐标系中生成前方体素监督。
 
 数据集包含 298 个完整序列和 38,862 帧，其中 248 个序列（32,385 帧）用于训练，50 个序列（6,477 帧）用于验证；划分以完整序列为单位，以避免同一路径或相邻帧同时出现在训练和验证集中。数据覆盖 cabbage、carrot、corn、cucumber、potato、radish、redbeet、sunflower、tomato 和 wheat 十种作物；每种作物进一步包含 early、mid 和 mature 三个生长阶段，并覆盖 dawn、morning、noon、evening 和 night 五个时段，以及 cloudy 与 sunny 两类天气。图\ref{fig:crop_distribution}给出了总体数据集的作物组成，potato 和 tomato 各占 14.09\%，cucumber 占 2.01\%，其余类别占比介于 6.04\% 与 12.08\% 之间。
 
@@ -208,13 +208,11 @@ $3\times1\times1$ 卷积编码垂直结构、以及膨胀率为 2 的 $1\times3\
 \bm{O}=W_o\bm{F}',
 \end{equation}
 其中，$\operatorname{GN}$ 为组归一化，$\operatorname{ReLU}$ 为非线性激活，$W_o$ 为 $1\times1\times1$ 分类卷积，
-$\bm{O}\in\R^{B\times6\times Z\times H\times W}$ 为最终语义 logits。该模块在推理时参与主预测，而不是训练期辅助细化分支，因此真正改变了最终占用头读取和融合三维视觉表征的方式。
-
-图\ref{fig:agri-amoe}以结构示意展示该解码过程：二维 BEV token 经 lifting 形成三维体积，通道/空间显著性和三方向梯度能量共同驱动逐体素路由，三个各向异性专家的输出经残差混合后用于最终分类。
+$\bm{O}\in\R^{B\times6\times Z\times H\times W}$ 为最终语义 logits。图\ref{fig:agri-amoe}展示了该模块的架构。
 \begin{figure}[t]
 \centering
 \includegraphics[width=\linewidth]{figures/agri_amoe_module_imagegen.png}
-\caption{Agri-AMoE 三维占用解码器。最终 BEV token 被提升为三维特征体；通道显著性、空间显著性与 $x/y/z$ 方向梯度能量输入逐体素路由器，分别激活平面局部细节、垂直结构和大范围平面上下文专家。三个专家的加权结果经残差混合与 $1\times1\times1$ 分类卷积产生语义体素 logits。}
+\caption{Agri-AMoE 三维占用解码器。二维 BEV token 经 lifting 形成三维体积，通道/空间显著性和三方向梯度能量共同驱动逐体素路由，三个各向异性专家的输出经残差混合后用于最终分类。}
 \label{fig:agri-amoe}
 \end{figure}
 

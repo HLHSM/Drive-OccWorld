@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>AgriOcc Architecture Figure Editor</title>
+  <style>
+    :root { --navy:#062A62; --blue:#A9D6FF; --cyan:#D6F4FC; --purple:#CDB7F6; --green:#BFF1B8; --orange:#FFC48B; --line:#dbe6f2; }
+    * { box-sizing:border-box; }
+    body { margin:0; min-height:100vh; font-family:Inter, "Microsoft YaHei", Arial, sans-serif; color:#13233d; background:#f4f7fb; }
+    header { height:64px; padding:0 22px; display:flex; gap:20px; align-items:center; background:#fff; border-bottom:1px solid #dce5f0; }
+    header h1 { margin:0; color:var(--navy); font-size:20px; letter-spacing:.2px; }
+    header p { margin:0; color:#62728a; font-size:13px; }
+    .app { display:grid; grid-template-columns:280px minmax(0,1fr); min-height:calc(100vh - 64px); }
+    aside { padding:18px; background:#fff; border-right:1px solid #dce5f0; overflow:auto; }
+    .figure-list { display:grid; gap:7px; margin:0 0 18px; }
+    .figure-list button, .toolbar button { border:1px solid #cbd8e8; background:#fff; color:#1f3659; border-radius:8px; padding:9px 10px; text-align:left; font:inherit; font-size:13px; cursor:pointer; }
+    .figure-list button.active { background:#e8f3ff; border-color:#4a8fd9; color:var(--navy); font-weight:700; }
+    .toolbar { display:grid; gap:7px; padding:14px 0; border-top:1px solid var(--line); border-bottom:1px solid var(--line); }
+    .toolbar button { text-align:center; font-weight:650; }
+    .toolbar button.primary { background:var(--navy); border-color:var(--navy); color:#fff; }
+    .hint { margin:14px 0 0; font-size:12px; line-height:1.65; color:#53637c; }
+    .inspector { margin-top:18px; padding-top:14px; border-top:1px solid var(--line); }
+    .inspector h2 { font-size:14px; margin:0 0 10px; color:var(--navy); }
+    .field { display:grid; grid-template-columns:66px 1fr; align-items:center; gap:8px; margin:7px 0; font-size:12px; }
+    .field input, .field textarea { width:100%; border:1px solid #cbd8e8; padding:6px 7px; border-radius:5px; font:inherit; }
+    .field textarea { height:62px; resize:vertical; }
+    .field.wide { grid-template-columns:1fr; gap:4px; }
+    main { padding:24px; overflow:auto; }
+    .canvas-wrap { width:min(1450px, 100%); margin:auto; }
+    .caption { display:flex; align-items:baseline; justify-content:space-between; gap:20px; margin:0 0 10px; }
+    .caption h2 { margin:0; color:var(--navy); font-size:18px; }
+    .caption small { color:#64748b; }
+    .canvas { position:relative; width:100%; aspect-ratio:16/9; overflow:hidden; background:#fff; border:1px solid #cfdbea; border-radius:9px; box-shadow:0 10px 30px rgba(20,55,95,.09); }
+    .reference, #diagram { position:absolute; inset:0; width:100%; height:100%; }
+    .reference { object-fit:contain; background:#fff; }
+    #diagram { display:none; background:#fff; touch-action:none; }
+    #diagram text { user-select:none; font-family:Inter, "Microsoft YaHei", Arial, sans-serif; fill:var(--navy); pointer-events:none; }
+    #diagram .node { cursor:move; }
+    #diagram .node rect { stroke:var(--navy); stroke-width:2; }
+    #diagram .node.selected rect { stroke:#e11d48; stroke-width:4; stroke-dasharray:8 4; }
+    #diagram .arrow { stroke:var(--navy); stroke-width:2.5; fill:none; marker-end:url(#arrow); pointer-events:none; }
+    #diagram .dashed { stroke-dasharray:7 5; }
+    #empty-inspector { color:#6b7b92; font-size:12px; line-height:1.6; }
+    @media (max-width:900px) { .app { grid-template-columns:1fr; } aside { border-right:0; border-bottom:1px solid #dce5f0; } main { padding:14px; } }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>AgriOcc Architecture Figure Editor</h1>
+    <p>论文参考图保持像素一致；切换至 SVG 编辑层即可调整核心模块。</p>
+  </header>
+  <div class="app">
+    <aside>
+      <div class="figure-list" id="figure-list"></div>
+      <div class="toolbar">
+        <button class="primary" id="reference-mode">显示论文参考图（像素一致）</button>
+        <button id="edit-mode">编辑 SVG 重建层</button>
+        <button id="download-svg">下载当前 SVG</button>
+        <button id="download-json">下载编辑数据 JSON</button>
+      </div>
+      <p class="hint">使用方式：默认模式直接显示论文中的 PNG；点击“编辑 SVG 重建层”后，点击模块即可修改文字、位置、尺寸与填充色，也可直接拖动模块。SVG 层是可保存、可继续编辑的结构化版本。</p>
+      <div class="inspector">
+        <h2>选中对象</h2>
+        <div id="empty-inspector">切换到 SVG 编辑层后，点击任一模块。</div>
+        <div id="fields" hidden>
+          <label class="field wide">文字<textarea id="f-text"></textarea></label>
+          <label class="field">X<input id="f-x" type="number" step="1"></label>
+          <label class="field">Y<input id="f-y" type="number" step="1"></label>
+          <label class="field">宽<input id="f-w" type="number" step="1"></label>
+          <label class="field">高<input id="f-h" type="number" step="1"></label>
+          <label class="field">填充<input id="f-fill" type="color"></label>
+        </div>
+      </div>
+    </aside>
+    <main>
+      <div class="canvas-wrap">
+        <div class="caption"><h2 id="figure-title"></h2><small id="figure-note"></small></div>
+        <div class="canvas"><img class="reference" id="reference" alt="Paper figure reference"><svg id="diagram" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid meet"></svg></div>
+      </div>
+    </main>
+  </div>
+  <script>
+  const C = { navy:'#062A62', blue:'#A9D6FF', cyan:'#D6F4FC', purple:'#CDB7F6', green:'#BFF1B8', orange:'#FFC48B', grey:'#EEF2F6', white:'#FFFFFF', lavender:'#DCD7FF' };
+  const r = (id,x,y,w,h,text,fill=C.white,fs=23,bold=true) => ({id,kind:'rect',x,y,w,h,text,fill,fs,bold});
+  const t = (id,x,y,w,h,text,fs=22,bold=true) => ({id,kind:'text',x,y,w,h,text,fs,bold,fill:'#ffffff'});
+  const a = (id,x,y,x2,y2,dash=false) => ({id,kind:'arrow',x,y,x2,y2,dash});
+  const g = (id,x,y,cols,rows,cell,fill=C.cyan) => ({id,kind:'grid',x,y,w:cols*cell,h:rows*cell,cols,rows,cell,fill,text:''});
+  const box = (id,x,y,w,h,title) => [r(id,x,y,w,h,'',C.white,1), t(id+'-title',x+12,y+8,w-24,38,title,26,true)];
+
+  const FIGURES = [
+    {
+      id:'overview', title:'AgriOcc 总体架构', image:'../figures/agriocc_overview_geovis_v2.png',
+      note:'对应论文图 2',
+      elements:[
+        t('title',470,48,660,55,'AgriOcc Architecture',40,true),
+        ...box('cams',25,135,210,595,'3 Front-view Images'),
+        r('cam1',48,225,165,118,'Front-Left',C.blue,19), r('cam2',48,385,165,118,'Front',C.blue,19), r('cam3',48,545,165,118,'Front-Right',C.blue,19),
+        ...box('fpn',255,135,295,595,'ResNet-101 + FPN'),
+        r('resnet',315,255,95,265,'ResNet-101\nBackbone',C.blue,20), r('pyramid',450,255,72,265,'Feature\nPyramid\n(FPN)',C.purple,18), t('scales',290,565,220,40,'4-scale image features',20,true),
+        ...box('encoder',570,135,420,595,'GeoVis-BEV Encoder (6 layers)'),
+        r('nearfar',600,195,360,45,'NearFar Query Layout, Layers 1–5',C.green,20), r('gvad',615,295,78,66,'GVAD',C.orange,19), r('cross',720,295,130,66,'Image\nCross-Attention',C.blue,17), r('ffn',878,295,62,66,'FFN',C.orange,18), t('times6',948,306,45,36,'× 6',26,true),
+        r('restore',625,410,310,45,'Restore Dense BEV before Layer 6',C.green,18), g('bev',620,505,7,4,24), g('dense',810,505,7,4,24), t('bevtxt',590,620,180,52,'BEV Tokens\n100 × 100 × 256',18,true), t('densetxt',790,620,180,52,'Dense BEV Tokens\n100 × 100 × 256',18,true),
+        ...box('decoder',1015,135,545,595,'3-stage Occupancy Decoder'),
+        r('stage1',1055,300,92,65,'Stage 1',C.blue,19), r('stage2',1170,300,92,65,'Stage 2',C.blue,19), r('final',1285,295,125,75,'Final Stage:\nAgri-AMoE',C.orange,18), r('lift',1430,300,80,65,'BEV-to-3D\nLift',C.grey,16),
+        r('supervision',1070,425,330,42,'Multi-level Occupancy Supervision',C.lavender,17), r('amoe',1135,510,275,160,'Agri-AMoE',C.orange,24), r('planar',1160,590,68,48,'Planar\nExpert','#FFF2D7',13), r('vertical',1240,590,68,48,'Vertical\nExpert','#FFF2D7',13), r('context',1320,590,68,48,'Context\nExpert','#FFF2D7',13),
+        a('a1',235,435,255,435),a('a2',550,435,570,435),a('a3',990,435,1015,435),a('a4',693,328,720,328),a('a5',850,328,878,328),a('a6',770,553,810,553),a('a7',1147,332,1170,332),a('a8',1262,332,1285,332),a('a9',1410,332,1430,332),a('a10',780,455,780,505),a('a11',1100,365,1100,425,true),a('a12',1216,365,1216,425,true),a('a13',1347,370,1347,425,true)
+      ]
+    },
+    {
+      id:'geovis', title:'GeoVis-BEV 编码器', image:'../figures/geovis_bev_encoder_overview.png', note:'对应论文图 3(a)',
+      elements:[
+        t('title',460,55,680,52,'GeoVis-BEV Encoder',40,true),
+        ...box('images',35,145,245,590,'Multi-view Image Features'),r('left',68,245,160,85,'Front-Left',C.blue,18),r('front',68,365,160,85,'Front',C.blue,18),r('right',68,485,160,85,'Front-Right',C.blue,18),
+        ...box('fpn',305,145,190,590,'ResNet-101 + FPN'),r('backbone',338,265,68,245,'ResNet-101\nBackbone',C.blue,15),r('p2',425,250,42,34,'P2',C.purple,14),r('p3',425,320,42,34,'P3',C.purple,14),r('p4',425,390,42,34,'P4',C.purple,14),r('p5',425,460,42,34,'P5',C.purple,14),
+        ...box('encoder',525,145,620,590,'GeoVis-BEV Encoder (6 layers)'),r('layout',565,200,540,43,'NearFar Query Layout: Layers 1–5',C.green,20),
+        ...[0,1,2,3,4].flatMap(i=>{const y=285+i*57; return [t('layer'+i,555,y,64,30,'Layer '+(i+1),15,true),r('g'+i,640,y,92,32,'GVAD',C.orange,12),r('c'+i,750,y,170,32,'Image Cross-Attention',C.blue,11),r('f'+i,940,y,70,32,'FFN',C.orange,12)]}),
+        r('restore',610,585,450,38,'Bilinear Restore to Dense BEV Grid',C.green,17),t('layer6',555,645,64,30,'Layer 6',15,true),r('g6',640,645,92,32,'GVAD',C.orange,12),r('c6',750,645,170,32,'Image Cross-Attention',C.blue,11),r('f6',940,645,70,32,'FFN',C.orange,12),
+        ...box('output',1180,145,360,590,'Dense BEV Output'),g('grid',1270,310,9,6,25),t('outtxt',1215,500,280,60,'Dense BEV Tokens\n100 × 100 × 256',21,true),a('i1',280,435,305,435),a('i2',495,435,525,435),a('i3',1145,435,1180,435)
+      ]
+    },
+    {
+      id:'gvad', title:'GVAD 详细架构', image:'../figures/gvad_detailed_architecture_v2.png', note:'对应论文图 4(b)',
+      elements:[
+        t('title',300,50,1000,52,'Geometry-visible Anchor Deformable Attention (GVAD)',34,true),r('query',45,400,150,72,'BEV Query\nq + position',C.cyan,19),r('mask',45,210,150,72,'Camera Projection\nMask',C.grey,17),r('visibility',235,210,150,72,'Visibility\nm',C.green,19),
+        ...box('local',235,360,520,310,'Local Deformable Path'),r('offset',285,455,130,72,'Offset & Weight\nPrediction',C.blue,17),r('points',465,455,140,72,'4 sampling points\n× 8 heads',C.cyan,16),r('update',650,455,72,72,'Local\nUpdate d',C.orange,16),
+        ...box('anchor',800,145,390,390,'Geometry-visible Anchor Path'),r('anchorgrid',835,235,125,67,'4 × 8 BEV\nAnchor Grid',C.cyan,17),r('weights',1005,235,145,67,'Confidence +\nlog Visibility',C.green,15),r('anchors',835,345,125,67,'32 Visible\nAnchors',C.purple,17),r('attention',1005,345,145,67,'Distance-biased\nAttention',C.orange,15),r('context',925,445,135,67,'Anchor\nContext g',C.orange,17),
+        r('gate',1245,390,150,75,'Visibility Gate\nσ(fg[q,m])',C.green,17),r('fusion',1425,390,130,75,'Residual\nFusion',C.orange,17),r('output',1400,570,155,70,'Enhanced\nBEV Token q′',C.cyan,17),
+        a('qmask',120,400,120,282),a('mvis',195,245,235,245),a('l1',195,436,285,491),a('l2',415,491,465,491),a('l3',605,491,650,491),a('p1',960,302,960,345),a('p2',1077,302,1077,345),a('p3',960,412,990,445),a('p4',1077,412,1000,445),a('merge1',722,491,1245,427),a('merge2',1060,478,1245,440),a('merge3',1395,427,1425,427),a('out',1490,465,1490,570)
+      ]
+    },
+    {
+      id:'nearfar', title:'NearFar BEV 查询布局', image:'../figures/nearfar_detailed_architecture_v2.png', note:'对应论文图 5(c)',
+      elements:[
+        t('title',470,50,660,52,'NearFar BEV Query Layout',40,true),
+        ...box('select',45,150,310,590,'1. Query Selection'),g('inputgrid',125,255,8,7,25),r('near',95,500,210,44,'Near 60%: retain all tokens',C.green,15),r('far',95,565,210,44,'Far 40%: stride-2 sampling',C.purple,15),t('coords',85,650,230,55,'Keep original dense\nBEV coordinates',17,true),
+        ...box('sparse',400,150,400,590,'2. Sparse Encoding'),...[0,1,2,3,4].map(i=>r('layer'+i,455,250+i*75,290,45,'Layer '+(i+1)+':  GVAD  →  Cross-Attn  →  FFN',C.blue,15)),t('active',470,650,250,35,'Active Tokens Only',20,true),
+        ...box('restore',845,150,315,590,'3. Restore Dense BEV'),r('neighbors',900,270,205,72,'4 Neighboring\nActive Tokens',C.cyan,18),r('bilinear',900,390,205,72,'Bilinear\nInterpolation',C.green,18),g('restoregrid',930,520,8,5,22),
+        ...box('final',1205,150,350,590,'Final Dense Refinement'),r('layer6',1250,285,260,65,'Layer 6: GVAD → Image\nCross-Attn → FFN',C.orange,17),g('outgrid',1300,450,8,5,23),t('outtxt',1250,620,260,55,'Dense BEV Tokens\n100 × 100 × 256',18,true),a('s1',355,445,400,445),a('s2',800,445,845,445),a('s3',1160,445,1205,445),a('r1',1002,342,1002,390),a('r2',1002,462,1002,520)
+      ]
+    },
+    {
+      id:'amoe', title:'Agri-AMoE 三维占用解码器', image:'../figures/agri_amoe_module_imagegen.png', note:'对应论文图 6',
+      elements:[
+        t('title',380,52,840,52,'Agri-AMoE 3D Occupancy Decoder',36,true),r('bev',45,405,160,78,'Final BEV\nTokens',C.cyan,20),r('lift',250,405,160,78,'BEV-to-3D\nLift',C.orange,20),...box('volume',455,205,280,495,'3D Feature Volume'),g('volumegrid',535,330,8,7,25,'#BAE3A6'),t('volumetxt',500,535,190,40,'Cₐ = 96, Z = 25',18,true),
+        ...box('router',780,205,270,495,'Feature-guided Router'),r('channel',825,300,180,55,'Channel Saliency',C.blue,17),r('spatial',825,390,180,55,'Spatial Saliency',C.green,17),r('energy',825,480,180,55,'x/y/z Gradient\nEnergy',C.purple,16),r('softmax',825,580,180,55,'Voxel-wise\nSoftmax Router',C.orange,16),
+        ...box('experts',1095,205,295,495,'Three Anisotropic Experts'),r('planar',1145,295,195,60,'Planar Detail\n1 × 3 × 3',C.orange,17),r('vertical',1145,400,195,60,'Vertical Structure\n3 × 1 × 1',C.orange,17),r('context',1145,505,195,60,'Planar Context\nDilation 2',C.orange,17),r('mix',1430,405,135,78,'Residual Mix\n+ 1×1×1 Classifier',C.orange,15),r('logits',1430,585,135,78,'6-class\nSemantic Logits',C.cyan,17),
+        a('m1',205,444,250,444),a('m2',410,444,455,444),a('m3',735,444,780,444),a('m4',1050,444,1095,444),a('m5',1390,444,1430,444),a('m6',1498,483,1498,585)
+      ]
+    }
+  ];
+
+  let current = FIGURES[0], selected = null, editing = false, drag = null;
+  const svg = document.querySelector('#diagram'), ref = document.querySelector('#reference');
+  const ns = 'http://www.w3.org/2000/svg';
+  const byId = id => current.elements.find(e => e.id === id);
+  const esc = s => String(s).replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+  function svgEl(tag, attrs={}) { const e=document.createElementNS(ns,tag); Object.entries(attrs).forEach(([k,v])=>e.setAttribute(k,v)); return e; }
+  function multiline(parent, e) { const lines=String(e.text||'').split('\n'); const y=e.y+e.h/2-(lines.length-1)*e.fs*.57; lines.forEach((line,i)=>{const node=svgEl('text',{x:e.x+e.w/2,y:y+i*e.fs*1.15,'text-anchor':'middle','font-size':e.fs,'font-weight':e.bold?700:500});node.textContent=line;parent.append(node);}); }
+  function renderElement(e) {
+    const group=svgEl('g',{'data-id':e.id, class:'node'+(selected===e.id?' selected':'')});
+    if(e.kind==='arrow') { const line=svgEl('line',{x1:e.x,y1:e.y,x2:e.x2,y2:e.y2,class:'arrow'+(e.dash?' dashed':'')}); group.append(line); return group; }
+    if(e.kind==='grid') { for(let rr=0;rr<e.rows;rr++) for(let cc=0;cc<e.cols;cc++) group.append(svgEl('rect',{x:e.x+cc*e.cell,y:e.y+rr*e.cell,width:e.cell,height:e.cell,fill:e.fill,stroke:'#3273B9','stroke-width':1.2})); return group; }
+    if(e.kind==='text') { multiline(group,e); return group; }
+    group.append(svgEl('rect',{x:e.x,y:e.y,width:e.w,height:e.h,rx:14,fill:e.fill})); multiline(group,e); return group;
+  }
+  function render() {
+    svg.innerHTML=''; const defs=svgEl('defs'); const marker=svgEl('marker',{id:'arrow',viewBox:'0 0 10 10',refX:9,refY:5,markerWidth:6,markerHeight:6,orient:'auto-start-reverse'}); marker.append(svgEl('path',{d:'M 0 0 L 10 5 L 0 10 z',fill:C.navy})); defs.append(marker); svg.append(defs);
+    current.elements.forEach(e=>svg.append(renderElement(e)));
+  }
+  function renderMenu() {
+    const list=document.querySelector('#figure-list'); list.innerHTML=''; FIGURES.forEach(f=>{const b=document.createElement('button'); b.textContent=f.title; b.className=f.id===current.id?'active':''; b.onclick=()=>{current=f;selected=null;document.querySelector('#fields').hidden=true;document.querySelector('#empty-inspector').hidden=false;updateFigure();}; list.append(b);});
+  }
+  function updateFigure() { document.querySelector('#figure-title').textContent=current.title;document.querySelector('#figure-note').textContent=current.note;ref.src=current.image;render();renderMenu(); }
+  function select(id) { const e=byId(id); if(!e || e.kind==='arrow' || e.kind==='text') return; selected=id; document.querySelector('#empty-inspector').hidden=true; document.querySelector('#fields').hidden=false; ['text','x','y','w','h','fill'].forEach(k=>{const input=document.querySelector('#f-'+k);input.value=e[k]??'';}); render(); }
+  function setMode(value) { editing=value; ref.style.display=value?'none':'block'; svg.style.display=value?'block':'none'; document.querySelector('#reference-mode').classList.toggle('primary',!value);document.querySelector('#edit-mode').classList.toggle('primary',value); }
+  svg.addEventListener('pointerdown', ev=>{const group=ev.target.closest('[data-id]');if(!group)return;const e=byId(group.dataset.id);select(e.id);drag={id:e.id,px:ev.clientX,py:ev.clientY,ox:e.x,oy:e.y};svg.setPointerCapture(ev.pointerId);});
+  svg.addEventListener('pointermove', ev=>{if(!drag)return;const e=byId(drag.id), rect=svg.getBoundingClientRect();e.x=Math.round(drag.ox+(ev.clientX-drag.px)*1600/rect.width);e.y=Math.round(drag.oy+(ev.clientY-drag.py)*900/rect.height);document.querySelector('#f-x').value=e.x;document.querySelector('#f-y').value=e.y;render();});
+  svg.addEventListener('pointerup',()=>drag=null);
+  ['text','x','y','w','h','fill'].forEach(k=>document.querySelector('#f-'+k).addEventListener('input',ev=>{if(!selected)return;const e=byId(selected);e[k]=k==='text'||k==='fill'?ev.target.value:Number(ev.target.value);render();}));
+  document.querySelector('#reference-mode').onclick=()=>setMode(false);document.querySelector('#edit-mode').onclick=()=>setMode(true);
+  function download(name, content, type) { const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([content],{type}));a.download=name;a.click();URL.revokeObjectURL(a.href); }
+  document.querySelector('#download-json').onclick=()=>download(current.id+'.json',JSON.stringify(current,null,2),'application/json');
+  document.querySelector('#download-svg').onclick=()=>{const clone=svg.cloneNode(true);clone.setAttribute('xmlns',ns);download(current.id+'.svg',new XMLSerializer().serializeToString(clone),'image/svg+xml');};
+  updateFigure(); setMode(false);
+  </script>
+</body>
+</html>

@@ -69,46 +69,45 @@
 \@writefile{toc}{\contentsline {subsection}{\numberline {3.6}总体优化目标}{13}{subsection.3.6}\protected@file@percent }
 \newlabel{sec:loss}{{3.6}{13}{总体优化目标}{subsection.3.6}{}}
 \citation{chen2025orad3d}
-\citation{jiang2020rellis}
-\@writefile{lof}{\contentsline {figure}{\numberline {6}{\ignorespaces Agri-AMoE 三维占用解码器。最终 BEV token 被提升为三维特征体；通道显著性、空间显著性与 $x/y/z$ 方向梯度能量输入逐体素路由器，分别激活平面局部细节、垂直结构和大范围平面上下文专家。三个专家的加权结果经残差混合与 $1\times 1\times 1$ 分类卷积产生语义体素 logits。}}{14}{figure.6}\protected@file@percent }
-\newlabel{fig:agri-amoe}{{6}{14}{Agri-AMoE 三维占用解码器。最终 BEV token 被提升为三维特征体；通道显著性、空间显著性与 $x/y/z$ 方向梯度能量输入逐体素路由器，分别激活平面局部细节、垂直结构和大范围平面上下文专家。三个专家的加权结果经残差混合与 $1\times 1\times 1$ 分类卷积产生语义体素 logits。}{figure.6}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {6}{\ignorespaces Agri-AMoE 三维占用解码器。二维 BEV token 经 lifting 形成三维体积，通道/空间显著性和三方向梯度能量共同驱动逐体素路由，三个各向异性专家的输出经残差混合后用于最终分类。}}{14}{figure.6}\protected@file@percent }
+\newlabel{fig:agri-amoe}{{6}{14}{Agri-AMoE 三维占用解码器。二维 BEV token 经 lifting 形成三维体积，通道/空间显著性和三方向梯度能量共同驱动逐体素路由，三个各向异性专家的输出经残差混合后用于最终分类。}{figure.6}{}}
 \@writefile{toc}{\contentsline {section}{\numberline {4}实验}{14}{section.4}\protected@file@percent }
 \newlabel{sec:experiments}{{4}{14}{实验}{section.4}{}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {4.1}数据集与评价协议}{14}{subsection.4.1}\protected@file@percent }
 \newlabel{sec:data}{{4.1}{14}{数据集与评价协议}{subsection.4.1}{}}
-\@writefile{toc}{\contentsline {paragraph}{AgriOcc-Dataset。}{14}{section*.7}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{ORAD-3D。}{14}{section*.8}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{指标。}{15}{section*.9}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {4.2}实现细节}{15}{subsection.4.2}\protected@file@percent }
-\newlabel{sec:implementation}{{4.2}{15}{实现细节}{subsection.4.2}{}}
+\@writefile{toc}{\contentsline {paragraph}{AgriOcc-Dataset}{14}{section*.7}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{ORAD-3D}{14}{section*.8}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{指标}{14}{section*.9}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.2}实现细节}{14}{subsection.4.2}\protected@file@percent }
+\newlabel{sec:implementation}{{4.2}{14}{实现细节}{subsection.4.2}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {1}{\ignorespaces AgriOcc-Dataset 验证集上的三维语义占用结果（\%）。参数量为训练时的可训练参数量。}}{15}{table.1}\protected@file@percent }
+\newlabel{tab:main}{{1}{15}{AgriOcc-Dataset 验证集上的三维语义占用结果（\%）。参数量为训练时的可训练参数量。}{table.1}{}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {4.3}与现有方法的比较}{15}{subsection.4.3}\protected@file@percent }
 \newlabel{sec:comparison}{{4.3}{15}{与现有方法的比较}{subsection.4.3}{}}
-\@writefile{lot}{\contentsline {table}{\numberline {1}{\ignorespaces FarmSim 验证集上的三维语义占用结果（\%）。参数量按训练日志统计；``--'' 表示对应官方复现日志未记录可训练参数量。}}{16}{table.1}\protected@file@percent }
-\newlabel{tab:main}{{1}{16}{FarmSim 验证集上的三维语义占用结果（\%）。参数量按训练日志统计；``--'' 表示对应官方复现日志未记录可训练参数量。}{table.1}{}}
-\@writefile{lot}{\contentsline {table}{\numberline {2}{\ignorespaces ORAD-3D \texttt  {test\_farm} 子集迁移结果。mIoU 为百分比；所有行均在相同 1,710 帧测试子集上重新评估。}}{16}{table.2}\protected@file@percent }
-\newlabel{tab:orad}{{2}{16}{ORAD-3D \texttt {test\_farm} 子集迁移结果。mIoU 为百分比；所有行均在相同 1,710 帧测试子集上重新评估。}{table.2}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {4.4}仿真到真实越野场景迁移}{16}{subsection.4.4}\protected@file@percent }
-\newlabel{sec:sim2real}{{4.4}{16}{仿真到真实越野场景迁移}{subsection.4.4}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {4.5}模块消融}{16}{subsection.4.5}\protected@file@percent }
-\newlabel{sec:ablation}{{4.5}{16}{模块消融}{subsection.4.5}{}}
-\@writefile{lot}{\contentsline {table}{\numberline {3}{\ignorespaces FarmSim 模块消融。\text  {$\mathsurround \z@ \mathchar "458$}表示对应模块启用；所有项均为 H=0、当前占用、8 epoch、固定 seed 0。}}{17}{table.3}\protected@file@percent }
-\newlabel{tab:ablation}{{3}{17}{FarmSim 模块消融。\checkmark 表示对应模块启用；所有项均为 H=0、当前占用、8 epoch、固定 seed 0。}{table.3}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {4.6}体素分辨率迁移}{17}{subsection.4.6}\protected@file@percent }
-\newlabel{sec:resolution_transfer}{{4.6}{17}{体素分辨率迁移}{subsection.4.6}{}}
-\@writefile{lot}{\contentsline {table}{\numberline {4}{\ignorespaces 0.1 m FarmSim 验证集上的体素分辨率迁移结果（\%）。迁移方法先在 $0.2\times 0.2\times 0.2\,$m 数据上训练，再适配至 $0.1\times 0.1\times 0.2\,$m；两行均训练 4 epoch，使用同一 1:1 序列级训练/验证划分。}}{18}{table.4}\protected@file@percent }
-\newlabel{tab:resolution_transfer}{{4}{18}{0.1 m FarmSim 验证集上的体素分辨率迁移结果（\%）。迁移方法先在 $0.2\times 0.2\times 0.2\,$m 数据上训练，再适配至 $0.1\times 0.1\times 0.2\,$m；两行均训练 4 epoch，使用同一 1:1 序列级训练/验证划分。}{table.4}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.4}模块消融}{15}{subsection.4.4}\protected@file@percent }
+\newlabel{sec:ablation}{{4.4}{15}{模块消融}{subsection.4.4}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.5}仿真到真实越野场景迁移}{15}{subsection.4.5}\protected@file@percent }
+\newlabel{sec:sim2real}{{4.5}{15}{仿真到真实越野场景迁移}{subsection.4.5}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {2}{\ignorespaces AgriOcc-Dataset 模块消融。\text  {$\mathsurround \z@ \mathchar "458$}表示对应模块启用}}{16}{table.2}\protected@file@percent }
+\newlabel{tab:ablation}{{2}{16}{AgriOcc-Dataset 模块消融。\checkmark 表示对应模块启用}{table.2}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {3}{\ignorespaces ORAD-3D 仿真到真实迁移结果（\%）。\texttt  {test} 为官方测试集，\texttt  {test\_farm} 为测试集中筛选出的农田场景子集。}}{16}{table.3}\protected@file@percent }
+\newlabel{tab:orad}{{3}{16}{ORAD-3D 仿真到真实迁移结果（\%）。\texttt {test} 为官方测试集，\texttt {test\_farm} 为测试集中筛选出的农田场景子集。}{table.3}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.6}体素分辨率迁移}{16}{subsection.4.6}\protected@file@percent }
+\newlabel{sec:resolution_transfer}{{4.6}{16}{体素分辨率迁移}{subsection.4.6}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {4}{\ignorespaces 0.1 m AgriOcc-Dataset 验证集上的体素分辨率迁移结果（\%）。迁移方法先在 $0.2\times 0.2\times 0.2\,$m 数据上训练，再适配至 $0.1\times 0.1\times 0.2\,$m；两行均训练 4 epoch，使用同一 1:1 序列级训练/验证划分。}}{17}{table.4}\protected@file@percent }
+\newlabel{tab:resolution_transfer}{{4}{17}{0.1 m AgriOcc-Dataset 验证集上的体素分辨率迁移结果（\%）。迁移方法先在 $0.2\times 0.2\times 0.2\,$m 数据上训练，再适配至 $0.1\times 0.1\times 0.2\,$m；两行均训练 4 epoch，使用同一 1:1 序列级训练/验证划分。}{table.4}{}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {4.7}讨论}{18}{subsection.4.7}\protected@file@percent }
 \newlabel{sec:discussion}{{4.7}{18}{讨论}{subsection.4.7}{}}
-\@writefile{toc}{\contentsline {section}{\numberline {5}结论与展望}{19}{section.5}\protected@file@percent }
-\newlabel{sec:conclusion}{{5}{19}{结论与展望}{section.5}{}}
-\@writefile{toc}{\let\numberline\tmptocnumberline}
-\@writefile{toc}{\contentsline {section}{\numberline {附录~A}补充实现与复现协议}{19}{appendix.A}\protected@file@percent }
-\newlabel{app:implementation}{{附录~A}{19}{补充实现与复现协议}{appendix.A}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {附录~A.1}数据与运行记录}{19}{subsection.A.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {5}结论与展望}{18}{section.5}\protected@file@percent }
+\newlabel{sec:conclusion}{{5}{18}{结论与展望}{section.5}{}}
 \bibstyle{elsarticle-num}
 \bibdata{references}
 \bibcite{nkwochaComprehensiveReviewSensing2025}{{1}{}{{}}{{}}}
 \bibcite{baiVisionbasedNavigationGuidance2023}{{2}{}{{}}{{}}}
+\@writefile{toc}{\let\numberline\tmptocnumberline}
+\@writefile{toc}{\contentsline {section}{\numberline {附录~A}补充实现与复现协议}{19}{appendix.A}\protected@file@percent }
+\newlabel{app:implementation}{{附录~A}{19}{补充实现与复现协议}{appendix.A}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {附录~A.1}数据与运行记录}{19}{subsection.A.1}\protected@file@percent }
 \bibcite{philion2020lift}{{3}{}{{}}{{}}}
 \bibcite{huang2021bevdet}{{4}{}{{}}{{}}}
 \bibcite{li2022bevdepth}{{5}{}{{}}{{}}}

@@ -1,7 +1,7 @@
 \section{补充实现与复现协议}\label{app:implementation}
 
 \subsection{数据与运行记录}
-FarmSim 主结果的运行目录如下：
+AgriOcc-Dataset 主结果的运行目录如下：
 {\footnotesize
 \begin{itemize}[leftmargin=1.8em,noitemsep]
   \item 当前帧 TSA 基线：\url{work_dirs/front3_base_nohis_ep8_20260828_043722}；
@@ -13,4 +13,4 @@ FarmSim 主结果的运行目录如下：
 }
 每个目录的 \texttt{*.log.json} 最后一个 \texttt{mode=val} 记录用于表\ref{tab:main}和表\ref{tab:ablation}；尚未完成的组合不填入表格。
 
-ORAD-3D 数字来自 \url{work_dirs/orad3d_evaluations/orad3d_eval_summary.csv}，该汇总由 \url{tools/evaluate_orad3d_experiments.py} 对 checkpoint 在 \texttt{test.json} 与 \texttt{farm\_all.json} 上独立评估生成。本文不把训练日志中的验证结果与此独立测试汇总混合。
+ORAD-3D 的两列指标均由保存的独立测试混淆矩阵计算：官方测试结果保存在相应训练目录，农田子集结果保存在统一评估目录。本文不把训练日志中的验证结果与这两套独立测试结果混合。
