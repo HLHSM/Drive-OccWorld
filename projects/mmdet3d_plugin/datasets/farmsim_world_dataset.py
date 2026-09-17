@@ -347,7 +347,10 @@ class FarmSimWorldDataset(torch.utils.data.Dataset):
             img_metas=DC(meta_queue, cpu_only=True),
             # Stable dataset index used to limit and name saved predictions
             # consistently across single- and multi-GPU evaluation.
-            sample_idx=torch.tensor(index, dtype=torch.long),
+            sample_idx=torch.tensor(
+                (self._stable_sample_indices[index]
+                 if hasattr(self, '_stable_sample_indices') else index),
+                dtype=torch.long),
             # The original detector receives a list after mmcv collation.
             segmentation=segmentation,
         )

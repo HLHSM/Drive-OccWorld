@@ -55,6 +55,15 @@ IR-WM & 60.68 & 35.15 & 85.52 & 19.63 & 40.29 & 29.66 & 21.06 & 14.76 \\
 \end{threeparttable}
 \end{table}
 
+图\ref{fig:qualitative_comparison}给出了三个具有代表性的农田场景的定性比较。
+AgriOcc 对作物行、地面边界和远近区域的语义布局保持了更好的空间连续性，并能更稳定地保留局部障碍物结构。
+\begin{figure}[t]
+\centering
+\includegraphics[width=\linewidth]{figures/qualitative_comparison_3x5.png}
+\caption{AgriOcc-Dataset 上的定性比较。每一行对应一个不同作物、光照和场景条件下的样本；从左至右依次为三路输入 RGB 图像、真值标签、SurroundOcc、IR-WM 和 AgriOcc 的当前帧三维语义占用预测。}
+\label{fig:qualitative_comparison}
+\end{figure}
+
 \subsection{消融实验}\label{sec:ablation}
 表\ref{tab:ablation}按模块的累积方式验证各设计的作用。
 GVAD 带来主要增益，表明以可见锚点约束 BEV 查询能够缓解农业场景中由遮挡和视角变化引起的几何歧义。
@@ -97,30 +106,44 @@ AgriOcc-Dataset 与 ORAD-3D 的类别和相机数不同，
 
 我们对比了使用ORAD-3D训练集的不同比例（10\%、25\%、50\%和100\%）进行迁移学习的结果，并与从头训练的结果进行比较。
 表\ref{tab:orad}同时给出 ORAD-3D 官方测试集和从中筛选出的农田场景子集的结果。
-mIoU 均按各测试清单中预测或标注出现的语义类计算。
-结果表明，当ORAD-3D的训练集比例达到25\%时，其性能已接近从头训练。
-当比例达到50\%和100\%时，则已明显超过从头训练。且训练时间均远远低于从头训练。
+\texttt{Test} 与 \texttt{Test (w/o Free)} 均在完整官方测试清单上计算，\texttt{Test\_farm} 则按农田子集中出现的类别计算。
+为与 ORAD-3D 论文中的语义 mIoU 保持可比，表中额外报告去除 Free 类后的 Test mIoU。
+结果表明，当ORAD-3D的训练集比例达到25\%和50\%时，性能已逐步接近从头训练；
+当比例达到100\%时，则超过从头训练，且训练时间远低于从头训练。
 可见，在AgriOcc的预训练权重上用少量真实数据进行迁移学习能够有效增强真实野外和农田场景的占用预测效果。
 因此，仿真农业 occupancy 数据不仅可以用于模型研究，还能提供可迁移的三维环境表征先验，降低真实农业和越野数据需求。
 
 \begin{table}[htbp]
 \centering
-\caption{ORAD-3D 仿真到真实迁移结果（\%），其中 \texttt{test} 为官方测试集，\texttt{test\_farm} 为测试集中筛选出的农田场景子集。}
+\caption{ORAD-3D 仿真到真实迁移结果（\%）。\texttt{Test} 为包含 Free 类的九类平均 IoU，\texttt{Test (w/o Free)} 为仅对八个非 Free 语义类求平均的 mIoU，因而可与 ORAD-3D 论文中的结果直接比较；\texttt{Test\_farm} 为农田场景子集上按出现类别计算的 mIoU。OpenOcc、OccFormer 和 SurroundOcc 的结果引自 ORAD-3D 论文\cite{chen2025orad3d}，未报告训练时间、包含 Free 类的平均值或农田子集结果。}
 \label{tab:orad}
 \fontsize{9}{11}\selectfont
-\begin{tabular}{lrrrr}
-\toprule
-训练方式 & 比例 & 训练时间(min) & Test & Test\_farm \\
+\setlength{\tabcolsep}{2.6pt}
+\begin{tabular}{lrrrrr}
+\toprule 
+训练方式 & 比例 & 训练时间(min) & Test & Test (w/o Free) & Test\_farm \\
 \midrule
-从头训练 & 100\% & 54.1 & 18.16 & 31.83 \\
+OpenOcc从头训练 & 100% & -- & -- & 5.83 & -- \\
+OccFormer从头训练 & 100% & -- & -- & 7.45 & -- \\
+SurroundOcc从头训练 & 100% & -- & -- & 7.60 & -- \\
 \midrule
-迁移学习 & 10\% & 4.0 & 14.33 & 22.29 \\
-迁移学习 & 25\% & 6.7 & 15.96 & 28.64 \\
-迁移学习 & 50\% & 10.6 & 18.70 & 34.52 \\
-迁移学习 & 100\% & 18.5 & \textbf{20.11} & 39.45 \\
+AgriOcc从头训练 & 100\% & 54.1 & 18.16 & 9.01 & 31.83 \\
+\midrule
+AgriOcc迁移学习 & 10\% & 4.0 & 14.33 & 4.97 & 22.29 \\
+AgriOcc迁移学习 & 25\% & 6.7 & 14.96 & 5.65 & 28.64 \\
+AgriOcc迁移学习 & 50\% & 10.6 & 15.70 & 6.29 & 34.52 \\
+AgriOcc迁移学习 & 100\% & 18.5 & \textbf{20.11} & \textbf{11.17} & 39.45 \\
 \bottomrule
 \end{tabular}
 \end{table}
+
+图\ref{fig:orad_qualitative}进一步在三个 ORAD-3D 官方测试样本上比较真值、从头训练和使用全部 ORAD-3D 训练数据迁移后的预测结果。
+\begin{figure}[t]
+\centering
+\includegraphics[width=\linewidth]{figures/orad3d_transfer_qualitative.png}
+\caption{ORAD-3D 上的定性迁移比较。每行对应同一官方测试样本；从左至右为输入 RGB 图像、真值标签、使用全部 ORAD-3D 训练数据的从头训练结果，以及 AgriOcc-Dataset 预训练后在全部 ORAD-3D 训练数据上迁移的结果（100\% Transfer）。}
+\label{fig:orad_qualitative}
+\end{figure}
 
 \subsection{体素分辨率迁移}\label{sec:resolution_transfer}
 本文构建的AgriOcc-Dataset的体素分辨率为0.2m，与主流汽车自动驾驶语义占用基准一致\cite{behley2019semantickitti,li2024sscbench}。
@@ -171,9 +194,21 @@ mIoU 均按各测试清单中预测或标注出现的语义类计算。
 因而，细化头只需学习粗网格未表达的高频空间残差，而不必重建完整的三维场景；
 这解释了其在作物、地面和可通行区域上的一致增益，也说明 AgriOcc 能在不承担端到端高分辨率 BEV 编码成本的条件下适配精细农业感知需求。
 
-\subsection{讨论}\label{sec:discussion}
+\subsection{讨论与局限性分析}\label{sec:discussion}
 AgriOcc 的总体增益集中于地面、可通行区域和复杂背景类别，说明可见性建模、
 三维结构自适应解码和近远场计算分配能够提升农业场景的大范围空间一致性。
-作物类别仍是最具挑战性的部分：相邻植株和叶片间隙在单帧三相机投影及 $0.2\,$m 体素化后易发生混合。
 Agri-AMoE 通过梯度能量在平面局部、垂直和大范围上下文专家之间逐体素路由；
 NearFar 将近场分辨率优先级显式编码到查询布局中，为农业机器人部署中的精细感知与高效计算提供了统一设计。
+
+模型对作物细粒度结构的恢复仍存在局限。对于植株和叶片密集分布的区域，
+相邻植株容易发生语义混合，模型倾向于将连续植被预测为一大片连通作物区域，因而难以保留单株间隔和细小的垄间空隙。
+对于苗期等体积很小的作物，有限的图像像素和有效占据体素会使弱视觉证据在图像--BEV 投影与语义解码中被背景吸收，
+图\ref{fig:limitations}展示了这些现象：卷心菜样本中真值中的株间空隙在预测中被明显填平，而早期玉米和马铃薯样本中的稀疏小尺度作物仅被部分恢复。
+因此，AgriOcc 更适用于以场景级三维语义理解、通行性评估和作业安全决策为核心的农业机器人应用，
+例如田间作业、果园巡检、温室移动、牧场巡逻与农场运输；对于依赖单株定位、株间距测量和精细长势评估的株级监测任务，仍存在局限。
+\begin{figure}[t]
+\centering
+\includegraphics[width=\linewidth]{figures/farmsim_limitations_2x3.png}
+\caption{AgriOcc-Dataset 上的局限性示例。第一行为真值标签，第二行为对应的 AgriOcc 预测；三列从左至右分别为卷心菜、玉米和马铃薯场景。密集作物的株间间隙易被预测为连通区域，而苗期等小尺度作物容易出现漏检或范围不足。}
+\label{fig:limitations}
+\end{figure}

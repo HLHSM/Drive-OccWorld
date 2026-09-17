@@ -449,6 +449,9 @@ INPUT sections/3_method.tex
 INPUT ./figures/crop_distribution.pdf
 INPUT ./figures/crop_distribution.pdf
 INPUT ./figures/crop_distribution.pdf
+INPUT ./figures/dataset.png
+INPUT ./figures/dataset.png
+INPUT ./figures/dataset.png
 INPUT ./figures/agriocc_overview_geovis_v2.png
 INPUT ./figures/agriocc_overview_geovis_v2.png
 INPUT ./figures/agriocc_overview_geovis_v2.png
@@ -495,14 +498,6 @@ INPUT /data/HL/texlive/2026/texmf-dist/fonts/tfm/public/cm/cmbx9.tfm
 INPUT /data/HL/texlive/2026/texmf-dist/fonts/tfm/public/cm/cmmib10.tfm
 INPUT /data/HL/texlive/2026/texmf-dist/fonts/tfm/public/cm/cmbsy10.tfm
 INPUT /data/HL/texlive/2026/texmf-dist/fonts/tfm/public/cm/cmr9.tfm
-INPUT ./sections/5_conclusion.tex
-INPUT ./sections/5_conclusion.tex
-INPUT ./sections/5_conclusion.tex
-INPUT ./sections/5_conclusion.tex
-INPUT sections/5_conclusion.tex
-INPUT ./main.bbl
-INPUT ./main.bbl
-INPUT main.bbl
-INPUT main.aux
-INPUT ./main.out
-INPUT ./main.out
+INPUT ./figures/qualitative_comparison_3x5.png
+INPUT ./figures/qualitative_comparison_3x5.png
+INPUT ./figures/qualitative_comparison_3x5.png

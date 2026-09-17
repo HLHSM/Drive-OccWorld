@@ -12,17 +12,30 @@
 作物、土壤地面、道路、其他植被与其他障碍物。
 
 \subsection{AgriOcc-Dataset 构建}\label{sec:dataset_construction}
-AgriOcc-Dataset 基于 Unreal Engine 5 构建，面向农业机器人前向作业时的多视角三维语义占用感知。每个序列包含六路同步 RGB 图像、相机内外参、机器人位姿、语义占用标签及有效体素掩码；本文的主任务从中选取正前、左前和右前三路图像。标签在加载阶段统一映射为 free、crop、soil\_ground、drivable、other\_vegetation 和 other\_obstacle 六类，并在机器人自身坐标系中生成前方体素监督。
+AgriOcc-Dataset 基于 Unreal Engine 5 构建，面向农业机器人前向作业时的多视角三维语义占用感知。
+每个序列包含正前、左前和右前三视角的同步 RGB 图像、相机内外参、机器人位姿、语义占用标签及有效体素掩码。
+标签在加载阶段统一映射为 free、crop、soil\_ground、drivable、other\_vegetation 和 other\_obstacle 六类，并在机器人自身坐标系中生成前方体素监督。
 
-数据集包含 298 个完整序列和 38,862 帧，其中 248 个序列（32,385 帧）用于训练，50 个序列（6,477 帧）用于验证；划分以完整序列为单位，以避免同一路径或相邻帧同时出现在训练和验证集中。数据覆盖 cabbage、carrot、corn、cucumber、potato、radish、redbeet、sunflower、tomato 和 wheat 十种作物；每种作物进一步包含 early、mid 和 mature 三个生长阶段，并覆盖 dawn、morning、noon、evening 和 night 五个时段，以及 cloudy 与 sunny 两类天气。图\ref{fig:crop_distribution}给出了总体数据集的作物组成，potato 和 tomato 各占 14.09\%，cucumber 占 2.01\%，其余类别占比介于 6.04\% 与 12.08\% 之间。
+数据集包含 298 个田间行驶序列，原始采集频率为10hz，共194k帧。为避免相似场景大量重复，我们下采样至2hz，共38.8k样本。
+其中 248 个序列（32,385 帧）用于训练，50 个序列（6,477 帧）用于验证。
+数据覆盖 cabbage、carrot、corn、cucumber、potato、radish、redbeet、sunflower、tomato 和 wheat 十种作物；
+每种作物进一步包含 early、mid 和 mature 三个生长阶段，并覆盖 dawn、morning、noon、evening 和 night 五个时段，
+以及 cloudy 与 sunny 两类天气。图\ref{fig:crop_distribution}给出了总体数据集的作物组成。
 
 \begin{figure}[t]
 \centering
 \includegraphics[width=0.88\linewidth]{figures/crop_distribution.pdf}
-\caption{AgriOcc-Dataset 中 298 个完整序列的作物组成。扇区面积表示各作物的序列占比，标注给出作物名称、序列数与百分比。}
+\caption{AgriOcc-Dataset 的作物组成。扇区面积表示各作物的占比。}
 \label{fig:crop_distribution}
 \end{figure}
 
+\begin{figure}[t]
+\centering
+\includegraphics[width=\linewidth]{figures/dataset.png}
+\caption{AgriOcc-Dataset 中十种作物的场景示例。}
+\label{fig:dataset}
+\end{figure} 
+ 
 \subsection{AgriOcc 总体结构}\label{sec:architecture}
 
 图\ref{fig:overview}给出 AgriOcc的总体架构。

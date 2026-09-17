@@ -88,6 +88,11 @@ def metrics_from_pickle(path):
     union = hist.sum(axis=0) + hist.sum(axis=1) - diagonal
     present = union > 0
     iou = np.divide(diagonal, union, out=np.zeros_like(diagonal), where=present)
+    semantic_present = present.copy()
+    # Class 0 is Free in the public ORAD-3D protocol.  Keep the historical
+    # all-class summary, but export the standard semantic mIoU separately so
+    # results can be compared with ORAD-3D baseline tables.
+    semantic_present[0] = False
     occupied_tp = hist[1:, 1:].sum()
     occupied_union = occupied_tp + hist[0, 1:].sum() + hist[1:, 0].sum()
     free_union = hist[0, :].sum() + hist[:, 0].sum() - hist[0, 0]
@@ -97,6 +102,9 @@ def metrics_from_pickle(path):
     result = dict(
         semantic_mIoU=float(iou[present].mean()) if present.any() else 0.0,
         semantic_mIoU_all_classes=float(iou.mean()),
+        semantic_mIoU_without_free=(
+            float(iou[semantic_present].mean())
+            if semantic_present.any() else 0.0),
         voxel_accuracy=float(diagonal.sum() / hist.sum()) if hist.sum() else 0.0,
         binary_IoU_free=float(free_iou),
         binary_IoU_occupied=float(occupied_iou),
@@ -169,7 +177,8 @@ def main():
 
     fieldnames = (
         'experiment', 'checkpoint', 'subset', 'manifest', 'raw_result',
-        'semantic_mIoU', 'semantic_mIoU_all_classes', 'voxel_accuracy',
+        'semantic_mIoU', 'semantic_mIoU_all_classes',
+        'semantic_mIoU_without_free', 'voxel_accuracy',
         *(f'IoU_{name}' for name in CLASS_NAMES),
         'binary_IoU_free', 'binary_IoU_occupied', 'binary_mIoU',
     )

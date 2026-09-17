@@ -130,6 +130,15 @@ def parse_args():
                         choices=('leading', 'per-sequence'), default='leading',
                         help='selection strategy for a non-negative prediction count: '
                              'leading (default) or balanced contiguous windows per sequence')
+    parser.add_argument('--save-prediction-indices', metavar='FILE',
+                        help='text file containing one stable dataset index per line; '
+                             'overrides --save-prediction-sampling for artifact export')
+    parser.add_argument('--prediction-subset-only', action='store_true',
+                        help='evaluate only indices from --save-prediction-indices; '
+                             'intended for fast qualitative artifact export')
+    parser.add_argument('--prediction-reference-indices', metavar='FILE',
+                        help='stable output indices, one per selected subset item; '
+                             'keeps qualitative artifact names aligned to a reference split')
     parser.add_argument('--out', help='output result file in pickle format')
     parser.add_argument(
         '--fuse-conv-bn',
@@ -225,6 +234,18 @@ def main():
         raise ValueError('--batch-size must be positive')
     if args.save_prediction_count < -1:
         raise ValueError('--save-prediction-count must be -1 or non-negative')
+    if args.save_prediction_indices and not args.save_predictions:
+        raise ValueError('--save-prediction-indices requires --save-predictions')
+    if (args.save_prediction_indices and
+            args.save_prediction_sampling != 'leading'):
+        raise ValueError('--save-prediction-indices cannot be combined with '
+                         '--save-prediction-sampling per-sequence')
+    if args.prediction_subset_only and not args.save_prediction_indices:
+        raise ValueError('--prediction-subset-only requires '
+                         '--save-prediction-indices')
+    if args.prediction_reference_indices and not args.prediction_subset_only:
+        raise ValueError('--prediction-reference-indices requires '
+                         '--prediction-subset-only')
 
     cfg = Config.fromfile(args.config)
     if args.cfg_options is not None:
@@ -304,8 +325,73 @@ def main():
     if args.seed is not None:
         set_random_seed(args.seed, deterministic=args.deterministic)
 
-    # build the dataloader
+    # Build the dataset before deciding which artifact indices to retain.
     dataset = build_dataset(cfg.data.test)
+    prediction_indices = None
+    prediction_index_list = None
+    if args.save_prediction_indices:
+        try:
+            with open(args.save_prediction_indices, 'r', encoding='utf-8') as handle:
+                prediction_index_list = [
+                    int(line.strip()) for line in handle
+                    if line.strip() and not line.lstrip().startswith('#')]
+        except OSError as error:
+            raise OSError(f'Unable to read --save-prediction-indices file '
+                          f'{args.save_prediction_indices}: {error}') from error
+        except ValueError as error:
+            raise ValueError('--save-prediction-indices must contain one '
+                             'integer dataset index per non-comment line') from error
+        if not prediction_index_list:
+            raise ValueError('--save-prediction-indices did not contain any indices')
+        prediction_indices = frozenset(prediction_index_list)
+        if len(prediction_indices) != len(prediction_index_list):
+            raise ValueError('--save-prediction-indices contains duplicate indices')
+        if any(index < 0 or index >= len(dataset) for index in prediction_indices):
+            raise ValueError('--save-prediction-indices contains an index outside '
+                             f'[0, {len(dataset) - 1}]')
+        print(f'Saving {len(prediction_indices)} predictions from explicit '
+              f'dataset indices in {args.save_prediction_indices}.')
+    elif (args.save_predictions and args.save_prediction_count >= 0 and
+            args.save_prediction_sampling == 'per-sequence'):
+        prediction_indices = _select_per_sequence_prediction_indices(
+            dataset, args.save_prediction_count)
+        print(f'Saving {len(prediction_indices)} predictions in balanced '
+              f'contiguous windows across {len(dataset.sequences)} validation sequences.')
+
+    if args.prediction_subset_only:
+        if not hasattr(dataset, 'samples'):
+            raise TypeError('--prediction-subset-only requires a dataset with '
+                            'a samples sequence')
+        selected_indices = prediction_index_list
+        stable_indices = selected_indices
+        if args.prediction_reference_indices:
+            try:
+                with open(args.prediction_reference_indices, 'r', encoding='utf-8') as handle:
+                    stable_indices = [
+                        int(line.strip()) for line in handle
+                        if line.strip() and not line.lstrip().startswith('#')]
+            except OSError as error:
+                raise OSError(f'Unable to read --prediction-reference-indices file '
+                              f'{args.prediction_reference_indices}: {error}') from error
+            except ValueError as error:
+                raise ValueError('--prediction-reference-indices must contain one '
+                                 'integer index per non-comment line') from error
+            if len(stable_indices) != len(selected_indices):
+                raise ValueError('--prediction-reference-indices must contain the '
+                                 'same number of indices as --save-prediction-indices')
+            if len(set(stable_indices)) != len(stable_indices) or any(index < 0 for index in stable_indices):
+                raise ValueError('--prediction-reference-indices must contain unique '
+                                 'non-negative indices')
+            prediction_indices = frozenset(stable_indices)
+        # FarmSimWorldDataset normally returns the local ``__getitem__`` index
+        # as ``sample_idx``.  Retain the original stable index after slicing so
+        # artifact names and downstream matching remain tied to the full split.
+        dataset._stable_sample_indices = tuple(stable_indices)
+        dataset.samples = [dataset.samples[index] for index in selected_indices]
+        dataset.flag = np.zeros(len(dataset.samples), dtype=np.uint8)
+        print(f'Qualitative subset mode: evaluating {len(dataset)} selected '
+              'samples only.')
+
     data_loader = build_dataloader(
         dataset,
         samples_per_gpu=samples_per_gpu,
@@ -314,13 +400,6 @@ def main():
         shuffle=False,
         nonshuffler_sampler=cfg.data.nonshuffler_sampler,
     )
-    prediction_indices = None
-    if (args.save_predictions and args.save_prediction_count >= 0 and
-            args.save_prediction_sampling == 'per-sequence'):
-        prediction_indices = _select_per_sequence_prediction_indices(
-            dataset, args.save_prediction_count)
-        print(f'Saving {len(prediction_indices)} predictions in balanced '
-              f'contiguous windows across {len(dataset.sequences)} validation sequences.')
 
     # build the model and load checkpoint
     cfg.model.train_cfg = None
