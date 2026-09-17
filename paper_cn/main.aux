@@ -93,11 +93,77 @@
 \newlabel{sec:ablation}{{4.4}{15}{消融实验}{subsection.4.4}{}}
 \@writefile{lot}{\contentsline {table}{\numberline {1}{\ignorespaces AgriOcc-Dataset 验证集上的三维语义占用结果（\%）。参数量为训练时的可训练参数量。}}{16}{table.1}\protected@file@percent }
 \newlabel{tab:main}{{1}{16}{AgriOcc-Dataset 验证集上的三维语义占用结果（\%）。参数量为训练时的可训练参数量。}{table.1}{}}
-\@writefile{lot}{\contentsline {table}{\numberline {2}{\ignorespaces AgriOcc-Dataset 消融实验。\text  {$\mathsurround \z@ \mathchar "458$}表示对应模块启用。训练时间由第 8 轮平均迭代时间与每轮迭代数估算；所有配置均采用 4 张 RTX 4090 和有效全局 batch size 为 24。显存为固定每卡 batch size 为 2、一次预热后前向--反向传播测得的单卡峰值分配显存；NearFar 的显存收益与同一 GVAD--ADHR 稠密对照组比较。}}{16}{table.2}\protected@file@percent }
-\newlabel{tab:ablation}{{2}{16}{AgriOcc-Dataset 消融实验。\checkmark 表示对应模块启用。训练时间由第 8 轮平均迭代时间与每轮迭代数估算；所有配置均采用 4 张 RTX 4090 和有效全局 batch size 为 24。显存为固定每卡 batch size 为 2、一次预热后前向--反向传播测得的单卡峰值分配显存；NearFar 的显存收益与同一 GVAD--ADHR 稠密对照组比较。}{table.2}{}}
-\@writefile{lof}{\contentsline {figure}{\numberline {8}{\ignorespaces AgriOcc-Dataset 上的定性比较。每一行对应一个不同作物、光照和场景条件下的样本；从左至右依次为三路输入 RGB 图像、真值标签、SurroundOcc、IR-WM 和 AgriOcc 的当前帧三维语义占用预测。}}{17}{figure.8}\protected@file@percent }
-\newlabel{fig:qualitative_comparison}{{8}{17}{AgriOcc-Dataset 上的定性比较。每一行对应一个不同作物、光照和场景条件下的样本；从左至右依次为三路输入 RGB 图像、真值标签、SurroundOcc、IR-WM 和 AgriOcc 的当前帧三维语义占用预测。}{figure.8}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {8}{\ignorespaces AgriOcc-Dataset 上的定性比较。每一行对应一个不同作物、光照和场景条件下的样本；从左至右依次为三路输入 RGB 图像、真值标签、SurroundOcc、IR-WM 和 AgriOcc 的当前帧三维语义占用预测。}}{16}{figure.8}\protected@file@percent }
+\newlabel{fig:qualitative_comparison}{{8}{16}{AgriOcc-Dataset 上的定性比较。每一行对应一个不同作物、光照和场景条件下的样本；从左至右依次为三路输入 RGB 图像、真值标签、SurroundOcc、IR-WM 和 AgriOcc 的当前帧三维语义占用预测。}{figure.8}{}}
+\citation{chen2025orad3d}
+\citation{chen2025orad3d}
+\@writefile{lot}{\contentsline {table}{\numberline {2}{\ignorespaces AgriOcc-Dataset 消融实验。\text  {$\mathsurround \z@ \mathchar "458$}表示对应模块启用。训练时间由第 8 轮平均迭代时间与每轮迭代数估算；所有配置均采用 4 张 RTX 4090 和有效全局 batch size 为 24。显存为固定每卡 batch size 为 2、一次预热后前向--反向传播测得的单卡峰值分配显存；NearFar 的显存收益与同一 GVAD--ADHR 稠密对照组比较。}}{17}{table.2}\protected@file@percent }
+\newlabel{tab:ablation}{{2}{17}{AgriOcc-Dataset 消融实验。\checkmark 表示对应模块启用。训练时间由第 8 轮平均迭代时间与每轮迭代数估算；所有配置均采用 4 张 RTX 4090 和有效全局 batch size 为 24。显存为固定每卡 batch size 为 2、一次预热后前向--反向传播测得的单卡峰值分配显存；NearFar 的显存收益与同一 GVAD--ADHR 稠密对照组比较。}{table.2}{}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {4.5}仿真到真实越野场景迁移}{17}{subsection.4.5}\protected@file@percent }
 \newlabel{sec:sim2real}{{4.5}{17}{仿真到真实越野场景迁移}{subsection.4.5}{}}
-\citation{chen2025orad3d}
-\citation{chen2025orad3d}
+\citation{jiang2024openocc}
+\citation{zhang2023occformer}
+\citation{wei2023surroundocc}
+\citation{behley2019semantickitti,li2024sscbench}
+\@writefile{lot}{\contentsline {table}{\numberline {3}{\ignorespaces ORAD-3D 仿真到真实迁移结果（\%）。两组 AgriOcc 均使用完整 ORAD-3D 训练集； 迁移模型以 AgriOcc-Dataset 预训练权重初始化后进行 2 个 epoch 适配。 \texttt  {Test (w/o Free)} 为去除Free类别的mIoU，与 ORAD-3D 论文中一致；\texttt  {Test} 为全部九类的mIoU。 \texttt  {Test\_farm} 为农田场景子集上按出现类别计算的 mIoU。}}{18}{table.3}\protected@file@percent }
+\newlabel{tab:orad}{{3}{18}{ORAD-3D 仿真到真实迁移结果（\%）。两组 AgriOcc 均使用完整 ORAD-3D 训练集； 迁移模型以 AgriOcc-Dataset 预训练权重初始化后进行 2 个 epoch 适配。 \texttt {Test (w/o Free)} 为去除Free类别的mIoU，与 ORAD-3D 论文中一致；\texttt {Test} 为全部九类的mIoU。 \texttt {Test\_farm} 为农田场景子集上按出现类别计算的 mIoU。}{table.3}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.6}体素分辨率迁移}{18}{subsection.4.6}\protected@file@percent }
+\newlabel{sec:resolution_transfer}{{4.6}{18}{体素分辨率迁移}{subsection.4.6}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {9}{\ignorespaces ORAD-3D 上的定性迁移比较。每行对应同一官方测试样本；从左至右为输入 RGB 图像、真值标签、使用全部 ORAD-3D 训练数据的从头训练结果，以及 AgriOcc-Dataset 预训练后在全部 ORAD-3D 训练数据上迁移的结果（100\% Transfer）。}}{19}{figure.9}\protected@file@percent }
+\newlabel{fig:orad_qualitative}{{9}{19}{ORAD-3D 上的定性迁移比较。每行对应同一官方测试样本；从左至右为输入 RGB 图像、真值标签、使用全部 ORAD-3D 训练数据的从头训练结果，以及 AgriOcc-Dataset 预训练后在全部 ORAD-3D 训练数据上迁移的结果（100\% Transfer）。}{figure.9}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {4}{\ignorespaces 0.1 m体素分辨率的迁移结果（\%）。 迁移方法先在 $0.2\times 0.2\times 0.2\,$m 数据上训练，再适配至 $0.1\times 0.1\times 0.2\,$m。 对照组则用 0.1 m 数据集从头训练，直接学习 $200\times 200$ 的高分辨率 BEV 与占用预测。}}{20}{table.4}\protected@file@percent }
+\newlabel{tab:resolution_transfer}{{4}{20}{0.1 m体素分辨率的迁移结果（\%）。 迁移方法先在 $0.2\times 0.2\times 0.2\,$m 数据上训练，再适配至 $0.1\times 0.1\times 0.2\,$m。 对照组则用 0.1 m 数据集从头训练，直接学习 $200\times 200$ 的高分辨率 BEV 与占用预测。}{table.4}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.7}讨论与局限性分析}{20}{subsection.4.7}\protected@file@percent }
+\newlabel{sec:discussion}{{4.7}{20}{讨论与局限性分析}{subsection.4.7}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {10}{\ignorespaces AgriOcc-Dataset 上的局限性示例。第一行为真值标签，第二行为对应的 AgriOcc 预测；三列从左至右分别为卷心菜、玉米和马铃薯场景。密集作物的株间间隙易被预测为连通区域，而苗期等小尺度作物容易出现漏检或范围不足。}}{21}{figure.10}\protected@file@percent }
+\newlabel{fig:limitations}{{10}{21}{AgriOcc-Dataset 上的局限性示例。第一行为真值标签，第二行为对应的 AgriOcc 预测；三列从左至右分别为卷心菜、玉米和马铃薯场景。密集作物的株间间隙易被预测为连通区域，而苗期等小尺度作物容易出现漏检或范围不足。}{figure.10}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {5}结论与展望}{21}{section.5}\protected@file@percent }
+\newlabel{sec:conclusion}{{5}{21}{结论与展望}{section.5}{}}
+\bibstyle{elsarticle-num}
+\bibdata{references}
+\bibcite{nkwochaComprehensiveReviewSensing2025}{{1}{}{{}}{{}}}
+\bibcite{baiVisionbasedNavigationGuidance2023}{{2}{}{{}}{{}}}
+\bibcite{philion2020lift}{{3}{}{{}}{{}}}
+\bibcite{huang2021bevdet}{{4}{}{{}}{{}}}
+\bibcite{li2022bevdepth}{{5}{}{{}}{{}}}
+\bibcite{wang2022detr3d}{{6}{}{{}}{{}}}
+\bibcite{li2022petr}{{7}{}{{}}{{}}}
+\bibcite{li2022bevformer}{{8}{}{{}}{{}}}
+\bibcite{wei2023surroundocc}{{9}{}{{}}{{}}}
+\bibcite{wang2023openoccupancy}{{10}{}{{}}{{}}}
+\bibcite{zheng2024occworld}{{11}{}{{}}{{}}}
+\bibcite{mei2025irwm}{{12}{}{{}}{{}}}
+\bibcite{li2022bevstereo}{{13}{}{{}}{{}}}
+\bibcite{zhou2022matrixvt}{{14}{}{{}}{{}}}
+\bibcite{liu2023petrv2}{{15}{}{{}}{{}}}
+\bibcite{li2023fbbev}{{16}{}{{}}{{}}}
+\bibcite{liu2023bevfusion}{{17}{}{{}}{{}}}
+\bibcite{cao2022monoscene}{{18}{}{{}}{{}}}
+\bibcite{huang2023tpvformer}{{19}{}{{}}{{}}}
+\bibcite{li2023voxformer}{{20}{}{{}}{{}}}
+\bibcite{zhang2023occformer}{{21}{}{{}}{{}}}
+\bibcite{ma2024cotr}{{22}{}{{}}{{}}}
+\bibcite{wang2024panoocc}{{23}{}{{}}{{}}}
+\bibcite{liu2024sparseocc}{{24}{}{{}}{{}}}
+\bibcite{tang2024sparseocc}{{25}{}{{}}{{}}}
+\bibcite{yu2023flashocc}{{26}{}{{}}{{}}}
+\bibcite{pan2024renderocc}{{27}{}{{}}{{}}}
+\bibcite{huang2022bevdet4d}{{28}{}{{}}{{}}}
+\bibcite{mohan2026forecastocc}{{29}{}{{}}{{}}}
+\bibcite{geiger2012kitti}{{30}{}{{}}{{}}}
+\bibcite{behley2019semantickitti}{{31}{}{{}}{{}}}
+\bibcite{caesar2020nuscenes}{{32}{}{{}}{{}}}
+\bibcite{jiang2020rellis}{{33}{}{{}}{{}}}
+\bibcite{dosovitskiy2017carla}{{34}{}{{}}{{}}}
+\bibcite{tobin2017domainrandomization}{{35}{}{{}}{{}}}
+\bibcite{peng2018sim2real}{{36}{}{{}}{{}}}
+\bibcite{hoffman2018cycada}{{37}{}{{}}{{}}}
+\bibcite{chen2025orad3d}{{38}{}{{}}{{}}}
+\bibcite{zhu2021deformable}{{39}{}{{}}{{}}}
+\bibcite{shi2026oneocc}{{40}{}{{}}{{}}}
+\bibcite{yangDrivingOccupancyWorld2025}{{41}{}{{}}{{}}}
+\bibcite{meiVisionCentric4DOccupancy2026}{{42}{}{{}}{{}}}
+\bibcite{jiang2024openocc}{{43}{}{{}}{{}}}
+\bibcite{li2024sscbench}{{44}{}{{}}{{}}}
+\providecommand\NAT@force@numbers{}\NAT@force@numbers
+\gdef \@abspage@last{28}

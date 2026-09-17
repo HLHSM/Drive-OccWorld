@@ -142,6 +142,10 @@ Y.~Yang, J.~Mei, Y.~Ma, S.~Du, W.~Chen, Y.~Qian, Y.~Feng, Y.~Liu, Driving in the
 J.~Mei, Y.~Yang, X.~Yang, L.~Wen, J.~Lv, B.~Shi, Y.~Liu, Vision-{{Centric 4D Occupancy Forecasting}} and {{Planning}} via {{Implicit Residual World Models}} (Feb. 2026).
 \newblock \href {http://arxiv.org/abs/2510.16729} {\path{arXiv:2510.16729}}, \href {https://doi.org/10.48550/arXiv.2510.16729} {\path{doi:10.48550/arXiv.2510.16729}}.
 
+\bibitem{jiang2024openocc}
+H.~Jiang, Y.~Xu, Y.~Zeng, H.~Xu, W.~Zhang, J.~Feng, L.~Zhang, Openocc: Open vocabulary 3d scene reconstruction via occupancy representation, in: 2024 IEEE/RSJ International Conference on Intelligent Robots and Systems (IROS), 2024, pp. 1145--1152.
+\newblock \href {https://doi.org/10.1109/IROS58592.2024.10801860} {\path{doi:10.1109/IROS58592.2024.10801860}}.
+
 \bibitem{li2024sscbench}
 Y.~Li, et~al., Sscbench: A large-scale 3d semantic scene completion benchmark for autonomous driving, in: 2024 IEEE/RSJ International Conference on Intelligent Robots and Systems (IROS), 2024.
 
