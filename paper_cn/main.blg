@@ -1,56 +1,57 @@
 This is BibTeX, Version 0.99e (TeX Live 2026)
 Capacity: max_strings=200000, hash_size=200000, hash_prime=170003
 The top-level auxiliary file: main.aux
-The style file: elsarticle-num.bst
+The style file: cas-model2-names.bst
 Database file #1: references.bib
-Warning--empty pages in li2022bevformer
-Warning--empty pages in wei2023surroundocc
-Warning--empty pages in wang2023openoccupancy
-Warning--empty pages in zheng2024occworld
-Warning--empty pages in liu2023petrv2
-Warning--empty pages in liu2024sparseocc
-Warning--empty pages in tang2024sparseocc
-Warning--empty pages in zhu2021deformable
+Reallocated singl_function (elt_size=4) to 100 items from 50.
 Warning--empty pages in li2024sscbench
+Warning--empty pages in li2022bevformer
+Warning--empty pages in liu2024sparseocc
+Warning--empty pages in liu2023petrv2
+Warning--empty pages in tang2024sparseocc
+Warning--empty pages in wang2023openoccupancy
+Warning--empty pages in wei2023surroundocc
+Warning--empty pages in zheng2024occworld
+Warning--empty pages in zhu2021deformable
 You've used 44 entries,
-            2952 wiz_defined-function locations,
-            886 strings with 15715 characters,
-and the built_in function-call counts, 18173 in all, are:
-= -- 1537
-> -- 872
-< -- 21
-+ -- 320
-- -- 276
-* -- 1190
-:= -- 2394
-add.period$ -- 56
+            2990 wiz_defined-function locations,
+            951 strings with 16895 characters,
+and the built_in function-call counts, 39730 in all, are:
+= -- 2877
+> -- 2296
+< -- 25
++ -- 878
+- -- 828
+* -- 4602
+:= -- 5717
+add.period$ -- 112
 call.type$ -- 44
-change.case$ -- 44
-chr.to.int$ -- 0
+change.case$ -- 495
+chr.to.int$ -- 40
 cite$ -- 53
-duplicate$ -- 665
-empty$ -- 1987
-format.name$ -- 320
-if$ -- 4714
-int.to.chr$ -- 0
-int.to.str$ -- 44
-missing$ -- 42
-newline$ -- 152
-num.names$ -- 44
-pop$ -- 393
+duplicate$ -- 2697
+empty$ -- 2424
+format.name$ -- 967
+if$ -- 7436
+int.to.chr$ -- 5
+int.to.str$ -- 1
+missing$ -- 551
+newline$ -- 215
+num.names$ -- 176
+pop$ -- 1069
 preamble$ -- 1
-purify$ -- 0
+purify$ -- 451
 quote$ -- 0
-skip$ -- 1272
+skip$ -- 979
 stack$ -- 0
-substring$ -- 877
-swap$ -- 265
+substring$ -- 1363
+swap$ -- 2202
 text.length$ -- 21
 text.prefix$ -- 0
 top$ -- 0
-type$ -- 0
+type$ -- 396
 warning$ -- 9
-while$ -- 111
-width$ -- 46
-write$ -- 403
+while$ -- 199
+width$ -- 0
+write$ -- 601
 (There were 9 warnings)
