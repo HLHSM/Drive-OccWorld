@@ -11,8 +11,32 @@
 每个有效体素 $v\in\V$ 的标签 $y_v\in\{0,\ldots,5\}$ 分别表示自由空间、
 作物、土壤地面、道路、其他植被与其他障碍物。
 
-\subsection{AgriOcc-Dataset 构建}\label{sec:dataset_construction}
-AgriOcc-Dataset 基于 Unreal Engine 5 构建，面向农业机器人前向作业时的多视角三维语义占用感知。
+\subsection{仿真数据采集系统与AgriOcc-Dataset}\label{sec:dataset_construction}
+\subsubsection{农田仿真数据采集系统}\label{sec:synthetic}
+为缓和农业场景作物种类繁多、数据采集时间跨度大等问题带来的农机数据采集困难，
+本文首先基于 Unreal Engine 5 构建可参数化农场仿真环境，其流程见图。
+场景包含农田、道路、地表、作物、房屋、围栏等常见元素，并依据作物种植边界和行株距对作物实例进行网格化布设。
+针对每个场景，系统先从作物类别与生长阶段中选择对应资产。然后在保持田间结构合理和满足农艺先验约束的前提下，
+对植株尺度、朝向、行株距、位置扰动及缺株比例进行随机化，从而模拟不同长势、密度与田间分布形态。
+
+在无人拖拉机车体上配置左前、正前和右前三个同步 RGB 传感器，形成面向行进方向的多视角观测。
+传感器的安装高度、视场角、分辨率及采样频率可统一配置；采集过程中同步记录相机内外参数、车辆位姿、
+速度及当前场景配置，保证图像、车辆状态与占用真值在时间和空间上的一致性。
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=1\linewidth]{figures/synthetic.png}
+\caption{农田仿真数据采集系统的构建流程。}
+\label{fig:synthetic}
+\end{figure}
+
+采集数据时首先录制拖拉机在农田中的行驶轨迹，再针对不同的作物种类、生长阶段、光照时段和天气组合重放同一路线，
+使车辆以相同运动轨迹穿过不同农田场景。为缩小仿真与真实采集之间的外观差异，
+系统进一步以设定概率在 RGB 图像上施加运动模糊、镜头污渍和扬尘颗粒等成像扰动。
+对每一帧数据，系统将车辆局部坐标系下的前方空间划分为规则三维体素网格，并基于场景几何与语义标签自动生成稠密占用真值。
+原始环境语义根据任务需求归并为自由空间、作物、土壤/地面、可通行区域、其他植被和其他障碍物六类。
+最终，每个样本由三视角 RGB 图像、对应的三维语义占用标签以及位姿和场景参数元数据组成，从而形成可用于视觉占用预测训练与评估的农田多模态数据集。
+\subsubsection{AgriOcc-Dataset}\label{sec:agriocc_dataset}
+基于上述流程，我们构建了面向田间农业机器人的多视角三维语义占用数据集 AgriOcc-Dataset。
 每个序列包含正前、左前和右前三视角的同步 RGB 图像、相机内外参、机器人位姿、语义占用标签及有效体素掩码。
 标签在加载阶段统一映射为 free、crop、soil\_ground、drivable、other\_vegetation 和 other\_obstacle 六类，并在机器人自身坐标系中生成前方体素监督。
 
@@ -22,14 +46,14 @@ AgriOcc-Dataset 基于 Unreal Engine 5 构建，面向农业机器人前向作�
 每种作物进一步包含 early、mid 和 mature 三个生长阶段，并覆盖 dawn、morning、noon、evening 和 night 五个时段，
 以及 cloudy 与 sunny 两类天气。图\ref{fig:crop_distribution}给出了总体数据集的作物组成。
 
-\begin{figure}[t]
+\begin{figure}[htbp]
 \centering
 \includegraphics[width=0.88\linewidth]{figures/crop_distribution.pdf}
 \caption{AgriOcc-Dataset 的作物组成。扇区面积表示各作物的占比。}
 \label{fig:crop_distribution}
 \end{figure}
 
-\begin{figure}[t]
+\begin{figure}[htbp]
 \centering
 \includegraphics[width=\linewidth]{figures/dataset.png}
 \caption{AgriOcc-Dataset 中十种作物的场景示例。}
@@ -49,7 +73,7 @@ GVAD 先结合局部可变形更新与可见性引导的全局锚点，为当前
 因此，AgriOcc 利用 GVAD 优化 BEV 编码过程中的可见性驱动全局上下文建模，以 Agri-AMoE 自适应建模三维局部结构，
 并以近远场布局将早期编码计算聚焦于近场精细结构。
 
-\begin{figure}[t]
+\begin{figure}[htbp]
 \centering
 \includegraphics[width=\linewidth]{figures/agriocc_overview_geovis_v2.png}
 \caption{AgriOcc 总体结构。三路前视图像经 ResNet--FPN 提取四尺度特征；
@@ -77,7 +101,7 @@ NearFar 在前五层实施近远场查询布局并在第六层前恢复稠密 BE
 通过空间交叉注意力聚合几何对齐的多尺度图像特征，并经前馈网络完成表征更新；
 该过程重复六次，最终输出 $100\times100$、通道数为 256 的稠密 BEV token。
 
-\begin{figure}[t]
+\begin{figure}[htbp]
 \centering
 \includegraphics[width=\linewidth]{figures/geovis_bev_encoder_overview.png}
 \caption{(a) GeoVis-BEV 编码器整体架构。三路前视图像经 ResNet--FPN 提取多尺度特征后输入六层编码器；
@@ -154,7 +178,7 @@ $\beta=0.75$ 为固定可见性衰减系数，$\bm{q}_i'$ 为 GVAD 输出 token�
 因此，弱可见单元获得更大的锚点上下文校正，直接可见区域则以局部分支为主，避免全局信息覆盖其精细边界。
 图\ref{fig:gvad} 展示了 GVAD 的双路径结构。
 
-\begin{figure}[t]
+\begin{figure}[htbp]
 \centering
 \includegraphics[width=\linewidth]{figures/gvad_detailed_architecture_v2.png}
 \caption{GVAD 架构。相机投影掩码首先归约为每个 BEV token 的可见性；局部可变形分支根据查询预测采样位置和权重，形成局部 BEV 更新；几何可见锚点分支将 BEV 平面划分为 $4\times8$ 个 tile，以特征置信度和可见性加权构建 32 个锚点，并通过距离偏置的多头注意力形成锚点上下文。两条分支经可见性门控和残差连接融合为增强 BEV token。}
@@ -173,7 +197,7 @@ $\beta=0.75$ 为固定可见性衰减系数，$\bm{q}_i'$ 为 GVAD 输出 token�
 GVAD 在稀疏层中仍按 token 的原始稠密 BEV 坐标分箱生成锚点。
 
 图\ref{fig:nearfar} 给出了近远场布局。它保留近场的完整网格以表达作物、垄沟和障碍物的细粒度几何，同时对远场执行规则稀疏采样，并在进入最终稠密图像交叉注意力前恢复完整特征图。
-\begin{figure}[t]
+\begin{figure}[htbp]
 \centering
 \includegraphics[width=\linewidth]{figures/nearfar_detailed_architecture_v2.png}
 \caption{NearFar 架构。输入稠密 BEV 网格沿前向距离划分为近场与远场，远场按步长 2 下采样激活。
@@ -222,7 +246,7 @@ $3\times1\times1$ 卷积编码垂直结构、以及膨胀率为 2 的 $1\times3\
 \end{equation}
 其中，$\operatorname{GN}$ 为组归一化，$\operatorname{ReLU}$ 为非线性激活，$W_o$ 为 $1\times1\times1$ 分类卷积，
 $\bm{O}\in\R^{B\times6\times Z\times H\times W}$ 为最终语义 logits。图\ref{fig:agri-amoe}展示了该模块的架构。
-\begin{figure}[t]
+\begin{figure}[htbp]
 \centering
 \includegraphics[width=\linewidth]{figures/agri_amoe_module_imagegen.png}
 \caption{Agri-AMoE 三维占用解码器。二维 BEV token 经 lifting 形成三维体积，通道/空间显著性和三方向梯度能量共同驱动逐体素路由，三个各向异性专家的输出经残差混合后用于最终分类。}
