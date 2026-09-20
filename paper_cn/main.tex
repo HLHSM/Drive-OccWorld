@@ -172,7 +172,7 @@ SurroundOcc 与 OpenOccupancy 推动了多相机稠密占用预测和环视基�
 速度及当前场景配置，保证图像、车辆状态与占用真值在时间和空间上的一致性。
 \begin{figure}[pos=htbp]
 \centering
-\includegraphics[width=1\linewidth]{figures/synthetic.png}
+\includegraphics[width=1\linewidth]{synthetic.png}
 \caption{农田仿真数据采集系统的构建流程。}
 \label{fig:synthetic}
 \end{figure}
@@ -196,14 +196,14 @@ SurroundOcc 与 OpenOccupancy 推动了多相机稠密占用预测和环视基�
 
 \begin{figure}[pos=htbp]
 \centering
-\includegraphics[width=0.6\linewidth]{figures/crop_distribution.pdf}
+\includegraphics[width=0.6\linewidth]{crop_distribution.pdf}
 \caption{AgriOcc-Dataset 的作物组成。扇区面积表示各作物的占比。}
 \label{fig:crop_distribution}
 \end{figure}
 
 \begin{figure}[pos=htbp]
 \centering
-\includegraphics[width=\linewidth]{figures/dataset.png}
+\includegraphics[width=\linewidth]{dataset.png}
 \caption{AgriOcc-Dataset 中十种作物的场景示例。}
 \label{fig:dataset}
 \end{figure} 
@@ -223,7 +223,7 @@ GVAD 先结合局部可变形更新与可见性引导的全局锚点，为当前
 
 \begin{figure}[pos=htbp]
 \centering
-\includegraphics[width=\linewidth]{figures/overview.png}
+\includegraphics[width=\linewidth]{overview.png}
 \caption{AgriOcc 总体结构。三路前视图像经 ResNet--FPN 提取四尺度特征；
 六层 GeoVis-BEV 编码器在每层依次执行 GVAD、图像空间交叉注意力与前馈更新，
 NearFar 在前五层实施近远场查询布局并在第六层前恢复稠密 BEV；三层占用解码器提供多层监督，
@@ -248,10 +248,10 @@ NearFar 在前五层实施近远场查询布局并在第六层前恢复稠密 BE
 对第 $l$ 层输入的 BEV token，编码器依次利用 GVAD 强化局部结构和可靠的长程上下文、
 通过空间交叉注意力聚合几何对齐的多尺度图像特征，并经前馈网络完成表征更新；
 该过程重复六次，最终输出 $100\times100$、通道数为 256 的稠密 BEV token。
-
+ 
 \begin{figure}[pos=htbp]
 \centering
-\includegraphics[width=\linewidth]{figures/geovis_bev_encoder_overview.png}
+\includegraphics[width=\linewidth]{geovis-bev.png}
 \caption{(a) GeoVis-BEV 编码器整体架构。三路前视图像经 ResNet--FPN 提取多尺度特征后输入六层编码器；
 GVAD 在各编码层中更新 BEV token，NearFar 在前五层保留近场稠密查询并对远场规则稀疏采样，
 恢复为稠密网格后由最后一层完成图像条件细化。}
@@ -328,7 +328,7 @@ $\beta=0.75$ 为固定可见性衰减系数，$\bm{q}_i'$ 为 GVAD 输出 token�
 
 \begin{figure}[pos=htbp]
 \centering
-\includegraphics[width=\linewidth]{figures/gvad_detailed_architecture_v2.png}
+\includegraphics[width=\linewidth]{gvad.png}
 \caption{GVAD 架构。相机投影掩码首先归约为每个 BEV token 的可见性；局部可变形分支根据查询预测采样位置和权重，形成局部 BEV 更新；几何可见锚点分支将 BEV 平面划分为 $4\times8$ 个 tile，以特征置信度和可见性加权构建 32 个锚点，并通过距离偏置的多头注意力形成锚点上下文。两条分支经可见性门控和残差连接融合为增强 BEV token。}
 \label{fig:gvad}
 \end{figure}
@@ -344,15 +344,8 @@ $\beta=0.75$ 为固定可见性衰减系数，$\bm{q}_i'$ 为 GVAD 输出 token�
 该安排避免仅由查询插值补全远场语义，同时使已有占用解码头保持不变。
 GVAD 在稀疏层中仍按 token 的原始稠密 BEV 坐标分箱生成锚点。
 
-图\ref{fig:nearfar} 给出了近远场布局。它保留近场的完整网格以表达作物、垄沟和障碍物的细粒度几何，同时对远场执行规则稀疏采样，并在进入最终稠密图像交叉注意力前恢复完整特征图。
-\begin{figure}[pos=htbp]
-\centering
-\includegraphics[width=\linewidth]{figures/nearfar_detailed_architecture_v2.png}
-\caption{NearFar 架构。输入稠密 BEV 网格沿前向距离划分为近场与远场，远场按步长 2 下采样激活。
-所有 active token 保留其原始稠密网格坐标，并在前五层进行稀疏编码；
-随后，未激活远场位置由相邻四个 active token 的双线性权重恢复为完整网格。}
-\label{fig:nearfar}
-\end{figure}
+近远场布局的架构见图\ref{fig:geovis-bev-encoder}。它保留近场的完整网格以表达作物、垄沟和障碍物的细粒度几何，同时对远场执行规则稀疏采样，并在进入最终稠密图像交叉注意力前恢复完整特征图。
+
  
 \subsection{农业结构自适应混合专家三维占用解码器}\label{sec:agri-amoe}
 农田占用空间具有显著的各向异性：作物行与垄沟在地平面上呈现长程连续和周期性交替，
@@ -369,25 +362,32 @@ GVAD 在稀疏层中仍按 token 的原始稠密 BEV 坐标分箱生成锚点。
 \end{equation}
 其中，$C$ 为输入 BEV token 的通道数，$H$、$W$ 为 BEV 网格的两个平面维度，$Z$ 为高度 bin 数，
 $W_{\mathrm{lift}}$ 为可学习的 lifting 映射，$\operatorname{reshape}(\cdot)$ 仅将映射后的 token 重排为三维体积。
-本文使用 $C_a=96$、$Z=25$。接下来首先对$F_0$进行全局三维池化后接MLP来计算通道显著性$F$。之后再由$F$的通道均值和最大值计算空间显著性，作为路由的空间线索：
+本文使用 $C_a=96$、$Z=25$。首先，对 $\bm{F}_0$ 进行全局三维池化，并经MLP生成通道注意力权重，以增强三维体积特征：
 \begin{equation}
-\bm{F}=\bm{F}_0\odot\sigma\!\left(f_c(\operatorname{GAP}(\bm{F}_0))\right),\qquad
+\bm{F}=\bm{F}_0\odot\sigma\!\left(f_c(\operatorname{GAP}(\bm{F}_0))\right).
+\end{equation}
+其中，$\operatorname{GAP}$ 表示在 $Z$、$H$、$W$ 维度上的全局平均池化，$f_c$ 为可学习的通道映射，
+$\sigma$ 为 Sigmoid 函数，$\odot$ 为逐元素乘法。增强后的 $\bm{F}$ 被同时送入三个并行的各向异性专家和路由分支。
+三个专家均以 $\bm{F}$ 为输入：$\mathcal{E}_1$ 采用 $1\times3\times3$ 深度可分离卷积编码株间平面细节，
+$\mathcal{E}_2$ 采用 $3\times1\times1$ 卷积编码垂直结构，$\mathcal{E}_3$ 则采用膨胀率为 2 的 $1\times3\times3$ 卷积编码较大范围的平面上下文。
+
+之后，Expert router根据 $\bm{F}$ 的空间显著性与局部结构变化，为每个体素分配专家权重。
+空间显著性由 $\bm{F}$ 的通道均值和最大值经MLP映射 $f_s$ 得到：
+\begin{equation}
 \bm{S}=\sigma\!\left(f_s([\operatorname{mean}_c(\bm{F}),\operatorname{max}_c(\bm{F})])\right).
 \end{equation}
-这里，$\operatorname{GAP}$ 表示在 $Z$、$H$、$W$ 维度上的全局平均池化，$f_c$ 与 $f_s$ 分别为可学习的通道映射和空间映射MLP，
-$\odot$ 为逐元素乘法，$\operatorname{mean}_c$ 与 $\operatorname{max}_c$ 分别表示沿通道维度的平均与最大聚合，
-$\bm{S}$ 为逐体素空间显著性图。
-
-为使专家选择与三维结构复杂度对齐，我们接下来计算体积特征在三个空间方向的有限差分能量：
+其中，$\operatorname{mean}_c$ 与 $\operatorname{max}_c$ 分别表示沿通道维度的平均与最大聚合，$\bm{S}$ 为逐体素空间显著性图。
+为使专家选择进一步与三维结构复杂度对齐，Expert router还计算 $\bm{F}$ 在三个空间方向的有限差分能量：
 \begin{equation}
 \bm{E}=\operatorname{mean}_c\!\left((\nabla_x\bm{F})^2+(\nabla_y\bm{F})^2+(\nabla_z\bm{F})^2\right).
 \end{equation}
-其中，$\nabla_x$、$\nabla_y$ 和 $\nabla_z$ 分别为三个空间方向的梯度，$\operatorname{mean}_c$ 仍表示通道平均，
-故 $\bm{E}$ 为逐体素的局部结构变化强度。之后逐体素路由器以 $[\log(1+\bm{E}),\bm{S}]$ 为输入，
-在温度 $\tau=1$ 下输出三个归一化专家权重
-$\bm{\alpha}=\operatorname{Softmax}(g([\log(1+\bm{E}),\bm{S}])/\tau)$，其中 $g$ 为可学习的全连接层，
-$\alpha_k$ 为第 $k$ 个专家在每个体素处的权重。三个轻量深度可分离专家 $\mathcal{E}_k$ 分别采用 $1\times3\times3$ 卷积编码株间平面细节、
-$3\times1\times1$ 卷积编码垂直结构、以及膨胀率为 2 的 $1\times3\times3$ 卷积编码较大范围平面上下文。最终的残差混合为
+其中，$\nabla_x$、$\nabla_y$ 和 $\nabla_z$ 分别为三个空间方向的梯度，故 $\bm{E}$ 为逐体素的局部结构变化强度。
+Expert router以 $[\log(1+\bm{E}),\bm{S}]$ 为输入，在温度 $\tau=1$ 下输出三个归一化专家权重：
+\begin{equation}
+\bm{\alpha}=\operatorname{Softmax}\!\left(g([\log(1+\bm{E}),\bm{S}]) / \tau\right),
+\end{equation}
+其中，$g$ 为由两层 $1\times1\times1$ 卷积、组归一化和 ReLU 构成的三路由映射，
+$\alpha_k$ 为第 $k$ 个专家在每个体素处的权重。最后，路由权重用于融合三个已计算的专家输出：
 \begin{equation}
 \bm{F}'=\operatorname{ReLU}\!\left(\bm{F}+\operatorname{GN}\!\left(\sum_{k=1}^{3}\alpha_k\mathcal{E}_k(\bm{F})\right)\right),\qquad
 \bm{O}=W_o\bm{F}',
@@ -396,7 +396,7 @@ $3\times1\times1$ 卷积编码垂直结构、以及膨胀率为 2 的 $1\times3\
 $\bm{O}\in\R^{B\times6\times Z\times H\times W}$ 为最终语义 logits。图\ref{fig:agri-amoe}展示了该模块的架构。
 \begin{figure}[pos=htbp]
 \centering
-\includegraphics[width=\linewidth]{figures/agri_amoe_module_imagegen.png}
+\includegraphics[width=\linewidth]{agri-amoe.png}
 \caption{Agri-AMoE 三维占用解码器。二维 BEV token 经 lifting 形成三维体积，通道/空间显著性和三方向梯度能量共同驱动逐体素路由，三个各向异性专家的输出经残差混合后用于最终分类。}
 \label{fig:agri-amoe}
 \end{figure}
@@ -466,7 +466,7 @@ IR-WM & 60.68 & 35.15 & 85.52 & 19.63 & 40.29 & 29.66 & 21.06 & 14.76 \\
 AgriOcc 对作物行、地面边界和远近区域的语义布局保持了更好的空间连续性，并能更稳定地保留局部障碍物结构。
 \begin{figure}[pos=htbp]
 \centering
-\includegraphics[width=\linewidth]{figures/qualitative_comparison_3x5.png}
+\includegraphics[width=\linewidth]{qualitative_comparison_3x5.png}
 \caption{AgriOcc-Dataset 上的定性比较。每一行对应一个不同作物、光照和场景条件下的样本；从左至右依次为三路输入 RGB 图像、真值标签、SurroundOcc、IR-WM 和 AgriOcc 的当前帧三维语义占用预测。}
 \label{fig:qualitative_comparison}
 \end{figure}
@@ -546,7 +546,7 @@ AgriOcc（预训练迁移） & 18.5 & \textbf{11.17} & \textbf{20.11} & 39.45 \\
 图\ref{fig:orad_qualitative}进一步在三个 ORAD-3D 官方测试样本上比较真值、从头训练和使用全部 ORAD-3D 训练数据迁移后的预测结果。
 \begin{figure}[pos=htbp]
 \centering
-\includegraphics[width=\linewidth]{figures/orad3d_transfer_qualitative.png}
+\includegraphics[width=\linewidth]{orad3d_transfer_qualitative.png}
 \caption{ORAD-3D 上的定性迁移比较。每行对应同一官方测试样本；从左至右为输入 RGB 图像、真值标签、使用全部 ORAD-3D 训练数据的从头训练结果，以及 AgriOcc-Dataset 预训练后在全部 ORAD-3D 训练数据上迁移的结果（100\% Transfer）。}
 \label{fig:orad_qualitative}
 \end{figure}
@@ -614,7 +614,7 @@ NearFar 将近场分辨率优先级显式编码到查询布局中，为农业机
 例如田间作业、果园巡检、温室移动、牧场巡逻与农场运输；对于依赖单株定位、株间距测量和精细长势评估的株级监测任务，仍存在局限。
 \begin{figure}[pos=htbp]
 \centering
-\includegraphics[width=\linewidth]{figures/farmsim_limitations_2x3.png}
+\includegraphics[width=\linewidth]{farmsim_limitations_2x3.png}
 \caption{AgriOcc-Dataset 上的局限性示例。第一行为真值标签，第二行为对应的 AgriOcc 预测；三列从左至右分别为卷心菜、玉米和马铃薯场景。密集作物的株间间隙易被预测为连通区域，而苗期等小尺度作物容易出现漏检或范围不足。}
 \label{fig:limitations}
 \end{figure}
