@@ -85,8 +85,8 @@
 \citation{ma2024cotr}
 \citation{yangDrivingOccupancyWorld2025}
 \citation{meiVisionCentric4DOccupancy2026}
-\@writefile{lof}{\contentsline {figure}{\numberline {7}{\ignorespaces Agri-AMoE 三维占用解码器。二维 BEV token 经 lifting 形成三维体积，通道/空间显著性和三方向梯度能量共同驱动逐体素路由，三个各向异性专家的输出经残差混合后用于最终分类。}}{9}{figure.7}\protected@file@percent }
-\newlabel{fig:agri-amoe}{{7}{9}{Agri-AMoE 三维占用解码器。二维 BEV token 经 lifting 形成三维体积，通道/空间显著性和三方向梯度能量共同驱动逐体素路由，三个各向异性专家的输出经残差混合后用于最终分类。}{figure.7}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {7}{\ignorespaces Agri-AMoE 三维占用解码器。二维 BEV token 经 lifting 形成三维体积，并首先由通道注意力增强；增强特征一方面并行输入三个各向异性专家，另一方面生成空间显著性与三方向梯度能量以计算逐体素路由权重。三个专家输出经加权求和与残差融合后完成最终分类。}}{9}{figure.7}\protected@file@percent }
+\newlabel{fig:agri-amoe}{{7}{9}{Agri-AMoE 三维占用解码器。二维 BEV token 经 lifting 形成三维体积，并首先由通道注意力增强；增强特征一方面并行输入三个各向异性专家，另一方面生成空间显著性与三方向梯度能量以计算逐体素路由权重。三个专家输出经加权求和与残差融合后完成最终分类。}{figure.7}{}}
 \@writefile{toc}{\contentsline {paragraph}{ORAD-3D}{9}{section*.8}\protected@file@percent }
 \@writefile{toc}{\contentsline {paragraph}{指标}{9}{section*.9}\protected@file@percent }
 \@writefile{toc}{\contentsline {subsection}{\numberline {4.2}实现细节}{9}{subsection.4.2}\protected@file@percent }

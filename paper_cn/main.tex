@@ -397,7 +397,7 @@ $\bm{O}\in\R^{B\times6\times Z\times H\times W}$ 为最终语义 logits。图\re
 \begin{figure}[pos=htbp]
 \centering
 \includegraphics[width=\linewidth]{agri-amoe.png}
-\caption{Agri-AMoE 三维占用解码器。二维 BEV token 经 lifting 形成三维体积，通道/空间显著性和三方向梯度能量共同驱动逐体素路由，三个各向异性专家的输出经残差混合后用于最终分类。}
+\caption{Agri-AMoE 三维占用解码器。二维 BEV token 经 lifting 形成三维体积，并首先由通道注意力增强；增强特征一方面并行输入三个各向异性专家，另一方面生成空间显著性与三方向梯度能量以计算逐体素路由权重。三个专家输出经加权求和与残差融合后完成最终分类。}
 \label{fig:agri-amoe}
 \end{figure}
 
