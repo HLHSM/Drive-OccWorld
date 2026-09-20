@@ -223,7 +223,7 @@ GVAD 先结合局部可变形更新与可见性引导的全局锚点，为当前
 
 \begin{figure}[pos=htbp]
 \centering
-\includegraphics[width=\linewidth]{figures/agriocc_overview_geovis_v2.png}
+\includegraphics[width=\linewidth]{figures/overview.png}
 \caption{AgriOcc 总体结构。三路前视图像经 ResNet--FPN 提取四尺度特征；
 六层 GeoVis-BEV 编码器在每层依次执行 GVAD、图像空间交叉注意力与前馈更新，
 NearFar 在前五层实施近远场查询布局并在第六层前恢复稠密 BEV；三层占用解码器提供多层监督，
@@ -353,7 +353,7 @@ GVAD 在稀疏层中仍按 token 的原始稠密 BEV 坐标分箱生成锚点。
 随后，未激活远场位置由相邻四个 active token 的双线性权重恢复为完整网格。}
 \label{fig:nearfar}
 \end{figure}
-
+ 
 \subsection{农业结构自适应混合专家三维占用解码器}\label{sec:agri-amoe}
 农田占用空间具有显著的各向异性：作物行与垄沟在地平面上呈现长程连续和周期性交替，
 作物冠层、土壤和障碍物又在高度方向具有不同的边界形态。
@@ -363,29 +363,29 @@ GVAD 在稀疏层中仍按 token 的原始稠密 BEV 坐标分箱生成锚点。
 因而，最终占用头不仅需要恢复高度维度，还应按局部三维结构的复杂度自适应地选择合适的感受野与方向建模方式。
 
 受文献\cite{shi2026oneocc}启发，本文设计农业结构自适应混合专家三维占用解码器（Agri-AMoE）。
-对于最终层 BEV 特征 $\bm{Q}\in\R^{B\times HW\times C}$，先经线性映射并重排为通道数为 $C_a$ 的三维体积
+对于最终层 BEV 特征 $\bm{Q}\in\R^{B\times HW\times C}$，先经线性映射并重排为通道数为 $C_a$ 的三维体积特征：
 \begin{equation}
 \bm{F}_0=\operatorname{reshape}(W_{\mathrm{lift}}\bm{Q})\in\R^{B\times C_a\times Z\times H\times W}.
 \end{equation}
 其中，$C$ 为输入 BEV token 的通道数，$H$、$W$ 为 BEV 网格的两个平面维度，$Z$ 为高度 bin 数，
 $W_{\mathrm{lift}}$ 为可学习的 lifting 映射，$\operatorname{reshape}(\cdot)$ 仅将映射后的 token 重排为三维体积。
-本文使用 $C_a=96$、$Z=25$。通道显著性由全局三维池化后的两层 $1\times1\times1$ 变换产生，并先调制体积特征；空间显著性由该特征的通道均值和最大值生成，作为路由的空间线索：
+本文使用 $C_a=96$、$Z=25$。接下来首先对$F_0$进行全局三维池化后接MLP来计算通道显著性$F$。之后再由$F$的通道均值和最大值计算空间显著性，作为路由的空间线索：
 \begin{equation}
 \bm{F}=\bm{F}_0\odot\sigma\!\left(f_c(\operatorname{GAP}(\bm{F}_0))\right),\qquad
 \bm{S}=\sigma\!\left(f_s([\operatorname{mean}_c(\bm{F}),\operatorname{max}_c(\bm{F})])\right).
 \end{equation}
-这里，$\operatorname{GAP}$ 表示在 $Z$、$H$、$W$ 维度上的全局平均池化，$f_c$ 与 $f_s$ 分别为可学习的通道映射和空间映射，
+这里，$\operatorname{GAP}$ 表示在 $Z$、$H$、$W$ 维度上的全局平均池化，$f_c$ 与 $f_s$ 分别为可学习的通道映射和空间映射MLP，
 $\odot$ 为逐元素乘法，$\operatorname{mean}_c$ 与 $\operatorname{max}_c$ 分别表示沿通道维度的平均与最大聚合，
 $\bm{S}$ 为逐体素空间显著性图。
 
-为使专家选择与三维结构复杂度对齐，Agri-AMoE 计算体积特征在三个空间方向的有限差分能量：
+为使专家选择与三维结构复杂度对齐，我们接下来计算体积特征在三个空间方向的有限差分能量：
 \begin{equation}
 \bm{E}=\operatorname{mean}_c\!\left((\nabla_x\bm{F})^2+(\nabla_y\bm{F})^2+(\nabla_z\bm{F})^2\right).
 \end{equation}
-其中，$\nabla_x$、$\nabla_y$ 和 $\nabla_z$ 分别为三个空间方向的一阶有限差分，$\operatorname{mean}_c$ 仍表示通道平均，
-故 $\bm{E}$ 为逐体素的局部结构变化强度。逐体素路由器以 $[\log(1+\bm{E}),\bm{S}]$ 为输入，
+其中，$\nabla_x$、$\nabla_y$ 和 $\nabla_z$ 分别为三个空间方向的梯度，$\operatorname{mean}_c$ 仍表示通道平均，
+故 $\bm{E}$ 为逐体素的局部结构变化强度。之后逐体素路由器以 $[\log(1+\bm{E}),\bm{S}]$ 为输入，
 在温度 $\tau=1$ 下输出三个归一化专家权重
-$\bm{\alpha}=\operatorname{Softmax}(g([\log(1+\bm{E}),\bm{S}])/\tau)$，其中 $g$ 为可学习的路由映射，
+$\bm{\alpha}=\operatorname{Softmax}(g([\log(1+\bm{E}),\bm{S}])/\tau)$，其中 $g$ 为可学习的全连接层，
 $\alpha_k$ 为第 $k$ 个专家在每个体素处的权重。三个轻量深度可分离专家 $\mathcal{E}_k$ 分别采用 $1\times3\times3$ 卷积编码株间平面细节、
 $3\times1\times1$ 卷积编码垂直结构、以及膨胀率为 2 的 $1\times3\times3$ 卷积编码较大范围平面上下文。最终的残差混合为
 \begin{equation}

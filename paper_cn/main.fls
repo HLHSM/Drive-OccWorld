@@ -496,9 +496,9 @@ INPUT ./figures/crop_distribution.pdf
 INPUT ./figures/dataset.png
 INPUT ./figures/dataset.png
 INPUT ./figures/dataset.png
-INPUT ./figures/agriocc_overview_geovis_v2.png
-INPUT ./figures/agriocc_overview_geovis_v2.png
-INPUT ./figures/agriocc_overview_geovis_v2.png
+INPUT ./figures/overview.png
+INPUT ./figures/overview.png
+INPUT ./figures/overview.png
 INPUT /data/HL/texlive/2026/texmf-dist/fonts/tfm/public/cm/cmmi9.tfm
 INPUT /data/HL/texlive/2026/texmf-dist/fonts/tfm/public/cm/cmsy9.tfm
 INPUT /data/HL/texlive/2026/texmf-dist/fonts/tfm/public/amsfonts/cmextra/cmex9.tfm
