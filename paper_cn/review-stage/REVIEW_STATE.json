@@ -1,0 +1,31 @@
+{
+  "round": 2,
+  "max_rounds": 4,
+  "reviewer_backend": "github-copilot-local (codex ignored per user instruction)",
+  "scope": "paper_cn/main.tex + paper_cn/references.bib only",
+  "status": "completed",
+  "termination_reason": "stop condition met: score 6.5 >= 6 AND verdict 'almost' in {ready, almost}",
+  "score_history": [
+    {"round": 1, "score": 3.5, "verdict": "not ready"},
+    {"round": 2, "score": 6.5, "verdict": "almost"}
+  ],
+  "last_score": 6.5,
+  "last_verdict": "almost",
+  "compile_status": "17 pages, 0 undefined references (verified at end of Round 2; no .tex changes afterwards)",
+  "local_fixable_items": "cleared",
+  "pending_experiments": [
+    "W1(P0) tab:main 中 Drive-OccWorld / IR-WM 重复数据核对（回查原始结果文件）",
+    "W1(P0) AgriOcc 与 COTR 的 Free=91.11 一致性核对",
+    "W2(P0) 多种子重复实验（建议 final 与 +NearFar 各补 2 seeds）",
+    "W3(P0) 推理时延 / FPS / FLOPs 测量",
+    "W4(P1) 对比方法适配协议补全（重训/预算/调参/初始化/相机与网格统一）",
+    "W5(P1) 跨作物、生长阶段、光照、天气的分组 mIoU",
+    "W6(P1) 补 2-3 篇最接近对照文献与检索关键词/截止时间",
+    "W7(P1) 0.1 m 迁移两组训练预算一致性逐项核实",
+    "W8(P2) 指标三项约定：IoU 聚合方式、有效体素掩码定义、Free 记入口径",
+    "W9(P2) 0.1 m 数据集与 AgriOcc-Dataset 的关系及场景重叠",
+    "W10(P2) 数据集发布链接与许可证"
+  ],
+  "timestamp": "2026-09-21T12:05:00",
+  "completed_at": "2026-09-21T12:05:00"
+}

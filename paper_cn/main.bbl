@@ -1,4 +1,4 @@
-\begin{thebibliography}{44}
+\begin{thebibliography}{43}
 \expandafter\ifx\csname natexlab\endcsname\relax\def\natexlab#1{#1}\fi
 \providecommand{\url}[1]{\texttt{#1}}
 \providecommand{\href}[2]{#2}
@@ -119,14 +119,9 @@
 \bibinfo{author}{Ma, Q.}, \bibinfo{author}{Tan, X.}, \bibinfo{author}{Qu, Y.}, \bibinfo{author}{Ma, L.}, \bibinfo{author}{Zhang, Z.}, \bibinfo{author}{Xie, Y.}, \bibinfo{year}{2024}.
 \newblock \bibinfo{title}{Cotr: Compact occupancy transformer for vision-based 3d occupancy prediction}, in: \bibinfo{booktitle}{Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition}, pp. \bibinfo{pages}{19936--19945}.
 \newblock \DOIprefix\doi{10.1109/CVPR52733.2024.01884}.
-%Type = Article
+%Type = Misc
 \bibitem[{Mei et~al.(2025)Mei, Yang, Yang, Wen, Lv, Shi and Liu}]{mei2025irwm}
 \bibinfo{author}{Mei, J.}, \bibinfo{author}{Yang, Y.}, \bibinfo{author}{Yang, X.}, \bibinfo{author}{Wen, L.}, \bibinfo{author}{Lv, J.}, \bibinfo{author}{Shi, B.}, \bibinfo{author}{Liu, Y.}, \bibinfo{year}{2025}.
-\newblock \bibinfo{title}{Vision-centric 4d occupancy forecasting and planning via implicit residual world models}.
-\newblock \bibinfo{journal}{arXiv preprint arXiv:2510.16729} .
-%Type = Misc
-\bibitem[{Mei et~al.(2026)Mei, Yang, Yang, Wen, Lv, Shi and Liu}]{meiVisionCentric4DOccupancy2026}
-\bibinfo{author}{Mei, J.}, \bibinfo{author}{Yang, Y.}, \bibinfo{author}{Yang, X.}, \bibinfo{author}{Wen, L.}, \bibinfo{author}{Lv, J.}, \bibinfo{author}{Shi, B.}, \bibinfo{author}{Liu, Y.}, \bibinfo{year}{2026}.
 \newblock \bibinfo{title}{Vision-{{Centric 4D Occupancy Forecasting}} and {{Planning}} via {{Implicit Residual World Models}}}.
 \newblock \DOIprefix\doi{10.48550/arXiv.2510.16729}, \href{http://arxiv.org/abs/2510.16729}{\tt arXiv:2510.16729}.
 %Type = Article

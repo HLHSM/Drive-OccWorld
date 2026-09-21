@@ -3,6 +3,7 @@ Capacity: max_strings=200000, hash_size=200000, hash_prime=170003
 The top-level auxiliary file: main.aux
 The style file: cas-model2-names.bst
 Database file #1: references.bib
+Warning--I didn't find a database entry for "meiVisionCentric4DOccupancy2026"
 Reallocated singl_function (elt_size=4) to 100 items from 50.
 Warning--empty pages in li2024sscbench
 Warning--empty pages in li2022bevformer
@@ -13,45 +14,45 @@ Warning--empty pages in wang2023openoccupancy
 Warning--empty pages in wei2023surroundocc
 Warning--empty pages in zheng2024occworld
 Warning--empty pages in zhu2021deformable
-You've used 44 entries,
+You've used 43 entries,
             2990 wiz_defined-function locations,
-            951 strings with 16895 characters,
-and the built_in function-call counts, 39730 in all, are:
-= -- 2877
-> -- 2296
+            949 strings with 16777 characters,
+and the built_in function-call counts, 38931 in all, are:
+= -- 2829
+> -- 2238
 < -- 25
-+ -- 878
-- -- 828
-* -- 4602
-:= -- 5717
-add.period$ -- 112
-call.type$ -- 44
-change.case$ -- 495
-chr.to.int$ -- 40
-cite$ -- 53
-duplicate$ -- 2697
-empty$ -- 2424
-format.name$ -- 967
-if$ -- 7436
++ -- 856
+- -- 807
+* -- 4503
+:= -- 5594
+add.period$ -- 109
+call.type$ -- 43
+change.case$ -- 483
+chr.to.int$ -- 39
+cite$ -- 52
+duplicate$ -- 2643
+empty$ -- 2380
+format.name$ -- 943
+if$ -- 7298
 int.to.chr$ -- 5
 int.to.str$ -- 1
-missing$ -- 551
-newline$ -- 215
-num.names$ -- 176
-pop$ -- 1069
+missing$ -- 539
+newline$ -- 210
+num.names$ -- 172
+pop$ -- 1044
 preamble$ -- 1
-purify$ -- 451
+purify$ -- 440
 quote$ -- 0
-skip$ -- 979
+skip$ -- 965
 stack$ -- 0
-substring$ -- 1363
-swap$ -- 2202
+substring$ -- 1352
+swap$ -- 2159
 text.length$ -- 21
 text.prefix$ -- 0
 top$ -- 0
-type$ -- 396
+type$ -- 387
 warning$ -- 9
-while$ -- 199
+while$ -- 196
 width$ -- 0
-write$ -- 601
-(There were 9 warnings)
+write$ -- 588
+(There were 10 warnings)

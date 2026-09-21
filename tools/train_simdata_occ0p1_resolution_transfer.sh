@@ -36,7 +36,7 @@ TOTAL_BATCH_SIZE="${TOTAL_BATCH_SIZE:-24}"
 WORKERS_PER_GPU="${WORKERS_PER_GPU:-4}"
 IMAGE_WIDTH="${IMAGE_WIDTH:-512}"
 IMAGE_HEIGHT="${IMAGE_HEIGHT:-288}"
-EPOCHS="${EPOCHS:-4}"
+EPOCHS="${EPOCHS:-8}"
 SEED="${SEED:-20260912}"
 USE_FP16="${USE_FP16:-1}"
 
@@ -118,13 +118,21 @@ train_one() {
 # fi
 
 
-# BATCH_SIZE=1
-# if [[ "${RUN_FROZEN_FINETUNE}" == "1" ]]; then
-#   # Freeze all 0.2 m pretrained modules.  The adapter-created 200x200 BEV
-#   # query table plus row/column positional embeddings are the only updates.
-#   train_one "finetune_from_0p2_frozen_base" "${CONFIG}" "${ADAPTED_CHECKPOINT}" \
-#     --freeze-resolution-transfer-base
-# fi
+BATCH_SIZE=1
+
+if [[ "${RUN_SCRATCH}" == "1" ]]; then
+  # This control has the same public 2D image initialization but receives no
+  # 0.2 m semantic-occupancy or BEV-query pretraining.
+  train_one "scratch_image_pretrained" "${CONFIG}" "${IMAGE_PRETRAINED}"
+fi
+
+BATCH_SIZE=1
+if [[ "${RUN_FROZEN_FINETUNE}" == "1" ]]; then
+  # Freeze all 0.2 m pretrained modules.  The adapter-created 200x200 BEV
+  # query table plus row/column positional embeddings are the only updates.
+  train_one "finetune_from_0p2_frozen_base" "${CONFIG}" "${ADAPTED_CHECKPOINT}" \
+    --freeze-resolution-transfer-base
+fi
 
 BATCH_SIZE=6
 if [[ "${RUN_FROZEN_HEADREFINE}" == "1" ]]; then
@@ -134,13 +142,7 @@ if [[ "${RUN_FROZEN_HEADREFINE}" == "1" ]]; then
     "${SOURCE_02_CHECKPOINT}" --freeze-resolution-transfer-base
 fi
 
-BATCH_SIZE=1
 
-if [[ "${RUN_SCRATCH}" == "1" ]]; then
-  # This control has the same public 2D image initialization but receives no
-  # 0.2 m semantic-occupancy or BEV-query pretraining.
-  train_one "scratch_image_pretrained" "${CONFIG}" "${IMAGE_PRETRAINED}"
-fi
 
 if [[ "${RUN_HEADREFINE}" == "1" ]]; then
   # The 100x100 GVAD BEV encoder is loaded unchanged; the new learned 2x
