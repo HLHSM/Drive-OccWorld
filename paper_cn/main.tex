@@ -10,6 +10,9 @@
 \usepackage{enumitem}
 \usepackage{threeparttable}
 \hypersetup{colorlinks=true,linkcolor=black,citecolor=black,urlcolor=blue}
+\ExplSyntaxOn
+\bool_gset_true:N \g_stm_nologo_bool
+\ExplSyntaxOff
 
 % Shared notation for AgriOcc.
 \newcommand{\R}{\mathbb{R}}
@@ -29,11 +32,28 @@
 \def\floatpagepagefraction{1}
 \def\textpagefraction{.001}
 
-\shorttitle{AgriOcc for Agricultural Robots}
-\shortauthors{Anonymous Author}
-\title[mode=title]{AgriOcc：面向农业机器人的几何感知高效三维语义占用预测}
-\author[1]{匿名作者}
-\affiliation[1]{organization={匿名单位}, country={}}
+\shorttitle{AgriOcc}
+\shortauthors{He, Jin, Liu and Qu}
+
+\title[mode=title]{AgriOcc：面向农业机器人的几何感知高效三维语义占用预测模型}
+
+\author[1]{Lei He}
+\author[1]{Jing Jin}[orcid=0000-0001-7753-7656]
+\cormark[1]
+\ead{jinjinghit@hit.edu.cn}
+\author[2]{Yi Liu}
+\affiliation[1]{
+  organization={School of Astronautics, Harbin Institute of Technology},
+  city={Harbin},
+  postcode={150001},
+  country={China}
+}
+\affiliation[2]{
+  organization={Zhengzhou Advanced Research Institute of Harbin Institute of Technology},
+  city={ZhengZhou},
+  postcode={450000},
+  country={China}
+}
 
 \begin{abstract}
 农业机器人的视觉导航通常依赖二维图像内的作物行检测、可通行区域分割及相应后处理技术。
@@ -41,7 +61,7 @@
 本文提出 AgriOcc：一种从三路前视 RGB 图像端到端预测机器人前方三维语义占用的框架，为田间作业、避障和导航提供统一的体素化环境表征。
 AgriOcc 的核心由 GeoVis-BEV 编码器和农业结构自适应混合专家三维占用解码器（Agri-AMoE）构成。
 GeoVis-BEV 编码器在多相机 BEV 表征学习中协同引入几何可见锚点可变形注意力（GVAD）和近远场查询布局：前者从可靠可见区域汇聚长程上下文，并保留局部可变形采样；后者将编码预算集中于近场精细结构，同时对远场查询进行规则稀疏化与特征恢复。
-Agri-AMoE 将 BEV 表征提升为三维特征体，并依据通道/空间显著性和梯度能量在局部平面、垂直结构和大范围上下文专家之间自适应路由。
+Agri-AMoE 将 BEV 表征提升为三维特征体，先以通道注意力增强特征，再利用空间显著性和梯度能量在局部平面、垂直结构和大范围上下文专家之间自适应路由。
 针对农业语义占用数据稀缺且采集成本高的问题，本文构建了农业多视角仿真数据集 AgriOcc-Dataset。
 在仿真和真实数据集上的大量实验表明，AgriOcc 具有良好的农业场景理解、真实环境迁移能力。
 为农业移动机器人的三维视觉导航构建了兼具性能与效率的新路径。
@@ -60,20 +80,20 @@ Agri-AMoE 将 BEV 表征提升为三维特征体，并依据通道/空间显著�
 农业机器人在田间执行巡检、植保、收获运输和自主导航时，需要同时理解作物、垄沟、土壤、
 可通行区域与突发障碍物的空间关系。现有视觉导航系统通常采用模块化流程：
 先通过作物行识别、道路或可通行区域分割得到二维结果，再经几何拟合、
-坐标变换和规则后处理生成导航约束\cite{nkwochaComprehensiveReviewSensing2025,baiVisionbasedNavigationGuidance2023}。
-该流程有两个实际限制:
+坐标变换和规则后处理生成导航约束\citep{nkwochaComprehensiveReviewSensing2025,baiVisionbasedNavigationGuidance2023}。
+该流程有两个限制:
 其一，二维感知、几何恢复和控制坐标变换彼此分离，前级预测误差会逐级传播；
 其二，作物品种、田块结构或机器人平台变化后，感知模型和后处理规则往往需要重新设定。
 对于具有密集植株、连续垄行和复杂遮挡的农田，仅以二维像素级结果作为导航接口也难以表达高度、
-遮挡后空间与株间自由间隙。
+遮挡后空间与株间间隙。
 
 三维语义占用预测以机器人自身坐标系中的规则体素网格统一表示环境，
 每个体素给出占据状态或语义类别。它能够将自由空间、地面、作物和障碍物以统一接口
 提供给后续通行性分析、碰撞检查和视觉导航。
-自动驾驶研究已证明，Lift--Splat--Shoot 等显式提升方法\cite{philion2020lift,huang2021bevdet,li2022bevdepth}，
-以及 DETR3D、PETR 和 BEVFormer 等查询式方法\cite{wang2022detr3d,li2022petr,li2022bevformer}，
-都可从多相机图像学习几何一致的鸟瞰表征；该表征还能扩展至稠密占用\cite{wei2023surroundocc,wang2023openoccupancy}、
-时序场景预测和规划\cite{zheng2024occworld,mei2025irwm}。
+自动驾驶研究已证明，Lift--Splat--Shoot 等显式提升方法\citep{philion2020lift,huang2021bevdet,li2022bevdepth}，
+以及 DETR3D、PETR 和 BEVFormer 等查询式方法\citep{wang2022detr3d,li2022petr,li2022bevformer}，
+都可从多相机图像学习几何一致的鸟瞰表征；该表征还能扩展至稠密占用\citep{wei2023surroundocc,wang2023openoccupancy}、
+时序场景预测和规划\citep{zheng2024occworld,mei2025irwm}。
 这些方法常设定六路环视相机、面向全向道路交通场景，并使用较大时空范围与模型规模。
 而农业机器人则通常配备低算力平台，多在相对静态、前向作业的田间环境中运行。
 
@@ -99,17 +119,16 @@ GeoVis-BEV 编码器面向农业前向视野组织 BEV 表征学习：
 使弱观测单元能够从可靠可见区域获得结构化补全；
 近远场查询布局则保持近场稠密计算，并对远场采用规则稀疏采样与特征恢复，
 从而匹配不同距离区域的感知需求与计算预算。
-最后，Agri-AMoE 将编码后的 BEV token 提升为三维特征体，并依据平面、
-垂直和大范围上下文的结构差异自适应路由专家，端到端输出前方空间的六类语义体素。
+最后，Agri-AMoE 将编码后的 BEV token 提升为三维特征体，先通过通道注意力增强，
+再依据空间显著性、梯度能量以及平面、垂直和大范围上下文的结构差异自适应路由专家，端到端输出前方空间的六类语义体素。
 
-本文的贡献如下：
+我们的主要贡献如下：
 \begin{enumerate}[leftmargin=1.8em]
   \item 构建面向农业机器人三维语义占用的仿真数据集AgriOcc-Dataset，在机器人坐标系下统一预测六类前方环境体素；
+  \item 提出AgriOcc，据我们所知的首个面向农业移动机器人的三维语义占用预测模型。它通过端到端学习将三路前视 RGB 图像映射为前方空间的稠密语义体素，提供统一的农业环境三维表征；
   \item 提出 GeoVis-BEV 编码器，将几何可见锚点可变形注意力（GVAD）和近远场查询布局纳入统一的 BEV 表征学习过程：前者以可见锚点上下文补全弱观测区域，后者以近密远疏的查询分配匹配农业前向视野的距离差异；
-  \item 提出 Agri-AMoE，将 BEV 表征提升为三维特征体，并以梯度能量自适应路由局部平面、垂直结构和大范围上下文专家；
+  \item 提出 Agri-AMoE占用解码器，将 BEV 表征提升为三维特征体，并以梯度能量自适应路由局部平面、垂直结构和大范围上下文专家；
 \end{enumerate}
-
-下文首先回顾相关工作，随后给出任务定义与模型设计，最后报告实验结果，并讨论局限与后续研究方向。
 
 \section{相关工作}\label{sec:related}
 
@@ -117,34 +136,34 @@ GeoVis-BEV 编码器面向农业前向视野组织 BEV 表征学习：
 鸟瞰（bird's-eye-view, BEV）表征将多相机图像中的视觉证据映射到机器人或车辆坐标系的俯视平面，使不同视角的观测能够在统一空间网格中进行融合、推理和规划。
 以 BEV 为中间表征的视觉感知方法通过预定义空间查询把多相机图像特征对齐到该统一坐标系。
 显式提升范式将图像特征沿深度分布投影至 BEV，代表性工作包括 Lift--Splat--Shoot、BEVDet、
-BEVDepth 和 BEVStereo\cite{philion2020lift,huang2021bevdet,li2022bevdepth,li2022bevstereo}；
-MatrixVT 则进一步讨论了高效的多相机到 BEV 变换\cite{zhou2022matrixvt}。
-查询式方法则利用三维参考点、位置嵌入或跨视图变换直接读取相机特征\cite{wang2022detr3d,li2022petr,liu2023petrv2,li2023fbbev}，
-并可在共享 BEV 中融合多模态信息\cite{liu2023bevfusion}。
-BEVFormer 进一步以空间交叉注意力和时序自注意力建立 BEV 查询之间的几何关联\cite{li2022bevformer}。
+BEVDepth 和 BEVStereo\citep{philion2020lift,huang2021bevdet,li2022bevdepth,li2022bevstereo}；
+MatrixVT 则进一步讨论了高效的多相机到 BEV 变换\citep{zhou2022matrixvt}。
+查询式方法则利用三维参考点、位置嵌入或跨视图变换直接读取相机特征\citep{wang2022detr3d,li2022petr,liu2023petrv2,li2023fbbev}，
+并可在共享 BEV 中融合多模态信息\citep{liu2023bevfusion}。
+BEVFormer 进一步以空间交叉注意力和时序自注意力建立 BEV 查询之间的几何关联\citep{li2022bevformer}。
 这些方法为统一坐标系下的视觉感知奠定基础。
 
 \paragraph{三维占用预测与高效表征}
 视觉三维占用将自由空间和语义实体编码为稠密或压缩的体素场。MonoScene、TPVFormer 和 VoxFormer 分别从单目特征提升、
-三平面表征和可见稀疏体素出发完成场景补全\cite{cao2022monoscene,huang2023tpvformer,li2023voxformer}；
-SurroundOcc 与 OpenOccupancy 推动了多相机稠密占用预测和环视基准的发展\cite{wei2023surroundocc,wang2023openoccupancy}。
+三平面表征和可见稀疏体素出发完成场景补全\citep{cao2022monoscene,huang2023tpvformer,li2023voxformer}；
+SurroundOcc 与 OpenOccupancy 推动了多相机稠密占用预测和环视基准的发展\citep{wei2023surroundocc,wang2023openoccupancy}。
 由于三维体素的计算代价随空间分辨率快速增长，后续工作从局部--全局结构、
-紧凑或由粗到细的查询、稀疏交互，以及高效解码和渲染监督等方向降低开销\cite{zhang2023occformer,ma2024cotr,wang2024panoocc,liu2024sparseocc,tang2024sparseocc,yu2023flashocc,pan2024renderocc}。
+紧凑或由粗到细的查询、稀疏交互，以及高效解码和渲染监督等方向降低开销\citep{zhang2023occformer,ma2024cotr,wang2024panoocc,liu2024sparseocc,tang2024sparseocc,yu2023flashocc,pan2024renderocc}。
 占用表征也进一步扩展为时序世界模型：BEVDet4D、OccWorld、IR-WM 与 ForecastOcc 分别
-利用跨帧 BEV、离散场景 token 或历史图像观测预测动态环境和未来状态\cite{huang2022bevdet4d,zheng2024occworld,mei2025irwm,mohan2026forecastocc}。
+利用跨帧 BEV、离散场景 token 或历史图像观测预测动态环境和未来状态\citep{huang2022bevdet4d,zheng2024occworld,mei2025irwm,mohan2026forecastocc}。
 这些研究验证了占用作为统一空间接口的价值，但其普遍面向全向交通环境，
 依赖更广的相机覆盖或历史运动信息。
 
 \paragraph{农业与越野三维感知数据}
-城市三维感知的常用数据集包括 KITTI\cite{geiger2012kitti}、SemanticKITTI\cite{behley2019semantickitti} 和 nuScenes\cite{caesar2020nuscenes}，
+城市三维感知的常用数据集包括 KITTI\citep{geiger2012kitti}、SemanticKITTI\citep{behley2019semantickitti} 和 nuScenes\citep{caesar2020nuscenes}，
 但它们的传感器布置、类别构成和道路结构与农田不同。
 农业场景中的公开数据多面向作物行检测、二维语义分割、实例分割或特定作业目标，难以同时提供多相机标定和稠密三维语义体素；
-越野方向的 RELLIS-3D\cite{jiang2020rellis} 也主要服务于多模态分割与建图。
-虚拟驾驶平台 CARLA\cite{dosovitskiy2017carla} 及领域随机化\cite{tobin2017domainrandomization,peng2018sim2real}、
-语义一致域适应\cite{hoffman2018cycada} 说明了仿真环境可以极大的缓和真实世界数据收集成本高、
+越野方向的 RELLIS-3D\citep{jiang2020rellis} 也主要服务于多模态分割与建图。
+虚拟驾驶平台 CARLA\citep{dosovitskiy2017carla} 及领域随机化\citep{tobin2017domainrandomization,peng2018sim2real}、
+语义一致域适应\citep{hoffman2018cycada} 说明了仿真环境可以极大的缓和真实世界数据收集成本高、
 耗时久的痛点，尤其是在农业场景。
 在真实越野方向，ORAD-3D 提供涵盖农田、林地、草地和道路等场景的三维占用
-基准\cite{chen2025orad3d},为本文提供了真实场景下的验证途径。
+基准\citep{chen2025orad3d},为本文提供了真实场景下的验证途径。
 
 \section{方法}\label{sec:method}
 
@@ -167,7 +186,7 @@ SurroundOcc 与 OpenOccupancy 推动了多相机稠密占用预测和环视基�
 针对每个场景，系统先从作物类别与生长阶段中选择对应资产。然后在保持田间结构合理和满足农艺先验约束的前提下，
 对植株尺度、朝向、行株距、位置扰动及缺株比例进行随机化，从而模拟不同长势、密度与田间分布形态。
 
-在无人拖拉机车体上配置左前、正前和右前三个同步 RGB 传感器，形成面向行进方向的多视角观测。
+之后在无人拖拉机车体上配置左前、正前和右前三个同步 RGB 传感器，形成面向行进方向的多视角观测。
 传感器的安装高度、视场角、分辨率及采样频率可统一配置；采集过程中同步记录相机内外参数、车辆位姿、
 速度及当前场景配置，保证图像、车辆状态与占用真值在时间和空间上的一致性。
 \begin{figure}[pos=htbp]
@@ -177,9 +196,11 @@ SurroundOcc 与 OpenOccupancy 推动了多相机稠密占用预测和环视基�
 \label{fig:synthetic}
 \end{figure}
 
-采集数据时首先录制拖拉机在农田中的行驶轨迹，再针对不同的作物种类、生长阶段、光照时段和天气组合重放同一路线，
-使车辆以相同运动轨迹穿过不同农田场景。为缩小仿真与真实采集之间的外观差异，
+采集数据时首先录制拖拉机在农田中的若干行驶轨迹，再针对不同的作物种类、生长阶段、光照时段和天气组合重放路线，
+实现多样的农田场景与运动轨迹的组合。为缩小仿真与真实采集之间的外观差异，
 系统进一步以设定概率在 RGB 图像上施加运动模糊、镜头污渍和扬尘颗粒等成像扰动。
+数据标注方面，与 nuScenes 等真实采集数据集不同，仿真引擎可直接导出相机位姿、场景语义和体素占用状态，
+无需进行人工逐帧点云语义标注、多帧点云时空配准及体素标签生成等复杂流程。
 对每一帧数据，系统将车辆局部坐标系下的前方空间划分为规则三维体素网格，并基于场景几何与语义标签自动生成稠密占用真值。
 原始环境语义根据任务需求归并为自由空间、作物、土壤/地面、可通行区域、其他植被和其他障碍物六类。
 最终，每个样本由三视角 RGB 图像、对应的三维语义占用标签以及位姿和场景参数元数据组成，从而形成可用于视觉占用预测训练与评估的农田多模态数据集。
@@ -196,7 +217,7 @@ SurroundOcc 与 OpenOccupancy 推动了多相机稠密占用预测和环视基�
 
 \begin{figure}[pos=htbp]
 \centering
-\includegraphics[width=0.6\linewidth]{crop_distribution.pdf}
+\includegraphics[width=0.5\linewidth]{crop_distribution.pdf}
 \caption{AgriOcc-Dataset 的作物组成。扇区面积表示各作物的占比。}
 \label{fig:crop_distribution}
 \end{figure}
@@ -211,15 +232,14 @@ SurroundOcc 与 OpenOccupancy 推动了多相机稠密占用预测和环视基�
 \subsection{AgriOcc 总体结构}\label{sec:architecture}
 
 图\ref{fig:overview}给出 AgriOcc的总体架构。
-图像编码器使用 ImageNet/FCOS3D 预训练的 ResNet-101 与 FPN 提取四级二维特征。
+图像编码器使用ResNet-101 与 FPN 提取四级二维特征。
 随后，六层 GeoVis-BEV 编码器以 GVAD 作为 BEV token 的上下文增强单元：在每个编码层内，
 GVAD 先结合局部可变形更新与可见性引导的全局锚点，为当前 BEV 查询补充可靠的空间上下文；
 再由空间交叉注意力依据相机投影关系，从多尺度图像中聚合几何对齐的视觉证据。
 经逐层更新后，编码器输出 $100\times100$、通道数为 256 的 BEV token；
 三层占用解码器提供多层监督，其中最后一层由 Agri-AMoE 将 BEV token 提升为
 三维特征体并预测 25 个高度位置上的六类 logits。
-因此，AgriOcc 利用 GVAD 优化 BEV 编码过程中的可见性驱动全局上下文建模，以 Agri-AMoE 自适应建模三维局部结构，
-并以近远场布局将早期编码计算聚焦于近场精细结构。
+因此，AgriOcc 利用 GVAD 优化 BEV 编码过程中的可见性驱动全局上下文建模，以近远场布局将早期编码计算聚焦于近场精细结构，并以 Agri-AMoE 自适应建模三维局部结构。
 
 \begin{figure}[pos=htbp]
 \centering
@@ -241,7 +261,7 @@ NearFar 在前五层实施近远场查询布局并在第六层前恢复稠密 BE
 另一方面，近场作物、垄沟和障碍物的细节直接决定机器人可通行空间，远场观测则更稀疏；
 对整个 BEV 平面采用统一密度和统一上下文聚合，既不能针对性补偿弱可见区域，也会浪费近场精细建模所需的计算资源。
 
-本文以 BEVFormer 的多相机 BEV 编码框架为基础\cite{li2022bevformer}，提出 GeoVis-BEV 编码器。
+本文以 BEVFormer 的多相机 BEV 编码框架为基础\citep{li2022bevformer}，提出 GeoVis-BEV 编码器。
 它以几何投影构建局部证据、以可见性选择可靠上下文，并按任务距离配置编码预算。
 该编码器在逐层图像条件更新中协同建模几何关系、观测可见性与近远场查询密度，
 从而将有限的多相机观测转化为兼具局部边界与全局结构一致性的 BEV 表征。
@@ -274,9 +294,9 @@ m_{b,i}=\frac{1}{C_{\mathrm{cam}}Z}\sum_{c=1}^{C_{\mathrm{cam}}}\sum_{z=1}^{Z}M_
 后文为简洁起见省略批量索引 $b$。GVAD 首先对带位置编码的输入执行层归一化，记为
 $\tilde{\bm{q}}_i=\operatorname{LN}(\bm{q}_i+\bm{e}_i)$；
 随后从该表征出发并行计算局部可变形分支和几何可见锚点分支，最后以可见性门控的残差形式融合二者。
-局部可变形采样继承了 BEVFormer 的查询自适应注意力骨架\cite{li2022bevformer}，
-而锚点路径结合 Deformable DETR\cite{zhu2021deformable} 的稀疏聚合思想和
- DETR3D\cite{wang2022detr3d} 的几何查询机制，显式度量观测可靠性。
+局部可变形采样继承了 BEVFormer 的查询自适应注意力骨架\citep{li2022bevformer}，
+而锚点路径结合 Deformable DETR\citep{zhu2021deformable} 的稀疏聚合思想和
+ DETR3D\citep{wang2022detr3d} 的几何查询机制，显式度量观测可靠性。
 
 \paragraph{局部可变形分支。}
 该分支等价于对 BEV token的可变形自注意力。
@@ -355,7 +375,7 @@ GVAD 在稀疏层中仍按 token 的原始稠密 BEV 坐标分箱生成锚点。
 解码器难以协调相邻位置的平面细节与垂直结构，预测容易在细粒度区域发生过度平滑。
 因而，最终占用头不仅需要恢复高度维度，还应按局部三维结构的复杂度自适应地选择合适的感受野与方向建模方式。
 
-受文献\cite{shi2026oneocc}启发，本文设计农业结构自适应混合专家三维占用解码器（Agri-AMoE）。
+受文献\citep{shi2026oneocc}启发，本文设计农业结构自适应混合专家三维占用解码器（Agri-AMoE）。
 对于最终层 BEV 特征 $\bm{Q}\in\R^{B\times HW\times C}$，先经线性映射并重排为通道数为 $C_a$ 的三维体积特征：
 \begin{equation}
 \bm{F}_0=\operatorname{reshape}(W_{\mathrm{lift}}\bm{Q})\in\R^{B\times C_a\times Z\times H\times W}.
@@ -371,18 +391,18 @@ $\sigma$ 为 Sigmoid 函数，$\odot$ 为逐元素乘法。增强后的 $\bm{F}$
 三个专家均以 $\bm{F}$ 为输入：$\mathcal{E}_1$ 采用 $1\times3\times3$ 深度可分离卷积编码株间平面细节，
 $\mathcal{E}_2$ 采用 $3\times1\times1$ 卷积编码垂直结构，$\mathcal{E}_3$ 则采用膨胀率为 2 的 $1\times3\times3$ 卷积编码较大范围的平面上下文。
 
-之后，Expert router根据 $\bm{F}$ 的空间显著性与局部结构变化，为每个体素分配专家权重。
-空间显著性由 $\bm{F}$ 的通道均值和最大值经MLP映射 $f_s$ 得到：
+随后，路由器根据 $\bm{F}$ 的空间显著性与局部结构变化，为每个体素分配专家权重。
+空间显著性由 $\bm{F}$ 的通道均值和最大值经 $3\times3\times3$ 卷积空间映射 $f_s$ 得到：
 \begin{equation}
 \bm{S}=\sigma\!\left(f_s([\operatorname{mean}_c(\bm{F}),\operatorname{max}_c(\bm{F})])\right).
 \end{equation}
 其中，$\operatorname{mean}_c$ 与 $\operatorname{max}_c$ 分别表示沿通道维度的平均与最大聚合，$\bm{S}$ 为逐体素空间显著性图。
-为使专家选择进一步与三维结构复杂度对齐，Expert router还计算 $\bm{F}$ 在三个空间方向的有限差分能量：
+为使专家选择进一步与三维结构复杂度对齐，路由器还计算 $\bm{F}$ 在三个空间方向的有限差分能量：
 \begin{equation}
 \bm{E}=\operatorname{mean}_c\!\left((\nabla_x\bm{F})^2+(\nabla_y\bm{F})^2+(\nabla_z\bm{F})^2\right).
 \end{equation}
 其中，$\nabla_x$、$\nabla_y$ 和 $\nabla_z$ 分别为三个空间方向的梯度，故 $\bm{E}$ 为逐体素的局部结构变化强度。
-Expert router以 $[\log(1+\bm{E}),\bm{S}]$ 为输入，在温度 $\tau=1$ 下输出三个归一化专家权重：
+路由器以 $[\log(1+\bm{E}),\bm{S}]$ 为输入，在温度 $\tau=1$ 下输出三个归一化专家权重：
 \begin{equation}
 \bm{\alpha}=\operatorname{Softmax}\!\left(g([\log(1+\bm{E}),\bm{S}]) / \tau\right),
 \end{equation}
@@ -402,7 +422,7 @@ $\bm{O}\in\R^{B\times6\times Z\times H\times W}$ 为最终语义 logits。图\re
 \end{figure}
 
 \subsection{总体优化目标}\label{sec:loss}
-占用主损失遵循 SurroundOcc 与 OpenOccupancy 的多层体素监督范式\cite{wei2023surroundocc,wang2023openoccupancy}，
+占用主损失遵循 SurroundOcc 与 OpenOccupancy 的多层体素监督范式\citep{wei2023surroundocc,wang2023openoccupancy}，
 由类别交叉熵、语义尺度损失、几何尺度损失和 Lov\'{a}sz-Softmax 项组成；其具体计算与上述工作一致，故不再重复推导。
 
 \section{实验}\label{sec:experiments}
@@ -413,7 +433,7 @@ $\bm{O}\in\R^{B\times6\times Z\times H\times W}$ 为最终语义 logits。图\re
 AgriOcc使用正前、左前和右前三路相机，预测机器人前方20m*20m区域的占用。
 
 \paragraph{ORAD-3D}
-另外，为测试仿真到真实环境的迁移，我们在\ref{sec:sim2real}节使用 ORAD-3D 数据集\cite{chen2025orad3d}评估AgriOcc在真实野外和农田占用预测任务中的性能。
+另外，为测试仿真到真实环境的迁移，我们在\ref{sec:sim2real}节使用 ORAD-3D 数据集\citep{chen2025orad3d}评估AgriOcc在真实野外和农田占用预测任务中的性能。
 
 \paragraph{指标}
 我们用mIoU和每个类别的IoU来评价语义占用模型的性能。对类别 $c$，$\IoU_c=\mathrm{TP}_c/(\mathrm{TP}_c+\mathrm{FP}_c+\mathrm{FN}_c)$；
@@ -428,8 +448,8 @@ AgriOcc采用预训练的 ResNet-101为图像编码器，并使用6 层 BEV enco
 
 \subsection{与现有方法的比较}\label{sec:comparison}
 表\ref{tab:main}汇总 AgriOcc-Dataset 上的占用预测结果对比。
-SurroundOcc\cite{wei2023surroundocc}、SparseOcc\cite{tang2024sparseocc}与 COTR\cite{ma2024cotr}同属当前帧语义占用方法；
-Drive-OccWorld\cite{yangDrivingOccupancyWorld2025}和 IR-WM\cite{meiVisionCentric4DOccupancy2026}则同时预测当前与未来占用。
+SurroundOcc\citep{wei2023surroundocc}、SparseOcc\citep{tang2024sparseocc}与 COTR\citep{ma2024cotr}同属当前帧语义占用方法；
+Drive-OccWorld\citep{yangDrivingOccupancyWorld2025}和 IR-WM\citep{meiVisionCentric4DOccupancy2026}则同时预测当前与未来占用。
 结果表明，AgriOcc 优于各对比方法。说明 GeoVis-BEV 编码器与
 农业结构自适应解码器能够将图像几何线索转化为更一致的空间占用表示。
 优势主要体现在地面、可通行区域和复杂植被/障碍物等结构性类别，
@@ -467,7 +487,7 @@ AgriOcc 对作物行、地面边界和远近区域的语义布局保持了更好
 \begin{figure}[pos=htbp]
 \centering
 \includegraphics[width=\linewidth]{qualitative_comparison_3x5.png}
-\caption{AgriOcc-Dataset 上的定性比较。每一行对应一个不同作物、光照和场景条件下的样本；从左至右依次为三路输入 RGB 图像、真值标签、SurroundOcc、IR-WM 和 AgriOcc 的当前帧三维语义占用预测。}
+\caption{AgriOcc-Dataset 上的定性比较。每一行对应一个不同作物、光照和场景条件下的样本；从左至右依次为三路输入 RGB 图像、真值标签、SurroundOcc、IR-WM 和 AgriOcc 的当前帧三维语义占用预测。图中红色箭头为行驶方向。}
 \label{fig:qualitative_comparison}
 \end{figure}
 
@@ -490,18 +510,18 @@ NearFar 的计算收益还体现为训练吞吐与显存占用。添加NearFar�
 \setlength{\tabcolsep}{1.4pt}
 \begin{tabular}{lccccccr}
 \toprule
-配置 & GVAD & NearFar & Agri-AMoE & 参数(M) & 显存(GB) & 训练(min/epoch) & mIoU(\%) \\
+配置 & GVAD & NearFar & Agri-AMoE & 参数(M) & 显存(GB) & mIoU(\%) \\
 \midrule
-Base  &  &  &  & 52.12 & 13.08 & 26.02 & 53.89 \\
-+ GVAD & \checkmark &  &  & 55.08 & 15.14 & 42.93 & 56.24 \\
-+ NearFar & \checkmark & \checkmark &  & 55.12 & \textbf{10.68} & 39.28 & 56.49 \\
-+ Agri-AMoE & \checkmark & \checkmark & \checkmark & \textbf{55.74} & 11.03 & 40.95 & \textbf{56.99} \\
+Base  &  &  &  & 52.12 & 13.08 & 53.89 \\
++ GVAD & \checkmark &  &  & 55.08 & 15.14 & 56.24 \\
++ NearFar & \checkmark & \checkmark &  & 55.12 & \textbf{10.68} & 56.49 \\
++ Agri-AMoE & \checkmark & \checkmark & \checkmark & \textbf{55.74} & 11.03 & \textbf{56.99} \\
 \bottomrule
 \end{tabular}
 \end{table}
 
 \subsection{仿真到真实越野场景迁移}\label{sec:sim2real}
-为了进一步验证仿真数据集上训练的模型在真实世界的有效性，本节我们在 ORAD-3D 数据集\cite{chen2025orad3d}上
+为了进一步验证仿真数据集上训练的模型在真实世界的有效性，本节我们在 ORAD-3D 数据集\citep{chen2025orad3d}上
 对 AgriOcc-Dataset上训练好的AgriOcc checkpoint 进行迁移学习，并评估在其官方测试集和农田子集上的性能。
 ORAD-3D 的占用预测的网格形状为 $100\times100\times16$ ，共有九类体素，类别定义沿用其官方标注协议；
 AgriOcc-Dataset 与 ORAD-3D 的类别和相机数不同，因而只取中心前视 embedding，
@@ -511,7 +531,7 @@ AgriOcc-Dataset 与 ORAD-3D 的类别和相机数不同，因而只取中心前�
 表\ref{tab:orad}同时给出 ORAD-3D 官方测试集和从中筛选出的农田场景子集的结果。
 \texttt{Test}在完整类别上计算，\texttt{Test\_farm} 则按农田子集中出现的类别计算。
 为与 ORAD-3D 论文中的语义 mIoU 保持可比，表中额外报告去除 Free 类后的 Test mIoU。
-表中OpenOcc、OccFormer 和 SurroundOcc 的结果引自 ORAD-3D 论文\cite{chen2025orad3d}。
+表中OpenOcc、OccFormer 和 SurroundOcc 的结果引自 ORAD-3D 论文\citep{chen2025orad3d}。
 结果表明，在相同的完整目标域训练数据下，AgriOcc-Dataset 预训练后仅需 2 个 epoch 的适配，
 即可在 \texttt{Test (w/o Free)} 上达到 11.17\%，高于从头训练的 9.01\%和ORAD-3D 论文中报告的7.60\%。
 同时将目标域训练时间由 54.1 分钟降至 18.5 分钟。
@@ -532,9 +552,9 @@ AgriOcc-Dataset 与 ORAD-3D 的类别和相机数不同，因而只取中心前�
 \toprule 
 方法 & 训练时间(min) & Test (w/o Free) & Test & Test\_farm \\
 \midrule
-OpenOcc\cite{jiang2024openocc} & -- & 5.83 & -- & -- \\
-OccFormer\cite{zhang2023occformer} & -- & 7.45 & -- & -- \\
-SurroundOcc\cite{wei2023surroundocc} & -- & 7.60 & -- & -- \\
+OpenOcc\citep{jiang2024openocc} & -- & 5.83 & -- & -- \\
+OccFormer\citep{zhang2023occformer} & -- & 7.45 & -- & -- \\
+SurroundOcc\citep{wei2023surroundocc} & -- & 7.60 & -- & -- \\
 \midrule
 AgriOcc（从头训练） & 54.1 & 9.01 & 18.16 & 31.83 \\
 \midrule
@@ -552,7 +572,7 @@ AgriOcc（预训练迁移） & 18.5 & \textbf{11.17} & \textbf{20.11} & 39.45 \\
 \end{figure}
 
 \subsection{体素分辨率迁移}\label{sec:resolution_transfer}
-本文构建的AgriOcc-Dataset的体素分辨率为0.2m，与主流汽车自动驾驶语义占用基准一致\cite{behley2019semantickitti,li2024sscbench}。
+本文构建的AgriOcc-Dataset的体素分辨率为0.2m，与主流汽车自动驾驶语义占用基准一致\citep{behley2019semantickitti,li2024sscbench}。
 但是农业机器人在垄间通行、株间避障和精细作业时，$0.2\times0.2\times0.2\,$m 的体素可能将相邻作物、
 窄垄沟或局部可通行边界量化到同一网格中，带来潜在的精度不足问题。
 然而，将整个 BEV 编码器直接扩展到 $0.1\times0.1\times0.2\,$m 会使

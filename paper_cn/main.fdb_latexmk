@@ -1,19 +1,19 @@
 # Fdb version 4
-["bibtex main"] 1789910978.07888 "main.aux" "main.bbl" "main" 1789910985.027 0
+["bibtex main"] 1789956331.84479 "main.aux" "main.bbl" "main" 1789956572.41647 0
   "./cas-model2-names.bst" 1789720501.3829 31802 28b630660245c09f173aac55be552b29 ""
   "./references.bib" 1789632538.21623 20259 c61d064681731b94abfdeec1417913d1 ""
-  "main.aux" 1789910979.87907 21264 5757b4f90388ac542a67c54fdbfed42d "xelatex"
+  "main.aux" 1789956572.3146 195 e3f9c70068cbf24133d1df9f44dc38d6 "xelatex"
   (generated)
   "main.bbl"
   "main.blg"
   (rewritten before read)
-["xdvipdfmx"] 1789910980.04853 "main.xdv" "main.pdf" "main" 1789910985.03164 0
-  "main.xdv" 1789910979.88107 424532 e09b7602bc52ebf18469755272dc8362 "xelatex"
+["xdvipdfmx"] 1789955755.09767 "main.xdv" "main.pdf" "main" 1789955759.92452 0
+  "main.xdv" 1789956331.69461 425120 5705d13d9b76d0cf4c3a4b52c3e5203a "xelatex"
   (generated)
   "main.pdf"
   (rewritten before read)
-["xelatex"] 1789910978.10892 "/data/HL/Drive-OccWorld/paper_cn/main.tex" "main.xdv" "main" 1789910985.02722 0
-  "/data/HL/Drive-OccWorld/paper_cn/main.tex" 1789910974.55606 48010 eabae44f3eece8278e5f33005680254f ""
+["xelatex"] 1789956571.20538 "/data/HL/Drive-OccWorld/paper_cn/main.tex" "main.xdv" "main" 1789956572.41669 2
+  "/data/HL/Drive-OccWorld/paper_cn/main.tex" 1789956570.14859 48837 5f682436c6fcabe41d9361bbcceee8ab ""
   "/data/HL/texlive/2026/texmf-dist/fonts/tfm/adobe/zapfding/pzdr.tfm" 1136768653 1528 f853c4d1b4e0550255e02831fdc8496f ""
   "/data/HL/texlive/2026/texmf-dist/fonts/tfm/public/amsfonts/cmextra/cmbsy5.tfm" 1246382020 1120 1e8878807317373affa7f7bba4cf2f6a ""
   "/data/HL/texlive/2026/texmf-dist/fonts/tfm/public/amsfonts/cmextra/cmbsy7.tfm" 1246382020 1120 7f9f170e8aa57527ad6c49feafd45d54 ""
@@ -225,17 +225,18 @@
   "/data/HL/texlive/2026/texmf.cnf" 1788148239.46057 528 5ccd4bd474fbdf310d7f1b20d93c0470 ""
   "agri-amoe.png" 1789910755.17036 182542 5cedd65398474eb90f70addb6b9c7d87 ""
   "cas-common.sty" 1789720501.3819 76648 24535a3f8392d9c735a1d17ef7be0103 ""
+  "cas-email.jpeg" 0 -1 0 ""
   "cas-sc.cls" 1789720501.3789 4358 32932acb612533f7a71a037065ec5161 ""
-  "crop_distribution.pdf" 1789441160.45672 14107 eead93223f93ffc27c0751da4b2aaa4c ""
+  "crop_distribution.pdf" 1789954401.00208 14131 40cec09a023460be8518d4859178cb85 ""
   "dataset.png" 1789611472.02251 1120960 0e0f51f83596dd927fe8c3c84148a20d ""
   "farmsim_limitations_2x3.png" 1789628644.9427 610296 c112d121378941ee29cf436ab580a696 ""
   "geovis-bev.png" 1789910503.00794 131607 39bcb6640a455c9c8a34e9a292ecd6da ""
   "gvad.png" 1789910584.95902 130620 9881687174a1a0b8c5c28607ff178f1e ""
-  "main.abs" 1789910979.11007 1449 3935b18c21f6dc95b1aeb8baedfe03b6 "xelatex"
-  "main.aux" 1789910979.87907 21264 5757b4f90388ac542a67c54fdbfed42d "xelatex"
-  "main.bbl" 1789910978.10207 23930 5ed9625ea0303687723194ab7aa30e99 "bibtex main"
-  "main.out" 1789910979.08607 0 d41d8cd98f00b204e9800998ecf8427e "xelatex"
-  "main.tex" 1789910974.55606 48010 eabae44f3eece8278e5f33005680254f ""
+  "main.abs" 1789956572.2606 1478 bacd3ae772022f119d81c94a3a53fbcd "xelatex"
+  "main.aux" 1789956572.3146 195 e3f9c70068cbf24133d1df9f44dc38d6 "xelatex"
+  "main.bbl" 1789956331.86861 23930 5ed9625ea0303687723194ab7aa30e99 "bibtex main"
+  "main.out" 1789956572.2326 0 d41d8cd98f00b204e9800998ecf8427e "xelatex"
+  "main.tex" 1789956570.14859 48837 5f682436c6fcabe41d9361bbcceee8ab ""
   "orad3d_transfer_qualitative.png" 1789626965.41652 1429278 1dc82cbc2ff0419f4301b7cfe2d58772 ""
   "overview.png" 1789909553.65073 313927 4e30a617bef538cab72555b8c5928a61 ""
   "qualitative_comparison_3x5.png" 1789624022.31126 1468340 58cb8ef90e046b421fe92d49d5854a5d ""

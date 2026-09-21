@@ -1,6 +1,9 @@
 \relax 
 \providecommand\hyper@newdestlabel[2]{}
 \providecommand*\HyPL@Entry[1]{}
+\orcidauthor{0000-0001-7753-7656}{Jing Jin}
+\csgdef{mark@corau2}{1}
+\emailauthor{jinjinghit@hit.edu.cn}{Jing Jin}
 \citation{nkwochaComprehensiveReviewSensing2025,baiVisionbasedNavigationGuidance2023}
 \citation{philion2020lift,huang2021bevdet,li2022bevdepth}
 \citation{wang2022detr3d,li2022petr,li2022bevformer}
@@ -68,11 +71,11 @@
 \newlabel{fig:gvad}{{6}{7}{GVAD 架构。相机投影掩码首先归约为每个 BEV token 的可见性；局部可变形分支根据查询预测采样位置和权重，形成局部 BEV 更新；几何可见锚点分支将 BEV 平面划分为 $4\times 8$ 个 tile，以特征置信度和可见性加权构建 32 个锚点，并通过距离偏置的多头注意力形成锚点上下文。两条分支经可见性门控和残差连接融合为增强 BEV token。}{figure.6}{}}
 \@writefile{toc}{\contentsline {subsubsection}{\numberline {3.4.2}近远场 BEV 查询布局}{7}{subsubsection.3.4.2}\protected@file@percent }
 \newlabel{sec:nearfar}{{3.4.2}{7}{近远场 BEV 查询布局}{subsubsection.3.4.2}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.5}农业结构自适应混合专家三维占用解码器}{7}{subsection.3.5}\protected@file@percent }
+\newlabel{sec:agri-amoe}{{3.5}{7}{农业结构自适应混合专家三维占用解码器}{subsection.3.5}{}}
 \citation{shi2026oneocc}
 \citation{wei2023surroundocc,wang2023openoccupancy}
 \citation{chen2025orad3d}
-\@writefile{toc}{\contentsline {subsection}{\numberline {3.5}农业结构自适应混合专家三维占用解码器}{8}{subsection.3.5}\protected@file@percent }
-\newlabel{sec:agri-amoe}{{3.5}{8}{农业结构自适应混合专家三维占用解码器}{subsection.3.5}{}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {3.6}总体优化目标}{8}{subsection.3.6}\protected@file@percent }
 \newlabel{sec:loss}{{3.6}{8}{总体优化目标}{subsection.3.6}{}}
 \@writefile{toc}{\contentsline {section}{\numberline {4}实验}{8}{section.4}\protected@file@percent }
@@ -80,6 +83,7 @@
 \@writefile{toc}{\contentsline {subsection}{\numberline {4.1}数据集与评价协议}{8}{subsection.4.1}\protected@file@percent }
 \newlabel{sec:data}{{4.1}{8}{数据集与评价协议}{subsection.4.1}{}}
 \@writefile{toc}{\contentsline {paragraph}{AgriOcc-Dataset}{8}{section*.7}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{ORAD-3D}{8}{section*.8}\protected@file@percent }
 \citation{wei2023surroundocc}
 \citation{tang2024sparseocc}
 \citation{ma2024cotr}
@@ -87,7 +91,6 @@
 \citation{meiVisionCentric4DOccupancy2026}
 \@writefile{lof}{\contentsline {figure}{\numberline {7}{\ignorespaces Agri-AMoE 三维占用解码器。二维 BEV token 经 lifting 形成三维体积，并首先由通道注意力增强；增强特征一方面并行输入三个各向异性专家，另一方面生成空间显著性与三方向梯度能量以计算逐体素路由权重。三个专家输出经加权求和与残差融合后完成最终分类。}}{9}{figure.7}\protected@file@percent }
 \newlabel{fig:agri-amoe}{{7}{9}{Agri-AMoE 三维占用解码器。二维 BEV token 经 lifting 形成三维体积，并首先由通道注意力增强；增强特征一方面并行输入三个各向异性专家，另一方面生成空间显著性与三方向梯度能量以计算逐体素路由权重。三个专家输出经加权求和与残差融合后完成最终分类。}{figure.7}{}}
-\@writefile{toc}{\contentsline {paragraph}{ORAD-3D}{9}{section*.8}\protected@file@percent }
 \@writefile{toc}{\contentsline {paragraph}{指标}{9}{section*.9}\protected@file@percent }
 \@writefile{toc}{\contentsline {subsection}{\numberline {4.2}实现细节}{9}{subsection.4.2}\protected@file@percent }
 \newlabel{sec:implementation}{{4.2}{9}{实现细节}{subsection.4.2}{}}
@@ -96,19 +99,19 @@
 \citation{chen2025orad3d}
 \@writefile{lot}{\contentsline {table}{\numberline {1}{\ignorespaces AgriOcc-Dataset 验证集上的三维语义占用结果（\%）。参数量为训练时的可训练参数量。}}{10}{table.1}\protected@file@percent }
 \newlabel{tab:main}{{1}{10}{AgriOcc-Dataset 验证集上的三维语义占用结果（\%）。参数量为训练时的可训练参数量。}{table.1}{}}
-\@writefile{lof}{\contentsline {figure}{\numberline {8}{\ignorespaces AgriOcc-Dataset 上的定性比较。每一行对应一个不同作物、光照和场景条件下的样本；从左至右依次为三路输入 RGB 图像、真值标签、SurroundOcc、IR-WM 和 AgriOcc 的当前帧三维语义占用预测。}}{10}{figure.8}\protected@file@percent }
-\newlabel{fig:qualitative_comparison}{{8}{10}{AgriOcc-Dataset 上的定性比较。每一行对应一个不同作物、光照和场景条件下的样本；从左至右依次为三路输入 RGB 图像、真值标签、SurroundOcc、IR-WM 和 AgriOcc 的当前帧三维语义占用预测。}{figure.8}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {8}{\ignorespaces AgriOcc-Dataset 上的定性比较。每一行对应一个不同作物、光照和场景条件下的样本；从左至右依次为三路输入 RGB 图像、真值标签、SurroundOcc、IR-WM 和 AgriOcc 的当前帧三维语义占用预测。图中红色箭头为行驶方向。}}{10}{figure.8}\protected@file@percent }
+\newlabel{fig:qualitative_comparison}{{8}{10}{AgriOcc-Dataset 上的定性比较。每一行对应一个不同作物、光照和场景条件下的样本；从左至右依次为三路输入 RGB 图像、真值标签、SurroundOcc、IR-WM 和 AgriOcc 的当前帧三维语义占用预测。图中红色箭头为行驶方向。}{figure.8}{}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {4.4}消融实验}{10}{subsection.4.4}\protected@file@percent }
 \newlabel{sec:ablation}{{4.4}{10}{消融实验}{subsection.4.4}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {4.5}仿真到真实越野场景迁移}{10}{subsection.4.5}\protected@file@percent }
-\newlabel{sec:sim2real}{{4.5}{10}{仿真到真实越野场景迁移}{subsection.4.5}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {2}{\ignorespaces AgriOcc-Dataset 消融实验。\text  {$\mathsurround \z@ \mathchar "458$}表示对应模块启用。训练时间由第 8 轮平均迭代时间与每轮迭代数估算；所有配置均采用 4 张 RTX 4090 和有效全局 batch size 为 24。显存为固定每卡 batch size 为 2、一次预热后前向--反向传播测得的单卡峰值分配显存；NearFar 的显存收益与同一 GVAD--ADHR 稠密对照组比较。}}{10}{table.2}\protected@file@percent }
+\newlabel{tab:ablation}{{2}{10}{AgriOcc-Dataset 消融实验。\checkmark 表示对应模块启用。训练时间由第 8 轮平均迭代时间与每轮迭代数估算；所有配置均采用 4 张 RTX 4090 和有效全局 batch size 为 24。显存为固定每卡 batch size 为 2、一次预热后前向--反向传播测得的单卡峰值分配显存；NearFar 的显存收益与同一 GVAD--ADHR 稠密对照组比较。}{table.2}{}}
 \citation{chen2025orad3d}
 \citation{jiang2024openocc}
 \citation{zhang2023occformer}
 \citation{wei2023surroundocc}
 \citation{behley2019semantickitti,li2024sscbench}
-\@writefile{lot}{\contentsline {table}{\numberline {2}{\ignorespaces AgriOcc-Dataset 消融实验。\text  {$\mathsurround \z@ \mathchar "458$}表示对应模块启用。训练时间由第 8 轮平均迭代时间与每轮迭代数估算；所有配置均采用 4 张 RTX 4090 和有效全局 batch size 为 24。显存为固定每卡 batch size 为 2、一次预热后前向--反向传播测得的单卡峰值分配显存；NearFar 的显存收益与同一 GVAD--ADHR 稠密对照组比较。}}{11}{table.2}\protected@file@percent }
-\newlabel{tab:ablation}{{2}{11}{AgriOcc-Dataset 消融实验。\checkmark 表示对应模块启用。训练时间由第 8 轮平均迭代时间与每轮迭代数估算；所有配置均采用 4 张 RTX 4090 和有效全局 batch size 为 24。显存为固定每卡 batch size 为 2、一次预热后前向--反向传播测得的单卡峰值分配显存；NearFar 的显存收益与同一 GVAD--ADHR 稠密对照组比较。}{table.2}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.5}仿真到真实越野场景迁移}{11}{subsection.4.5}\protected@file@percent }
+\newlabel{sec:sim2real}{{4.5}{11}{仿真到真实越野场景迁移}{subsection.4.5}{}}
 \@writefile{lot}{\contentsline {table}{\numberline {3}{\ignorespaces ORAD-3D 仿真到真实迁移结果（\%）。两组 AgriOcc 均使用完整 ORAD-3D 训练集； 迁移模型以 AgriOcc-Dataset 预训练权重初始化后进行 2 个 epoch 适配。 \texttt  {Test (w/o Free)} 为去除Free类别的mIoU，与 ORAD-3D 论文中一致；\texttt  {Test} 为全部九类的mIoU。 \texttt  {Test\_farm} 为农田场景子集上按出现类别计算的 mIoU。}}{11}{table.3}\protected@file@percent }
 \newlabel{tab:orad}{{3}{11}{ORAD-3D 仿真到真实迁移结果（\%）。两组 AgriOcc 均使用完整 ORAD-3D 训练集； 迁移模型以 AgriOcc-Dataset 预训练权重初始化后进行 2 个 epoch 适配。 \texttt {Test (w/o Free)} 为去除Free类别的mIoU，与 ORAD-3D 论文中一致；\texttt {Test} 为全部九类的mIoU。 \texttt {Test\_farm} 为农田场景子集上按出现类别计算的 mIoU。}{table.3}{}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {4.6}体素分辨率迁移}{11}{subsection.4.6}\protected@file@percent }
@@ -124,14 +127,14 @@
 \bibcite{baiVisionbasedNavigationGuidance2023}{{1}{2023}{{Bai et~al.}}{{Bai, Zhang, Xu, Zhou, Shi and Diao}}}
 \bibcite{behley2019semantickitti}{{2}{2019}{{Behley et~al.}}{{Behley, Garbade, Milioto, Quenzel, Behnke, Stachniss and Gall}}}
 \bibcite{caesar2020nuscenes}{{3}{2020}{{Caesar et~al.}}{{Caesar, Bankiti, Lang, Vora, Liong, Xu, Krishnan, Pan, Baldan and Beijbom}}}
-\@writefile{lof}{\contentsline {figure}{\numberline {10}{\ignorespaces AgriOcc-Dataset 上的局限性示例。第一行为真值标签，第二行为对应的 AgriOcc 预测；三列从左至右分别为卷心菜、玉米和马铃薯场景。密集作物的株间间隙易被预测为连通区域，而苗期等小尺度作物容易出现漏检或范围不足。}}{13}{figure.10}\protected@file@percent }
-\newlabel{fig:limitations}{{10}{13}{AgriOcc-Dataset 上的局限性示例。第一行为真值标签，第二行为对应的 AgriOcc 预测；三列从左至右分别为卷心菜、玉米和马铃薯场景。密集作物的株间间隙易被预测为连通区域，而苗期等小尺度作物容易出现漏检或范围不足。}{figure.10}{}}
-\@writefile{toc}{\contentsline {section}{\numberline {5}结论与展望}{13}{section.5}\protected@file@percent }
-\newlabel{sec:conclusion}{{5}{13}{结论与展望}{section.5}{}}
 \bibcite{cao2022monoscene}{{4}{2022}{{Cao and de~Charette}}{{}}}
 \bibcite{chen2025orad3d}{{5}{2025}{{Chen et~al.}}{{Chen, Mei, Zhai, Wang, Sun, Kong, Li, Mao, Liu, Wang, Nie, Zhu, Xiao, Zhao and Hu}}}
 \bibcite{dosovitskiy2017carla}{{6}{2017}{{Dosovitskiy et~al.}}{{Dosovitskiy, Ros, Codevilla, Lopez and Koltun}}}
 \bibcite{geiger2012kitti}{{7}{2012}{{Geiger et~al.}}{{Geiger, Lenz and Urtasun}}}
+\@writefile{lof}{\contentsline {figure}{\numberline {10}{\ignorespaces AgriOcc-Dataset 上的局限性示例。第一行为真值标签，第二行为对应的 AgriOcc 预测；三列从左至右分别为卷心菜、玉米和马铃薯场景。密集作物的株间间隙易被预测为连通区域，而苗期等小尺度作物容易出现漏检或范围不足。}}{13}{figure.10}\protected@file@percent }
+\newlabel{fig:limitations}{{10}{13}{AgriOcc-Dataset 上的局限性示例。第一行为真值标签，第二行为对应的 AgriOcc 预测；三列从左至右分别为卷心菜、玉米和马铃薯场景。密集作物的株间间隙易被预测为连通区域，而苗期等小尺度作物容易出现漏检或范围不足。}{figure.10}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {5}结论与展望}{13}{section.5}\protected@file@percent }
+\newlabel{sec:conclusion}{{5}{13}{结论与展望}{section.5}{}}
 \bibcite{hoffman2018cycada}{{8}{2018}{{Hoffman et~al.}}{{Hoffman, Tzeng, Park, Zhu, Isola, Saenko, Efros and Darrell}}}
 \bibcite{huang2022bevdet4d}{{9}{2022}{{Huang and Huang}}{{}}}
 \bibcite{huang2021bevdet}{{10}{2021}{{Huang et~al.}}{{Huang, Huang, Zhu, Ye and Du}}}

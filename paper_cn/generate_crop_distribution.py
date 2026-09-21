@@ -7,7 +7,7 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 
 
-ROOT = Path(__file__).resolve().parents[2]
+ROOT = Path(__file__).resolve().parents[1]
 REPORT_PATH = ROOT / 'data' / 'farmsim' / 'splits' / 'split_report.json'
 OUTPUT_PATH = Path(__file__).resolve().with_name('crop_distribution.pdf')
 
@@ -28,8 +28,8 @@ def main():
         'ps.fonttype': 42,
     })
     colors = [
-        '#0173B2', '#DE8F05', '#029E73', '#CC78BC', '#CA9161',
-        '#ECE133', '#56B4E9', '#949494', '#D55E00', '#7F7F7F',
+        '#A8DADC', '#F6BD60', '#B8E0D2', '#D7BDE2', '#E6C9A8',
+        '#F5E6A8', '#BDE0FE', '#C9C9C9', '#F4A6A6', '#D9D9D9',
     ]
     fig, axis = plt.subplots(figsize=(7.2, 3.8))
     wedges, _, _ = axis.pie(
