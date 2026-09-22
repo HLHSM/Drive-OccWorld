@@ -609,43 +609,45 @@ XY 查询数从 $100\times100$ 增至 $200\times200$，即增加四倍；
 包含 19,300 个样本，并按 1:1 划分为训练集和验证集。
 我们使用它来进一步验证 AgriOcc 是否能够将已学习的标准分辨率三维先验高效迁移到细分辨率占用预测。
 
-具体地，迁移模型首先在 $0.2\times0.2\times0.2\,\mathrm{m}$ 的 AgriOcc-Dataset 上完成训练，
-保留其 $100\times100$ 的 GeoVis-BEV 编码器与 Agri-AMoE 解码器；
-随后在 $0.1\times0.1\times0.2\,\mathrm{m}$ 数据上微调，并在占用输出端加入学习式 $2\times$ 细化头。
-该头将粗占用 logits 与相应的 BEV 特征投影融合，输出 $200\times200\times25$ 体素。
-对照组则在同一个$0.1\,\mathrm{m}$分辨率数据集上从头训练，直接学习 $200\times200$ 的高分辨率 BEV 与占用预测；
-两组结果如表\ref{tab:resolution_transfer}所示。
+具体地，迁移模型首先在 $0.2\times0.2\times0.2\,\mathrm{m}$ 的 AgriOcc-Dataset 上完成训练。
+在 $0.1\times0.1\times0.2\,\mathrm{m}$ 数据上，我们比较两种冻结主干的适配方式：
+\emph{查询适配}保留主干参数，仅学习 $200\times200$ 高分辨率 BEV 查询格点；
+\emph{细化头适配}保留原有 $100\times100$ GeoVis-BEV 编码器与 Agri-AMoE 解码器，冻结其全部已有权重，
+仅在占用输出端训练学习式 $2\times$ 细化头。该头将粗占用 logits 与对应的 BEV 特征投影融合，
+输出 $200\times200\times25$ 体素。对照组不使用 $0.2\,\mathrm{m}$ 占用预训练权重，
+而是在同一个 $0.1\,\mathrm{m}$ 数据集上从头学习 $200\times200$ 的高分辨率 BEV 与占用预测；
+三种设置的结果如表\ref{tab:resolution_transfer}所示。
 
 \begin{table}[pos=htbp]
 \centering
-\caption{$0.1\,\mathrm{m}$ 体素分辨率的迁移结果（\%）。
-迁移方法先在 $0.2\times0.2\times0.2\,\mathrm{m}$ 数据上训练，再适配至 $0.1\times0.1\times0.2\,\mathrm{m}$；
-对照组在同一个$0.1\,\mathrm{m}$分辨率数据集上从头训练，直接学习 $200\times200$ 的高分辨率 BEV 与占用预测。}
+\caption{$0.1\,\mathrm{m}$ 体素分辨率的迁移结果（IoU 为\%，时间为 8 epoch 端到端墙钟耗时，含逐 epoch 验证）。
+迁移方法先在 $0.2\times0.2\times0.2\,\mathrm{m}$ 数据上训练，再冻结已有主干并适配至 $0.1\times0.1\times0.2\,\mathrm{m}$。}
 \label{tab:resolution_transfer}
 \fontsize{9}{11}\selectfont
 \setlength{\tabcolsep}{2.4pt}
-\begin{tabular}{lrrrrrrr}
+\resizebox{\linewidth}{!}{%
+\begin{tabular}{lrrrrrrrr}
 \toprule
-方法 & mIoU & Free & Crop & Soil & Drivable & Other veg. & Other obs. \\
+方法 & 时间 & mIoU & Free & Crop & Soil & Drivable & Other veg. & Other obs. \\
 \midrule
-0.1 m 从头训练 & 36.18 & 89.27 & 16.74 & 52.92 & 20.11 & 23.45 & 14.56 \\
-\midrule
-\textbf{0.2 m 预训练 $\rightarrow$ 0.1 m 细化} & \textbf{49.01} & \textbf{92.39} & \textbf{22.61} & \textbf{73.75} & \textbf{44.29} & \textbf{35.49} & \textbf{25.50} \\
+0.1 m 从头训练 & 7 h 41 min & 40.63 & 90.83 & 18.71 & 59.68 & 28.90 & 27.64 & 17.99 \\
+0.1 m 查询适配（冻结主干） & 6 h 31 min & 42.94 & 89.95 & 21.61 & 61.75 & 30.53 & 30.88 & 22.94 \\
+0.1 m 细化头适配（冻结主干） & \textbf{1 h 14 min} & \textbf{46.23} & \textbf{91.81} & \textbf{23.59} & \textbf{66.46} & \textbf{37.89} & \textbf{33.07} & \textbf{24.53} \\
 \bottomrule
 \end{tabular}
+}
 \end{table}
 
-表\ref{tab:resolution_transfer}显示，预训练迁移在所有语义类别上均优于直接高分辨率训练，
-且对地面和可通行区域等连续结构的改善尤为明显。这说明 $0.2\,\mathrm{m}$ 预训练学习到了
-可复用的图像--BEV 投影关系、可见性约束与场景级语义布局。
-因而，微调阶段可以将有限的高分辨率监督集中用于恢复局部边界、垄沟与作物间隙，
-而不必重新估计相机几何和大范围田间结构。
-
-从优化角度看，直接高分辨率训练必须同时学习四倍数量的 BEV 查询及其图像对应关系；
-在训练样本规模不变时，每个高分辨率体素获得的有效几何观测更稀疏，
-迁移方案保留 $100\times100$ 编码器的稳定全局上下文，并以残差式 $2\times$ 输出细化将粗预测上采样到 0.1 m 网格。
-因而，细化头只需学习粗网格未表达的高频空间残差，而不必重建完整的三维场景；
-这解释了其在作物、地面和可通行区域上的一致增益，也说明 AgriOcc 能在不承担端到端高分辨率 BEV 编码成本的条件下适配精细农业感知需求。
+表\ref{tab:resolution_transfer}显示，相比不使用 $0.2\,\mathrm{m}$ 占用预训练的从头训练，
+两种冻结主干的适配方式均缩短了 8 epoch 端到端时间：查询适配由 7 h 41 min 降至 6 h 31 min（减少 15.2\%），
+细化头适配进一步降至 1 h 14 min（减少 84.1\%）。同时，查询适配的 mIoU 提升至 42.94\%，
+细化头适配达到最高的 46.23\%，分别比从头训练高 2.31 和 5.60 个百分点；后者在六个语义类别上也均取得最佳 IoU。
+这是因为直接以 $200\times200$ 查询格点进行适配，仍需在高分辨率 BEV 平面上重新优化大量查询表征；
+它虽然复用了冻结主干的图像--BEV 几何先验，但训练和显存开销仍接近端到端高分辨率建模。
+细化头适配则保持 $100\times100$ 编码器的稳定全局上下文，仅以 11,238 个可训练参数学习从 0.2 m 粗预测到 0.1 m 体素的高频残差。
+因此，高分辨率监督能够集中恢复株间边界、垄沟与局部可通行区域，而无需重新学习相机投影关系和场景级语义布局。
+上述结果表明，利用冻结主干与轻量细化头，可以将 $0.2\,\mathrm{m}$ 数据上训练的 AgriOcc 有效迁移至更高分辨率的占用预测，
+并同时获得优于从头训练的精度和显著更短的适配时间。
 
 \subsection{讨论与局限性分析}\label{sec:discussion}
 AgriOcc 的总体增益集中于地面、可通行区域和复杂背景类别，说明可见性建模、
