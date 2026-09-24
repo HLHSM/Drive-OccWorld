@@ -1,0 +1,175 @@
+\relax 
+\providecommand\hyper@newdestlabel[2]{}
+\providecommand*\HyPL@Entry[1]{}
+\orcidauthor{0000-0001-7753-7656}{Jing Jin}
+\csgdef{mark@corau2}{1}
+\emailauthor{jinjinghit@hit.edu.cn}{Jing Jin}
+\citation{nkwochaComprehensiveReviewSensing2025,baiVisionbasedNavigationGuidance2023}
+\citation{philion2020lift,huang2021bevdet,li2022bevdepth}
+\citation{wang2022detr3d,li2022petr,li2022bevformer}
+\citation{wei2023surroundocc,wang2023openoccupancy}
+\citation{zheng2024occworld,mei2025irwm}
+\HyPL@Entry{0<</S/D>>}
+\@writefile{toc}{\contentsline {section}{\numberline {1}Introduction}{1}{section.1}\protected@file@percent }
+\newlabel{sec:intro}{{1}{1}{Introduction}{section.1}{}}
+\citation{philion2020lift,huang2021bevdet,li2022bevdepth,li2022bevstereo}
+\citation{zhou2022matrixvt}
+\citation{wang2022detr3d,li2022petr,liu2023petrv2,li2023fbbev}
+\citation{liu2023bevfusion}
+\citation{li2022bevformer}
+\citation{cao2022monoscene,huang2023tpvformer,li2023voxformer}
+\citation{wei2023surroundocc,wang2023openoccupancy}
+\citation{zhang2023occformer,ma2024cotr,wang2024panoocc,liu2024sparseocc,tang2024sparseocc,yu2023flashocc,pan2024renderocc}
+\citation{huang2022bevdet4d,zheng2024occworld,mei2025irwm,mohan2026forecastocc}
+\citation{geiger2012kitti}
+\citation{behley2019semantickitti}
+\citation{caesar2020nuscenes}
+\citation{jiang2020rellis}
+\citation{dosovitskiy2017carla}
+\citation{tobin2017domainrandomization,peng2018sim2real}
+\citation{hoffman2018cycada}
+\citation{chen2025orad3d}
+\@writefile{toc}{\contentsline {section}{\numberline {2}Related Work}{3}{section.2}\protected@file@percent }
+\newlabel{sec:related}{{2}{3}{Related Work}{section.2}{}}
+\@writefile{toc}{\contentsline {paragraph}{Multi-camera BEV perception}{3}{section*.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{3D occupancy prediction and efficient representations}{3}{section*.2}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Agricultural and off-road 3D perception data}{3}{section*.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {3}Method}{3}{section.3}\protected@file@percent }
+\newlabel{sec:method}{{3}{3}{Method}{section.3}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.1}Task definition}{3}{subsection.3.1}\protected@file@percent }
+\newlabel{sec:task}{{3.1}{3}{Task definition}{subsection.3.1}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.2}Simulation data-acquisition system and AgriOcc-Dataset}{4}{subsection.3.2}\protected@file@percent }
+\newlabel{sec:dataset_construction}{{3.2}{4}{Simulation data-acquisition system and AgriOcc-Dataset}{subsection.3.2}{}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {3.2.1}Farmland simulation data-acquisition system}{4}{subsubsection.3.2.1}\protected@file@percent }
+\newlabel{sec:synthetic}{{3.2.1}{4}{Farmland simulation data-acquisition system}{subsubsection.3.2.1}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces Construction pipeline of the farmland simulation data-acquisition system.}}{4}{figure.1}\protected@file@percent }
+\newlabel{fig:synthetic}{{1}{4}{Construction pipeline of the farmland simulation data-acquisition system}{figure.1}{}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {3.2.2}AgriOcc-Dataset}{5}{subsubsection.3.2.2}\protected@file@percent }
+\newlabel{sec:agriocc_dataset}{{3.2.2}{5}{AgriOcc-Dataset}{subsubsection.3.2.2}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces Crop composition of AgriOcc-Dataset. Sector area indicates the proportion of each crop.}}{5}{figure.2}\protected@file@percent }
+\newlabel{fig:crop_distribution}{{2}{5}{Crop composition of AgriOcc-Dataset. Sector area indicates the proportion of each crop}{figure.2}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces Scene examples of the ten crops in AgriOcc-Dataset.}}{5}{figure.3}\protected@file@percent }
+\newlabel{fig:dataset}{{3}{5}{Scene examples of the ten crops in AgriOcc-Dataset}{figure.3}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.3}Overall AgriOcc architecture}{5}{subsection.3.3}\protected@file@percent }
+\newlabel{sec:architecture}{{3.3}{5}{Overall AgriOcc architecture}{subsection.3.3}{}}
+\citation{li2022bevformer}
+\@writefile{lof}{\contentsline {figure}{\numberline {4}{\ignorespaces Overall AgriOcc architecture. Three forward-facing images are processed by ResNet--FPN to produce four-scale features. The six-layer GeoVis-BEV encoder executes GVAD, image spatial cross-attention, and feed-forward updates in sequence in each layer. NearFar applies its near--far query layout in the first five layers and restores dense BEV before the sixth layer. The three-layer occupancy decoder provides multi-level supervision; its final layer uses Agri-AMoE to lift BEV tokens into a 3D feature volume and outputs $100\times 100\times 25\times 6$ semantic logits.}}{6}{figure.4}\protected@file@percent }
+\newlabel{fig:overview}{{4}{6}{Overall AgriOcc architecture. Three forward-facing images are processed by ResNet--FPN to produce four-scale features. The six-layer GeoVis-BEV encoder executes GVAD, image spatial cross-attention, and feed-forward updates in sequence in each layer. NearFar applies its near--far query layout in the first five layers and restores dense BEV before the sixth layer. The three-layer occupancy decoder provides multi-level supervision; its final layer uses Agri-AMoE to lift BEV tokens into a 3D feature volume and outputs $100\times 100\times 25\times 6$ semantic logits}{figure.4}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.4}GeoVis-BEV encoder}{6}{subsection.3.4}\protected@file@percent }
+\newlabel{sec:bev-encoder}{{3.4}{6}{GeoVis-BEV encoder}{subsection.3.4}{}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {3.4.1}Geometry-Visible Anchor Deformable Attention}{6}{subsubsection.3.4.1}\protected@file@percent }
+\newlabel{sec:gvad}{{3.4.1}{6}{Geometry-Visible Anchor Deformable Attention}{subsubsection.3.4.1}{}}
+\citation{li2022bevformer}
+\citation{zhu2021deformable}
+\citation{wang2022detr3d}
+\@writefile{lof}{\contentsline {figure}{\numberline {5}{\ignorespaces Overall architecture of the GeoVis-BEV encoder. Three forward-facing images are processed by ResNet--FPN and fed to a six-layer encoder. GVAD updates BEV tokens in every layer. NearFar retains dense near-field queries and regularly sparsely samples far-field queries in the first five layers; after restoration to a dense grid, the final layer performs image-conditioned refinement.}}{7}{figure.5}\protected@file@percent }
+\newlabel{fig:geovis-bev-encoder}{{5}{7}{Overall architecture of the GeoVis-BEV encoder. Three forward-facing images are processed by ResNet--FPN and fed to a six-layer encoder. GVAD updates BEV tokens in every layer. NearFar retains dense near-field queries and regularly sparsely samples far-field queries in the first five layers; after restoration to a dense grid, the final layer performs image-conditioned refinement}{figure.5}{}}
+\@writefile{toc}{\contentsline {paragraph}{Local deformable branch.}{7}{section*.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Geometry-visible anchor branch.}{7}{section*.5}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Visibility-gated fusion.}{8}{section*.6}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {3.4.2}NearFar BEV query layout}{8}{subsubsection.3.4.2}\protected@file@percent }
+\newlabel{sec:nearfar}{{3.4.2}{8}{NearFar BEV query layout}{subsubsection.3.4.2}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.5}Agricultural Structure-Adaptive Mixture-of-Experts 3D occupancy decoder}{8}{subsection.3.5}\protected@file@percent }
+\newlabel{sec:agri-amoe}{{3.5}{8}{Agricultural Structure-Adaptive Mixture-of-Experts 3D occupancy decoder}{subsection.3.5}{}}
+\citation{shi2026oneocc}
+\@writefile{lof}{\contentsline {figure}{\numberline {6}{\ignorespaces GVAD architecture. The camera-projection mask is first reduced to visibility for each BEV token. The local deformable branch predicts sampling locations and weights from queries to form local BEV updates. The geometry-visible anchor branch divides the BEV plane into $4\times 8$ tiles, constructs 32 anchors weighted by feature confidence and visibility, and forms anchor context through distance-biased multi-head attention. The two branches are fused through visibility gating and residual connections into enhanced BEV tokens.}}{9}{figure.6}\protected@file@percent }
+\newlabel{fig:gvad}{{6}{9}{GVAD architecture. The camera-projection mask is first reduced to visibility for each BEV token. The local deformable branch predicts sampling locations and weights from queries to form local BEV updates. The geometry-visible anchor branch divides the BEV plane into $4\times 8$ tiles, constructs 32 anchors weighted by feature confidence and visibility, and forms anchor context through distance-biased multi-head attention. The two branches are fused through visibility gating and residual connections into enhanced BEV tokens}{figure.6}{}}
+\citation{wei2023surroundocc,wang2023openoccupancy}
+\@writefile{lof}{\contentsline {figure}{\numberline {7}{\ignorespaces Agri-AMoE 3D occupancy decoder. 2D BEV tokens are lifted into a 3D volume and enhanced by channel attention. Enhanced features are passed in parallel to three anisotropic experts and used to compute spatial saliency and three-direction gradient energy for per-voxel routing weights. The weighted expert outputs are summed, residually fused, and classified.}}{10}{figure.7}\protected@file@percent }
+\newlabel{fig:agri-amoe}{{7}{10}{Agri-AMoE 3D occupancy decoder. 2D BEV tokens are lifted into a 3D volume and enhanced by channel attention. Enhanced features are passed in parallel to three anisotropic experts and used to compute spatial saliency and three-direction gradient energy for per-voxel routing weights. The weighted expert outputs are summed, residually fused, and classified}{figure.7}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.6}Overall optimization objective}{10}{subsection.3.6}\protected@file@percent }
+\newlabel{sec:loss}{{3.6}{10}{Overall optimization objective}{subsection.3.6}{}}
+\citation{chen2025orad3d}
+\citation{wei2023surroundocc}
+\citation{tang2024sparseocc}
+\citation{ma2024cotr}
+\citation{yangDrivingOccupancyWorld2025}
+\citation{mei2025irwm}
+\@writefile{toc}{\contentsline {section}{\numberline {4}Experiments}{11}{section.4}\protected@file@percent }
+\newlabel{sec:experiments}{{4}{11}{Experiments}{section.4}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.1}Datasets and evaluation protocol}{11}{subsection.4.1}\protected@file@percent }
+\newlabel{sec:data}{{4.1}{11}{Datasets and evaluation protocol}{subsection.4.1}{}}
+\@writefile{toc}{\contentsline {paragraph}{AgriOcc-Dataset}{11}{section*.7}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{ORAD-3D}{11}{section*.8}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Metrics}{11}{section*.9}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.2}Implementation details}{11}{subsection.4.2}\protected@file@percent }
+\newlabel{sec:implementation}{{4.2}{11}{Implementation details}{subsection.4.2}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.3}Comparison with existing methods}{11}{subsection.4.3}\protected@file@percent }
+\newlabel{sec:comparison}{{4.3}{11}{Comparison with existing methods}{subsection.4.3}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {1}{\ignorespaces 3D semantic occupancy results on the AgriOcc-Dataset validation set (\%). Parameter count is the number of trainable parameters. SurroundOcc, SparseOcc, and COTR are current-frame methods; Drive-OccWorld and IR-WM are world models also predicting future occupancy, for which only current-frame output is compared.}}{11}{table.1}\protected@file@percent }
+\newlabel{tab:main}{{1}{11}{3D semantic occupancy results on the AgriOcc-Dataset validation set (\%). Parameter count is the number of trainable parameters. SurroundOcc, SparseOcc, and COTR are current-frame methods; Drive-OccWorld and IR-WM are world models also predicting future occupancy, for which only current-frame output is compared}{table.1}{}}
+\citation{chen2025orad3d}
+\citation{chen2025orad3d}
+\citation{jiang2024openocc}
+\citation{zhang2023occformer}
+\citation{wei2023surroundocc}
+\@writefile{lof}{\contentsline {figure}{\numberline {8}{\ignorespaces Qualitative comparison on AgriOcc-Dataset. Each row is a sample with different crops, illumination, and scene conditions. From left to right: three input RGB images, ground truth, and current-frame 3D semantic occupancy predictions from SurroundOcc, IR-WM, and AgriOcc. Red arrows indicate driving direction.}}{12}{figure.8}\protected@file@percent }
+\newlabel{fig:qualitative_comparison}{{8}{12}{Qualitative comparison on AgriOcc-Dataset. Each row is a sample with different crops, illumination, and scene conditions. From left to right: three input RGB images, ground truth, and current-frame 3D semantic occupancy predictions from SurroundOcc, IR-WM, and AgriOcc. Red arrows indicate driving direction}{figure.8}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.4}Ablation study}{12}{subsection.4.4}\protected@file@percent }
+\newlabel{sec:ablation}{{4.4}{12}{Ablation study}{subsection.4.4}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {2}{\ignorespaces Ablation study on AgriOcc-Dataset. A checkmark indicates an enabled module. Training time is estimated from mean iteration time and iteration count in epoch 8; all configurations use four RTX 4090 GPUs and effective global batch size 24. Memory is peak allocated memory per GPU, measured after warm-up at fixed per-GPU batch size 2.}}{12}{table.2}\protected@file@percent }
+\newlabel{tab:ablation}{{2}{12}{Ablation study on AgriOcc-Dataset. A checkmark indicates an enabled module. Training time is estimated from mean iteration time and iteration count in epoch 8; all configurations use four RTX 4090 GPUs and effective global batch size 24. Memory is peak allocated memory per GPU, measured after warm-up at fixed per-GPU batch size 2}{table.2}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.5}Sim-to-real transfer to off-road scenes}{12}{subsection.4.5}\protected@file@percent }
+\newlabel{sec:sim2real}{{4.5}{12}{Sim-to-real transfer to off-road scenes}{subsection.4.5}{}}
+\citation{behley2019semantickitti,li2024sscbench}
+\@writefile{lot}{\contentsline {table}{\numberline {3}{\ignorespaces Sim-to-real transfer results on ORAD-3D (\%). Both AgriOcc variants use the full ORAD-3D training set and only the center forward camera. The transfer model is initialized by AgriOcc-Dataset pretraining and adapted for two epochs. \texttt  {Test (w/o Free)} excludes Free; \texttt  {Test} is nine-class mIoU; \texttt  {Test\_farm} is mIoU over classes in the farmland subset. Baseline results are from the ORAD-3D paper.}}{13}{table.3}\protected@file@percent }
+\newlabel{tab:orad}{{3}{13}{Sim-to-real transfer results on ORAD-3D (\%). Both AgriOcc variants use the full ORAD-3D training set and only the center forward camera. The transfer model is initialized by AgriOcc-Dataset pretraining and adapted for two epochs. \texttt {Test (w/o Free)} excludes Free; \texttt {Test} is nine-class mIoU; \texttt {Test\_farm} is mIoU over classes in the farmland subset. Baseline results are from the ORAD-3D paper}{table.3}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {9}{\ignorespaces Qualitative transfer comparison on ORAD-3D. Each row is the same official test sample. From left to right: input RGB image, ground truth, a model trained from scratch using all ORAD-3D training data, and a model transferred from AgriOcc-Dataset pretraining using all ORAD-3D training data (100\% Transfer).}}{13}{figure.9}\protected@file@percent }
+\newlabel{fig:orad_qualitative}{{9}{13}{Qualitative transfer comparison on ORAD-3D. Each row is the same official test sample. From left to right: input RGB image, ground truth, a model trained from scratch using all ORAD-3D training data, and a model transferred from AgriOcc-Dataset pretraining using all ORAD-3D training data (100\% Transfer)}{figure.9}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.6}Voxel-resolution transfer}{13}{subsection.4.6}\protected@file@percent }
+\newlabel{sec:resolution_transfer}{{4.6}{13}{Voxel-resolution transfer}{subsection.4.6}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {4}{\ignorespaces Transfer results at $0.1\,\mathrm  {m}$ voxel resolution (IoU in \%; time is end-to-end wall-clock time for 8 epochs including per-epoch validation). Transfer methods first train at $0.2\times 0.2\times 0.2\,\mathrm  {m}$, then freeze the backbone and adapt to $0.1\times 0.1\times 0.2\,\mathrm  {m}$.}}{14}{table.4}\protected@file@percent }
+\newlabel{tab:resolution_transfer}{{4}{14}{Transfer results at $0.1\,\mathrm {m}$ voxel resolution (IoU in \%; time is end-to-end wall-clock time for 8 epochs including per-epoch validation). Transfer methods first train at $0.2\times 0.2\times 0.2\,\mathrm {m}$, then freeze the backbone and adapt to $0.1\times 0.1\times 0.2\,\mathrm {m}$}{table.4}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.7}Discussion and limitations}{14}{subsection.4.7}\protected@file@percent }
+\newlabel{sec:discussion}{{4.7}{14}{Discussion and limitations}{subsection.4.7}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {5}Conclusion and future work}{14}{section.5}\protected@file@percent }
+\newlabel{sec:conclusion}{{5}{14}{Conclusion and future work}{section.5}{}}
+\bibstyle{cas-model2-names}
+\bibdata{references}
+\bibcite{baiVisionbasedNavigationGuidance2023}{{1}{2023}{{Bai et~al.}}{{Bai, Zhang, Xu, Zhou, Shi and Diao}}}
+\bibcite{behley2019semantickitti}{{2}{2019}{{Behley et~al.}}{{Behley, Garbade, Milioto, Quenzel, Behnke, Stachniss and Gall}}}
+\@writefile{lof}{\contentsline {figure}{\numberline {10}{\ignorespaces Examples of limitations on AgriOcc-Dataset. The first row shows ground truth and the second row shows AgriOcc predictions; columns show cabbage, corn, and potato scenes. Inter-plant gaps in dense crops tend to become connected regions, while small early-stage crops may be missed or incompletely recovered.}}{15}{figure.10}\protected@file@percent }
+\newlabel{fig:limitations}{{10}{15}{Examples of limitations on AgriOcc-Dataset. The first row shows ground truth and the second row shows AgriOcc predictions; columns show cabbage, corn, and potato scenes. Inter-plant gaps in dense crops tend to become connected regions, while small early-stage crops may be missed or incompletely recovered}{figure.10}{}}
+\bibcite{caesar2020nuscenes}{{3}{2020}{{Caesar et~al.}}{{Caesar, Bankiti, Lang, Vora, Liong, Xu, Krishnan, Pan, Baldan and Beijbom}}}
+\bibcite{cao2022monoscene}{{4}{2022}{{Cao and de~Charette}}{{}}}
+\bibcite{chen2025orad3d}{{5}{2025}{{Chen et~al.}}{{Chen, Mei, Zhai, Wang, Sun, Kong, Li, Mao, Liu, Wang, Nie, Zhu, Xiao, Zhao and Hu}}}
+\bibcite{dosovitskiy2017carla}{{6}{2017}{{Dosovitskiy et~al.}}{{Dosovitskiy, Ros, Codevilla, Lopez and Koltun}}}
+\bibcite{geiger2012kitti}{{7}{2012}{{Geiger et~al.}}{{Geiger, Lenz and Urtasun}}}
+\bibcite{hoffman2018cycada}{{8}{2018}{{Hoffman et~al.}}{{Hoffman, Tzeng, Park, Zhu, Isola, Saenko, Efros and Darrell}}}
+\bibcite{huang2022bevdet4d}{{9}{2022}{{Huang and Huang}}{{}}}
+\bibcite{huang2021bevdet}{{10}{2021}{{Huang et~al.}}{{Huang, Huang, Zhu, Ye and Du}}}
+\bibcite{huang2023tpvformer}{{11}{2023}{{Huang et~al.}}{{Huang, Zheng, Zhang, Zhou and Lu}}}
+\bibcite{jiang2024openocc}{{12}{2024}{{Jiang et~al.}}{{Jiang, Xu, Zeng, Xu, Zhang, Feng and Zhang}}}
+\bibcite{jiang2020rellis}{{13}{2020}{{Jiang et~al.}}{{Jiang, Osteen, Wigness and Saripalli}}}
+\bibcite{li2022bevstereo}{{14}{2022a}{{Li et~al.}}{{Li, Bao, Ge, Yang, Sun and Li}}}
+\bibcite{li2022bevdepth}{{15}{2022b}{{Li et~al.}}{{Li, Ge, Yu, Yang, Wang, Shi, Sun and Li}}}
+\bibcite{li2023voxformer}{{16}{2023a}{{Li et~al.}}{{Li, Yu, Choy, Xiao, Alvarez, Fidler, Feng and Anandkumar}}}
+\bibcite{li2024sscbench}{{17}{2024}{{Li et~al.}}{{}}}
+\bibcite{li2022bevformer}{{18}{2022c}{{Li et~al.}}{{Li, Wang, Li, Xie, Sima, Lu, Yu and Dai}}}
+\bibcite{li2023fbbev}{{19}{2023b}{{Li et~al.}}{{Li, Yu, Wang, Anandkumar, Lu and Alvarez}}}
+\bibcite{liu2024sparseocc}{{20}{2024}{{Liu et~al.}}{{Liu, Chen, Wang, Yang, Li, Zeng, Chen, Li and Wang}}}
+\bibcite{li2022petr}{{21}{2022}{{Liu et~al.}}{{Liu, Wang, Zhang and Sun}}}
+\bibcite{liu2023petrv2}{{22}{2023a}{{Liu et~al.}}{{Liu, Yan, Jia, Li, Gao, Wang, Zhang and Sun}}}
+\bibcite{liu2023bevfusion}{{23}{2023b}{{Liu et~al.}}{{Liu, Tang, Amini, Yang, Mao, Rus and Han}}}
+\bibcite{ma2024cotr}{{24}{2024}{{Ma et~al.}}{{Ma, Tan, Qu, Ma, Zhang and Xie}}}
+\bibcite{mei2025irwm}{{25}{2025}{{Mei et~al.}}{{Mei, Yang, Yang, Wen, Lv, Shi and Liu}}}
+\bibcite{mohan2026forecastocc}{{26}{2026}{{Mohan et~al.}}{{Mohan, Hurtado, Mohan and Valada}}}
+\bibcite{nkwochaComprehensiveReviewSensing2025}{{27}{2025}{{Nkwocha et~al.}}{{Nkwocha, Adewumi, Folorunsho, Eze, Jjagwe, Kemeshi and Wang}}}
+\bibcite{pan2024renderocc}{{28}{2024}{{Pan et~al.}}{{Pan, Liu, Zhang, Huang, Li, Wang, Xie, Liu and Zhang}}}
+\bibcite{peng2018sim2real}{{29}{2018}{{Peng et~al.}}{{Peng, Andrychowicz, Zaremba and Abbeel}}}
+\bibcite{philion2020lift}{{30}{2020}{{Philion and Fidler}}{{}}}
+\bibcite{shi2026oneocc}{{31}{2026}{{Shi et~al.}}{{Shi, Wang, Guo, Duan, Wang, Chen, Yang, Wang and Wang}}}
+\bibcite{tang2024sparseocc}{{32}{2024}{{Tang et~al.}}{{Tang, Wang, Wang, Zheng, Ren, Feng and Ma}}}
+\bibcite{tobin2017domainrandomization}{{33}{2017}{{Tobin et~al.}}{{Tobin, Fong, Ray, Schneider, Zaremba and Abbeel}}}
+\bibcite{wang2023openoccupancy}{{34}{2023}{{Wang et~al.}}{{Wang, Zhu, Xu, Zhang, Wei, Chi, Ye, Du, Lu and Wang}}}
+\bibcite{wang2024panoocc}{{35}{2024}{{Wang et~al.}}{{Wang, Chen, Liao, Fan and Zhang}}}
+\bibcite{wang2022detr3d}{{36}{2022}{{Wang et~al.}}{{Wang, Guizilini, Zhang, Wang, Zhao and Solomon}}}
+\bibcite{wei2023surroundocc}{{37}{2023}{{Wei et~al.}}{{Wei, Zhao, Zheng, Zhu, Zhou and Lu}}}
+\bibcite{yangDrivingOccupancyWorld2025}{{38}{2025}{{Yang et~al.}}{{Yang, Mei, Ma, Du, Chen, Qian, Feng and Liu}}}
+\bibcite{yu2023flashocc}{{39}{2023}{{Yu et~al.}}{{Yu, Shu, Deng, Lu, Liu, Yu, Yang, Li and Chen}}}
+\bibcite{zhang2023occformer}{{40}{2023}{{Zhang et~al.}}{{Zhang, Zhu and Du}}}
+\bibcite{zheng2024occworld}{{41}{2024}{{Zheng et~al.}}{{Zheng, Chen, Huang, Zhang, Duan and Lu}}}
+\bibcite{zhou2022matrixvt}{{42}{2022}{{Zhou et~al.}}{{Zhou, Ge, Li and Zhang}}}
+\bibcite{zhu2021deformable}{{43}{2021}{{Zhu et~al.}}{{Zhu, Su, Lu, Li, Wang and Dai}}}
+\csxdef{lastpage}{17}
+\gdef \@abspage@last{17}
