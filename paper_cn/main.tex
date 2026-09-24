@@ -64,8 +64,8 @@ GeoVis-BEV 编码器在多相机 BEV 表征学习中协同引入几何可见锚�
 Agri-AMoE 将 BEV 表征提升为三维特征体，先以通道注意力增强特征，再利用空间显著性和梯度能量在局部平面、垂直结构和大范围上下文专家之间自适应路由。
 针对农业语义占用数据稀缺且采集成本高的问题，本文构建了农业多视角仿真数据集 AgriOcc-Dataset。
 在该数据集上，AgriOcc 取得 56.99\% mIoU，优于所对比的多相机语义占用方法；
-在真实越野数据集 ORAD-3D 上，以本文数据预训练可将目标域适配时间由 54.1 分钟缩短至 18.5 分钟，并在取得性能的明显提升。
-实验表明，AgriOcc 具备农业场景理解与真实环境迁移能力，为农业移动机器人的三维视觉导航提供了兼顾精度与训练开销的新路径。
+在真实越野数据集 ORAD-3D 上以AgriOcc进行目标域适配也表现出显著的效率和性能提升。另外在真实大豆田的零样本预测中，AgriOcc也展现出良好的泛化能力。
+大量实验表明，AgriOcc 具备良好的农业场景理解与真实环境迁移能力，为农业移动机器人的三维视觉导航提供了兼顾精度与训练开销的新路径。
 \end{abstract}
 \begin{keywords}
 农业机器人 \sep 三维语义占用预测 \sep 鸟瞰表征 \sep 仿真到真实迁移 \sep 多相机视觉
@@ -77,7 +77,7 @@ Agri-AMoE 将 BEV 表征提升为三维特征体，先以通道注意力增强�
 % sections/ are retained only as backups and are not part of the build.
 
 \section{引言}\label{sec:intro}
-
+ 
 农业机器人在田间执行巡检、植保、收获运输和自主导航时，需要同时理解作物、垄沟、土壤、
 可通行区域与突发障碍物的空间关系。现有视觉导航系统通常采用模块化流程：
 先通过作物行识别、道路或可通行区域分割得到二维结果，再经几何拟合、
@@ -545,7 +545,8 @@ Base  &  &  &  & 52.12 & 13.08 & 26.02 & 53.89 \\
 \end{tabular}
 \end{table}
 
-\subsection{仿真到真实越野场景迁移}\label{sec:sim2real}
+\subsection{真实场景实验}\label{sec:sim2real}
+\subsubsection{仿真到真实数据集的迁移}\label{sec:orad_transfer}
 为了进一步验证仿真数据集上训练的模型在真实世界的有效性，本节我们在 ORAD-3D 数据集\citep{chen2025orad3d}上
 对 AgriOcc-Dataset 上训练好的 AgriOcc checkpoint 进行迁移学习，并评估其官方测试集和农田子集上的性能。
 ORAD-3D 的占用预测网格形状为 $100\times100\times16$，共有九类体素，类别定义沿用其官方标注协议。
@@ -596,6 +597,24 @@ AgriOcc（预训练迁移） & 18.5 & \textbf{11.17} & \textbf{20.11} & 39.45 \\
 \includegraphics[width=\linewidth]{orad3d_transfer_qualitative.png}
 \caption{ORAD-3D 上的定性迁移比较。每行对应同一官方测试样本；从左至右为输入 RGB 图像、真值标签、使用全部 ORAD-3D 训练数据的从头训练结果，以及 AgriOcc-Dataset 预训练后在全部 ORAD-3D 训练数据上迁移的结果（100\% Transfer）。}
 \label{fig:orad_qualitative}
+\end{figure}
+
+\subsubsection{真实农田 Zero-shot 定性分析}\label{sec:realfield_zeroshot}
+除 ORAD-3D 的迁移实验外，我们进一步在哈尔滨工业大学智慧农场验证中心采集真实的大豆田图像，来定性分析AgriOcc在真实农田场景的性能。、
+4组例图的预测结果见图\ref{fig:realfield_zeroshot}。
+四个场景包含两处田块的作物垄行和耕作前裸土：它们在作物密度、土壤纹理、背景建筑、树木遮挡和光照条件上均与 AgriOcc-Dataset 存在明显差异。
+我们直接采用 AgriOcc-Dataset 上训练的AgriOcc进行Zero-shot推理，未使用真实农田数据进行微调。
+
+在两组作物垄行场景中，预测结果均恢复了作物与土壤地面交替的长条带结构，且在 $20\,$m 前向范围内保持了垄行的方向连续性。
+对于两组裸土场景，模型将绝大多数近地体素判定为 soil\_ground，并保留由耕作纹理形成的前向结构；远处树木和建筑附近仍会产生少量其他植被、障碍物或可通行区域的预测结果。
+这些结果表明，AgriOcc 从仿真农田中学习到的图像--BEV 几何布局和作物--土壤结构先验能够在未见真实田块中形成合理的三维语义占用布局。
+由于该组实验不含同步采集的体素真值，我们将其作为 zero-shot 可视化分析，进一步验证了我们利用仿真数据训练的AgriOcc在真实农田场景的同样具备有效的空间理解能力。
+
+\begin{figure}[pos=htbp]
+\centering
+\includegraphics[width=\linewidth]{realfield_zero_shot_qualitative.png}
+\caption{真实农田 zero-shot 三维语义占用预测。}
+\label{fig:realfield_zeroshot}
 \end{figure}
 
 \subsection{体素分辨率迁移}\label{sec:resolution_transfer}
@@ -670,13 +689,13 @@ NearFar 将近场分辨率优先级显式编码到查询布局中，为农业机
 
 \section{结论与展望}\label{sec:conclusion}
 
-本文提出 AgriOcc，用三路前视图像直接预测农业机器人坐标系下的前方当前三维语义占用。
+本文提出 AgriOcc，用三路前视图像直接预测农业机器人坐标系下的前方三维语义占用。
 该框架以GeoVis-BEV 编码器和 Agri-AMoE 三维占用解码器为核心。
 GeoVis-BEV 编码器以 GVAD 从可靠可见区域构造锚点上下文，并保持局部可变形采样；
 同时以近远场查询布局将编码预算优先分配给近场精细结构。
 Agri-AMoE 则将最终 BEV 表征提升为由梯度能量自适应路由的三维混合专家特征体。
 在 AgriOcc-Dataset 上，AgriOcc 以 55.74M 参数取得 56.99\% mIoU；
-ORAD-3D 迁移结果进一步表明，AgriOcc-Dataset 预训练能够为真实野外和农田空间提供有效的三维占用初始化。
+ORAD-3D 迁移结果和大豆田数据上的定性分析进一步表明，AgriOcc具有良好的农业场景理解与真实农田泛化能力。
 
 AgriOcc 将农业环境中的作物、地面、自由空间和障碍物统一编码为可直接供规划使用的三维语义接口。
 GeoVis-BEV 编码器提供面向农业前向视野的几何感知表征，
@@ -685,7 +704,7 @@ Agri-AMoE 则将该表征转化为适配多类空间结构的三维占用特征�
 以及以语义占用为中间状态的通行性预测、避障和闭环规划。
 
 未来将进一步面向真实农田的光照、天气、作物生长期与传感器扰动构建更丰富的跨域训练策略；
-引入选择性激活的高分辨率近场查询，以提升株级作物间隙和细粒度边界的表达；
+研究选择性激活的高分辨率近场查询，以提升株级作物间隙和细粒度边界的表达；
 并将 AgriOcc 的占用表征与风险感知通行性分析、轨迹优化和闭环导航深度耦合。
 最终，语义占用有望成为连接农业机器人感知、决策与控制的稳定三维基础模型接口。
 

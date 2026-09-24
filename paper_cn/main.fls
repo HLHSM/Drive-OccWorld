@@ -532,6 +532,9 @@ INPUT ./qualitative_comparison_3x5.png
 INPUT ./orad3d_transfer_qualitative.png
 INPUT ./orad3d_transfer_qualitative.png
 INPUT ./orad3d_transfer_qualitative.png
+INPUT ./realfield_zero_shot_qualitative.png
+INPUT ./realfield_zero_shot_qualitative.png
+INPUT ./realfield_zero_shot_qualitative.png
 INPUT ./farmsim_limitations_2x3.png
 INPUT ./farmsim_limitations_2x3.png
 INPUT ./farmsim_limitations_2x3.png

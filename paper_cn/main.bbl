@@ -12,422 +12,199 @@
 \providecommand{\bibinfo}[2]{#2}
 \ifx\xfnm\relax \def\xfnm[#1]{\unskip,\space#1}\fi
 %Type = Article
-\bibitem[{Bai et~al.(2023)Bai, Zhang, Xu, Zhou, Shi and
-  Diao}]{baiVisionbasedNavigationGuidance2023}
-\bibinfo{author}{Bai, Y.}, \bibinfo{author}{Zhang, B.}, \bibinfo{author}{Xu,
-  N.}, \bibinfo{author}{Zhou, J.}, \bibinfo{author}{Shi, J.},
-  \bibinfo{author}{Diao, Z.}, \bibinfo{year}{2023}.
-\newblock \bibinfo{title}{Vision-based navigation and guidance for agricultural
-  autonomous vehicles and robots: {{A}} review}.
-\newblock \bibinfo{journal}{Computers and Electronics in Agriculture}
-  \bibinfo{volume}{205}, \bibinfo{pages}{107584}.
+\bibitem[{Bai et~al.(2023)Bai, Zhang, Xu, Zhou, Shi and Diao}]{baiVisionbasedNavigationGuidance2023}
+\bibinfo{author}{Bai, Y.}, \bibinfo{author}{Zhang, B.}, \bibinfo{author}{Xu, N.}, \bibinfo{author}{Zhou, J.}, \bibinfo{author}{Shi, J.}, \bibinfo{author}{Diao, Z.}, \bibinfo{year}{2023}.
+\newblock \bibinfo{title}{Vision-based navigation and guidance for agricultural autonomous vehicles and robots: {{A}} review}.
+\newblock \bibinfo{journal}{Computers and Electronics in Agriculture} \bibinfo{volume}{205}, \bibinfo{pages}{107584}.
 \newblock \DOIprefix\doi{10.1016/j.compag.2022.107584}.
 %Type = Inproceedings
-\bibitem[{Behley et~al.(2019)Behley, Garbade, Milioto, Quenzel, Behnke,
-  Stachniss and Gall}]{behley2019semantickitti}
-\bibinfo{author}{Behley, J.}, \bibinfo{author}{Garbade, M.},
-  \bibinfo{author}{Milioto, A.}, \bibinfo{author}{Quenzel, J.},
-  \bibinfo{author}{Behnke, S.}, \bibinfo{author}{Stachniss, C.},
-  \bibinfo{author}{Gall, J.}, \bibinfo{year}{2019}.
-\newblock \bibinfo{title}{Semantickitti: A dataset for semantic scene
-  understanding of lidar sequences}, in: \bibinfo{booktitle}{Proceedings of the
-  IEEE/CVF International Conference on Computer Vision}, pp.
-  \bibinfo{pages}{9296--9306}.
+\bibitem[{Behley et~al.(2019)Behley, Garbade, Milioto, Quenzel, Behnke, Stachniss and Gall}]{behley2019semantickitti}
+\bibinfo{author}{Behley, J.}, \bibinfo{author}{Garbade, M.}, \bibinfo{author}{Milioto, A.}, \bibinfo{author}{Quenzel, J.}, \bibinfo{author}{Behnke, S.}, \bibinfo{author}{Stachniss, C.}, \bibinfo{author}{Gall, J.}, \bibinfo{year}{2019}.
+\newblock \bibinfo{title}{Semantickitti: A dataset for semantic scene understanding of lidar sequences}, in: \bibinfo{booktitle}{Proceedings of the IEEE/CVF International Conference on Computer Vision}, pp. \bibinfo{pages}{9296--9306}.
 %Type = Inproceedings
-\bibitem[{Caesar et~al.(2020)Caesar, Bankiti, Lang, Vora, Liong, Xu, Krishnan,
-  Pan, Baldan and Beijbom}]{caesar2020nuscenes}
-\bibinfo{author}{Caesar, H.}, \bibinfo{author}{Bankiti, V.},
-  \bibinfo{author}{Lang, A.H.}, \bibinfo{author}{Vora, S.},
-  \bibinfo{author}{Liong, V.E.}, \bibinfo{author}{Xu, Q.},
-  \bibinfo{author}{Krishnan, A.}, \bibinfo{author}{Pan, Y.},
-  \bibinfo{author}{Baldan, G.}, \bibinfo{author}{Beijbom, O.},
-  \bibinfo{year}{2020}.
-\newblock \bibinfo{title}{nuscenes: A multimodal dataset for autonomous
-  driving}, in: \bibinfo{booktitle}{Proceedings of the IEEE/CVF Conference on
-  Computer Vision and Pattern Recognition}, pp. \bibinfo{pages}{11621--11631}.
+\bibitem[{Caesar et~al.(2020)Caesar, Bankiti, Lang, Vora, Liong, Xu, Krishnan, Pan, Baldan and Beijbom}]{caesar2020nuscenes}
+\bibinfo{author}{Caesar, H.}, \bibinfo{author}{Bankiti, V.}, \bibinfo{author}{Lang, A.H.}, \bibinfo{author}{Vora, S.}, \bibinfo{author}{Liong, V.E.}, \bibinfo{author}{Xu, Q.}, \bibinfo{author}{Krishnan, A.}, \bibinfo{author}{Pan, Y.}, \bibinfo{author}{Baldan, G.}, \bibinfo{author}{Beijbom, O.}, \bibinfo{year}{2020}.
+\newblock \bibinfo{title}{nuscenes: A multimodal dataset for autonomous driving}, in: \bibinfo{booktitle}{Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition}, pp. \bibinfo{pages}{11621--11631}.
 %Type = Inproceedings
 \bibitem[{Cao and de~Charette(2022)}]{cao2022monoscene}
-\bibinfo{author}{Cao, A.Q.}, \bibinfo{author}{de~Charette, R.},
-  \bibinfo{year}{2022}.
-\newblock \bibinfo{title}{Monoscene: Monocular 3d semantic scene completion},
-  in: \bibinfo{booktitle}{Proceedings of the IEEE/CVF Conference on Computer
-  Vision and Pattern Recognition}, pp. \bibinfo{pages}{3991--4001}.
+\bibinfo{author}{Cao, A.Q.}, \bibinfo{author}{de~Charette, R.}, \bibinfo{year}{2022}.
+\newblock \bibinfo{title}{Monoscene: Monocular 3d semantic scene completion}, in: \bibinfo{booktitle}{Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition}, pp. \bibinfo{pages}{3991--4001}.
 %Type = Article
-\bibitem[{Chen et~al.(2025)Chen, Mei, Zhai, Wang, Sun, Kong, Li, Mao, Liu,
-  Wang, Nie, Zhu, Xiao, Zhao and Hu}]{chen2025orad3d}
-\bibinfo{author}{Chen, M.}, \bibinfo{author}{Mei, J.}, \bibinfo{author}{Zhai,
-  H.}, \bibinfo{author}{Wang, S.}, \bibinfo{author}{Sun, T.},
-  \bibinfo{author}{Kong, F.}, \bibinfo{author}{Li, H.}, \bibinfo{author}{Mao,
-  F.}, \bibinfo{author}{Liu, F.}, \bibinfo{author}{Wang, S.},
-  \bibinfo{author}{Nie, Y.}, \bibinfo{author}{Zhu, Q.}, \bibinfo{author}{Xiao,
-  L.}, \bibinfo{author}{Zhao, D.}, \bibinfo{author}{Hu, Y.},
-  \bibinfo{year}{2025}.
-\newblock \bibinfo{title}{Advancing off-road autonomous driving: The
-  large-scale orad-3d dataset and comprehensive benchmarks}.
+\bibitem[{Chen et~al.(2025)Chen, Mei, Zhai, Wang, Sun, Kong, Li, Mao, Liu, Wang, Nie, Zhu, Xiao, Zhao and Hu}]{chen2025orad3d}
+\bibinfo{author}{Chen, M.}, \bibinfo{author}{Mei, J.}, \bibinfo{author}{Zhai, H.}, \bibinfo{author}{Wang, S.}, \bibinfo{author}{Sun, T.}, \bibinfo{author}{Kong, F.}, \bibinfo{author}{Li, H.}, \bibinfo{author}{Mao, F.}, \bibinfo{author}{Liu, F.}, \bibinfo{author}{Wang, S.}, \bibinfo{author}{Nie, Y.}, \bibinfo{author}{Zhu, Q.}, \bibinfo{author}{Xiao, L.}, \bibinfo{author}{Zhao, D.}, \bibinfo{author}{Hu, Y.}, \bibinfo{year}{2025}.
+\newblock \bibinfo{title}{Advancing off-road autonomous driving: The large-scale orad-3d dataset and comprehensive benchmarks}.
 \newblock \bibinfo{journal}{arXiv preprint arXiv:2510.16500} .
 %Type = Inproceedings
-\bibitem[{Dosovitskiy et~al.(2017)Dosovitskiy, Ros, Codevilla, Lopez and
-  Koltun}]{dosovitskiy2017carla}
-\bibinfo{author}{Dosovitskiy, A.}, \bibinfo{author}{Ros, G.},
-  \bibinfo{author}{Codevilla, F.}, \bibinfo{author}{Lopez, A.M.},
-  \bibinfo{author}{Koltun, V.}, \bibinfo{year}{2017}.
-\newblock \bibinfo{title}{Carla: An open urban driving simulator}, in:
-  \bibinfo{booktitle}{Proceedings of the 1st Conference on Robot Learning}, pp.
-  \bibinfo{pages}{1--16}.
+\bibitem[{Dosovitskiy et~al.(2017)Dosovitskiy, Ros, Codevilla, Lopez and Koltun}]{dosovitskiy2017carla}
+\bibinfo{author}{Dosovitskiy, A.}, \bibinfo{author}{Ros, G.}, \bibinfo{author}{Codevilla, F.}, \bibinfo{author}{Lopez, A.M.}, \bibinfo{author}{Koltun, V.}, \bibinfo{year}{2017}.
+\newblock \bibinfo{title}{Carla: An open urban driving simulator}, in: \bibinfo{booktitle}{Proceedings of the 1st Conference on Robot Learning}, pp. \bibinfo{pages}{1--16}.
 %Type = Inproceedings
 \bibitem[{Geiger et~al.(2012)Geiger, Lenz and Urtasun}]{geiger2012kitti}
-\bibinfo{author}{Geiger, A.}, \bibinfo{author}{Lenz, P.},
-  \bibinfo{author}{Urtasun, R.}, \bibinfo{year}{2012}.
-\newblock \bibinfo{title}{Are we ready for autonomous driving? the kitti vision
-  benchmark suite}, in: \bibinfo{booktitle}{Proceedings of the IEEE Conference
-  on Computer Vision and Pattern Recognition}, pp. \bibinfo{pages}{3354--3361}.
+\bibinfo{author}{Geiger, A.}, \bibinfo{author}{Lenz, P.}, \bibinfo{author}{Urtasun, R.}, \bibinfo{year}{2012}.
+\newblock \bibinfo{title}{Are we ready for autonomous driving? the kitti vision benchmark suite}, in: \bibinfo{booktitle}{Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition}, pp. \bibinfo{pages}{3354--3361}.
 %Type = Inproceedings
-\bibitem[{Hoffman et~al.(2018)Hoffman, Tzeng, Park, Zhu, Isola, Saenko, Efros
-  and Darrell}]{hoffman2018cycada}
-\bibinfo{author}{Hoffman, J.}, \bibinfo{author}{Tzeng, E.},
-  \bibinfo{author}{Park, T.}, \bibinfo{author}{Zhu, J.Y.},
-  \bibinfo{author}{Isola, P.}, \bibinfo{author}{Saenko, K.},
-  \bibinfo{author}{Efros, A.}, \bibinfo{author}{Darrell, T.},
-  \bibinfo{year}{2018}.
-\newblock \bibinfo{title}{Cycada: Cycle-consistent adversarial domain
-  adaptation}, in: \bibinfo{booktitle}{Proceedings of the 35th International
-  Conference on Machine Learning}, pp. \bibinfo{pages}{1989--1998}.
+\bibitem[{Hoffman et~al.(2018)Hoffman, Tzeng, Park, Zhu, Isola, Saenko, Efros and Darrell}]{hoffman2018cycada}
+\bibinfo{author}{Hoffman, J.}, \bibinfo{author}{Tzeng, E.}, \bibinfo{author}{Park, T.}, \bibinfo{author}{Zhu, J.Y.}, \bibinfo{author}{Isola, P.}, \bibinfo{author}{Saenko, K.}, \bibinfo{author}{Efros, A.}, \bibinfo{author}{Darrell, T.}, \bibinfo{year}{2018}.
+\newblock \bibinfo{title}{Cycada: Cycle-consistent adversarial domain adaptation}, in: \bibinfo{booktitle}{Proceedings of the 35th International Conference on Machine Learning}, pp. \bibinfo{pages}{1989--1998}.
 %Type = Article
 \bibitem[{Huang and Huang(2022)}]{huang2022bevdet4d}
 \bibinfo{author}{Huang, J.}, \bibinfo{author}{Huang, G.}, \bibinfo{year}{2022}.
-\newblock \bibinfo{title}{Bevdet4d: Exploit temporal cues in multi-camera 3d
-  object detection}.
+\newblock \bibinfo{title}{Bevdet4d: Exploit temporal cues in multi-camera 3d object detection}.
 \newblock \bibinfo{journal}{arXiv preprint arXiv:2203.17054} .
 %Type = Article
 \bibitem[{Huang et~al.(2021)Huang, Huang, Zhu, Ye and Du}]{huang2021bevdet}
-\bibinfo{author}{Huang, J.}, \bibinfo{author}{Huang, G.}, \bibinfo{author}{Zhu,
-  Z.}, \bibinfo{author}{Ye, Y.}, \bibinfo{author}{Du, D.},
-  \bibinfo{year}{2021}.
-\newblock \bibinfo{title}{Bevdet: High-performance multi-camera 3d object
-  detection in bird-eye-view}.
+\bibinfo{author}{Huang, J.}, \bibinfo{author}{Huang, G.}, \bibinfo{author}{Zhu, Z.}, \bibinfo{author}{Ye, Y.}, \bibinfo{author}{Du, D.}, \bibinfo{year}{2021}.
+\newblock \bibinfo{title}{Bevdet: High-performance multi-camera 3d object detection in bird-eye-view}.
 \newblock \bibinfo{journal}{arXiv preprint arXiv:2112.11790} .
 %Type = Inproceedings
-\bibitem[{Huang et~al.(2023)Huang, Zheng, Zhang, Zhou and
-  Lu}]{huang2023tpvformer}
-\bibinfo{author}{Huang, Y.}, \bibinfo{author}{Zheng, W.},
-  \bibinfo{author}{Zhang, Y.}, \bibinfo{author}{Zhou, J.}, \bibinfo{author}{Lu,
-  J.}, \bibinfo{year}{2023}.
-\newblock \bibinfo{title}{Tri-perspective view for vision-based 3d semantic
-  occupancy prediction}, in: \bibinfo{booktitle}{Proceedings of the IEEE/CVF
-  Conference on Computer Vision and Pattern Recognition}, pp.
-  \bibinfo{pages}{9223--9232}.
+\bibitem[{Huang et~al.(2023)Huang, Zheng, Zhang, Zhou and Lu}]{huang2023tpvformer}
+\bibinfo{author}{Huang, Y.}, \bibinfo{author}{Zheng, W.}, \bibinfo{author}{Zhang, Y.}, \bibinfo{author}{Zhou, J.}, \bibinfo{author}{Lu, J.}, \bibinfo{year}{2023}.
+\newblock \bibinfo{title}{Tri-perspective view for vision-based 3d semantic occupancy prediction}, in: \bibinfo{booktitle}{Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition}, pp. \bibinfo{pages}{9223--9232}.
 %Type = Inproceedings
-\bibitem[{Jiang et~al.(2024)Jiang, Xu, Zeng, Xu, Zhang, Feng and
-  Zhang}]{jiang2024openocc}
-\bibinfo{author}{Jiang, H.}, \bibinfo{author}{Xu, Y.}, \bibinfo{author}{Zeng,
-  Y.}, \bibinfo{author}{Xu, H.}, \bibinfo{author}{Zhang, W.},
-  \bibinfo{author}{Feng, J.}, \bibinfo{author}{Zhang, L.},
-  \bibinfo{year}{2024}.
-\newblock \bibinfo{title}{Openocc: Open vocabulary 3d scene reconstruction via
-  occupancy representation}, in: \bibinfo{booktitle}{2024 IEEE/RSJ
-  International Conference on Intelligent Robots and Systems (IROS)}, pp.
-  \bibinfo{pages}{1145--1152}.
+\bibitem[{Jiang et~al.(2024)Jiang, Xu, Zeng, Xu, Zhang, Feng and Zhang}]{jiang2024openocc}
+\bibinfo{author}{Jiang, H.}, \bibinfo{author}{Xu, Y.}, \bibinfo{author}{Zeng, Y.}, \bibinfo{author}{Xu, H.}, \bibinfo{author}{Zhang, W.}, \bibinfo{author}{Feng, J.}, \bibinfo{author}{Zhang, L.}, \bibinfo{year}{2024}.
+\newblock \bibinfo{title}{Openocc: Open vocabulary 3d scene reconstruction via occupancy representation}, in: \bibinfo{booktitle}{2024 IEEE/RSJ International Conference on Intelligent Robots and Systems (IROS)}, pp. \bibinfo{pages}{1145--1152}.
 \newblock \DOIprefix\doi{10.1109/IROS58592.2024.10801860}.
 %Type = Misc
-\bibitem[{Jiang et~al.(2020)Jiang, Osteen, Wigness and
-  Saripalli}]{jiang2020rellis}
-\bibinfo{author}{Jiang, P.}, \bibinfo{author}{Osteen, P.},
-  \bibinfo{author}{Wigness, M.}, \bibinfo{author}{Saripalli, S.},
-  \bibinfo{year}{2020}.
+\bibitem[{Jiang et~al.(2020)Jiang, Osteen, Wigness and Saripalli}]{jiang2020rellis}
+\bibinfo{author}{Jiang, P.}, \bibinfo{author}{Osteen, P.}, \bibinfo{author}{Wigness, M.}, \bibinfo{author}{Saripalli, S.}, \bibinfo{year}{2020}.
 \newblock \bibinfo{title}{Rellis-3d dataset: Data, benchmarks and analysis}.
 \newblock \href{http://arxiv.org/abs/2011.12954}{\tt arXiv:2011.12954}.
 %Type = Article
 \bibitem[{Li et~al.(2022a)Li, Bao, Ge, Yang, Sun and Li}]{li2022bevstereo}
-\bibinfo{author}{Li, Y.}, \bibinfo{author}{Bao, H.}, \bibinfo{author}{Ge, Z.},
-  \bibinfo{author}{Yang, J.}, \bibinfo{author}{Sun, J.}, \bibinfo{author}{Li,
-  Z.}, \bibinfo{year}{2022}a.
-\newblock \bibinfo{title}{Bevstereo: Enhancing depth estimation in multi-view
-  3d object detection with dynamic temporal stereo}.
+\bibinfo{author}{Li, Y.}, \bibinfo{author}{Bao, H.}, \bibinfo{author}{Ge, Z.}, \bibinfo{author}{Yang, J.}, \bibinfo{author}{Sun, J.}, \bibinfo{author}{Li, Z.}, \bibinfo{year}{2022}a.
+\newblock \bibinfo{title}{Bevstereo: Enhancing depth estimation in multi-view 3d object detection with dynamic temporal stereo}.
 \newblock \bibinfo{journal}{arXiv preprint arXiv:2209.10248} .
 %Type = Article
-\bibitem[{Li et~al.(2022b)Li, Ge, Yu, Yang, Wang, Shi, Sun and
-  Li}]{li2022bevdepth}
-\bibinfo{author}{Li, Y.}, \bibinfo{author}{Ge, Z.}, \bibinfo{author}{Yu, G.},
-  \bibinfo{author}{Yang, J.}, \bibinfo{author}{Wang, Z.}, \bibinfo{author}{Shi,
-  Y.}, \bibinfo{author}{Sun, J.}, \bibinfo{author}{Li, Z.},
-  \bibinfo{year}{2022}b.
-\newblock \bibinfo{title}{Bevdepth: Acquisition of reliable depth for
-  multi-view 3d object detection}.
+\bibitem[{Li et~al.(2022b)Li, Ge, Yu, Yang, Wang, Shi, Sun and Li}]{li2022bevdepth}
+\bibinfo{author}{Li, Y.}, \bibinfo{author}{Ge, Z.}, \bibinfo{author}{Yu, G.}, \bibinfo{author}{Yang, J.}, \bibinfo{author}{Wang, Z.}, \bibinfo{author}{Shi, Y.}, \bibinfo{author}{Sun, J.}, \bibinfo{author}{Li, Z.}, \bibinfo{year}{2022}b.
+\newblock \bibinfo{title}{Bevdepth: Acquisition of reliable depth for multi-view 3d object detection}.
 \newblock \bibinfo{journal}{arXiv preprint arXiv:2206.10092} .
 %Type = Inproceedings
-\bibitem[{Li et~al.(2023a)Li, Yu, Choy, Xiao, Alvarez, Fidler, Feng and
-  Anandkumar}]{li2023voxformer}
-\bibinfo{author}{Li, Y.}, \bibinfo{author}{Yu, Z.}, \bibinfo{author}{Choy, C.},
-  \bibinfo{author}{Xiao, C.}, \bibinfo{author}{Alvarez, J.M.},
-  \bibinfo{author}{Fidler, S.}, \bibinfo{author}{Feng, C.},
-  \bibinfo{author}{Anandkumar, A.}, \bibinfo{year}{2023}a.
-\newblock \bibinfo{title}{Voxformer: Sparse voxel transformer for camera-based
-  3d semantic scene completion}, in: \bibinfo{booktitle}{Proceedings of the
-  IEEE/CVF Conference on Computer Vision and Pattern Recognition}, pp.
-  \bibinfo{pages}{9087--9098}.
+\bibitem[{Li et~al.(2023a)Li, Yu, Choy, Xiao, Alvarez, Fidler, Feng and Anandkumar}]{li2023voxformer}
+\bibinfo{author}{Li, Y.}, \bibinfo{author}{Yu, Z.}, \bibinfo{author}{Choy, C.}, \bibinfo{author}{Xiao, C.}, \bibinfo{author}{Alvarez, J.M.}, \bibinfo{author}{Fidler, S.}, \bibinfo{author}{Feng, C.}, \bibinfo{author}{Anandkumar, A.}, \bibinfo{year}{2023}a.
+\newblock \bibinfo{title}{Voxformer: Sparse voxel transformer for camera-based 3d semantic scene completion}, in: \bibinfo{booktitle}{Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition}, pp. \bibinfo{pages}{9087--9098}.
 \newblock \DOIprefix\doi{10.1109/CVPR52729.2023.00877}.
 %Type = Inproceedings
 \bibitem[{Li et~al.(2024)}]{li2024sscbench}
 \bibinfo{author}{Li, Y.}, et~al., \bibinfo{year}{2024}.
-\newblock \bibinfo{title}{Sscbench: A large-scale 3d semantic scene completion
-  benchmark for autonomous driving}, in: \bibinfo{booktitle}{2024 IEEE/RSJ
-  International Conference on Intelligent Robots and Systems (IROS)}.
+\newblock \bibinfo{title}{Sscbench: A large-scale 3d semantic scene completion benchmark for autonomous driving}, in: \bibinfo{booktitle}{2024 IEEE/RSJ International Conference on Intelligent Robots and Systems (IROS)}.
 %Type = Inproceedings
-\bibitem[{Li et~al.(2022c)Li, Wang, Li, Xie, Sima, Lu, Yu and
-  Dai}]{li2022bevformer}
-\bibinfo{author}{Li, Z.}, \bibinfo{author}{Wang, W.}, \bibinfo{author}{Li, H.},
-  \bibinfo{author}{Xie, E.}, \bibinfo{author}{Sima, C.}, \bibinfo{author}{Lu,
-  T.}, \bibinfo{author}{Yu, Q.}, \bibinfo{author}{Dai, J.},
-  \bibinfo{year}{2022}c.
-\newblock \bibinfo{title}{Bevformer: Learning bird's-eye-view representation
-  from multi-camera images via spatiotemporal transformers}, in:
-  \bibinfo{booktitle}{Proceedings of the European Conference on Computer
-  Vision}.
+\bibitem[{Li et~al.(2022c)Li, Wang, Li, Xie, Sima, Lu, Yu and Dai}]{li2022bevformer}
+\bibinfo{author}{Li, Z.}, \bibinfo{author}{Wang, W.}, \bibinfo{author}{Li, H.}, \bibinfo{author}{Xie, E.}, \bibinfo{author}{Sima, C.}, \bibinfo{author}{Lu, T.}, \bibinfo{author}{Yu, Q.}, \bibinfo{author}{Dai, J.}, \bibinfo{year}{2022}c.
+\newblock \bibinfo{title}{Bevformer: Learning bird's-eye-view representation from multi-camera images via spatiotemporal transformers}, in: \bibinfo{booktitle}{Proceedings of the European Conference on Computer Vision}.
 %Type = Inproceedings
-\bibitem[{Li et~al.(2023b)Li, Yu, Wang, Anandkumar, Lu and
-  Alvarez}]{li2023fbbev}
-\bibinfo{author}{Li, Z.}, \bibinfo{author}{Yu, Z.}, \bibinfo{author}{Wang, W.},
-  \bibinfo{author}{Anandkumar, A.}, \bibinfo{author}{Lu, T.},
-  \bibinfo{author}{Alvarez, J.M.}, \bibinfo{year}{2023}b.
-\newblock \bibinfo{title}{Fb-bev: Bev representation from forward-backward view
-  transformations}, in: \bibinfo{booktitle}{Proceedings of the IEEE/CVF
-  International Conference on Computer Vision}, pp.
-  \bibinfo{pages}{6919--6928}.
+\bibitem[{Li et~al.(2023b)Li, Yu, Wang, Anandkumar, Lu and Alvarez}]{li2023fbbev}
+\bibinfo{author}{Li, Z.}, \bibinfo{author}{Yu, Z.}, \bibinfo{author}{Wang, W.}, \bibinfo{author}{Anandkumar, A.}, \bibinfo{author}{Lu, T.}, \bibinfo{author}{Alvarez, J.M.}, \bibinfo{year}{2023}b.
+\newblock \bibinfo{title}{Fb-bev: Bev representation from forward-backward view transformations}, in: \bibinfo{booktitle}{Proceedings of the IEEE/CVF International Conference on Computer Vision}, pp. \bibinfo{pages}{6919--6928}.
 %Type = Inproceedings
-\bibitem[{Liu et~al.(2024)Liu, Chen, Wang, Yang, Li, Zeng, Chen, Li and
-  Wang}]{liu2024sparseocc}
-\bibinfo{author}{Liu, H.}, \bibinfo{author}{Chen, Y.}, \bibinfo{author}{Wang,
-  H.}, \bibinfo{author}{Yang, Z.}, \bibinfo{author}{Li, T.},
-  \bibinfo{author}{Zeng, J.}, \bibinfo{author}{Chen, L.}, \bibinfo{author}{Li,
-  H.}, \bibinfo{author}{Wang, L.}, \bibinfo{year}{2024}.
-\newblock \bibinfo{title}{Fully sparse 3d occupancy prediction}, in:
-  \bibinfo{booktitle}{Proceedings of the European Conference on Computer
-  Vision}.
+\bibitem[{Liu et~al.(2024)Liu, Chen, Wang, Yang, Li, Zeng, Chen, Li and Wang}]{liu2024sparseocc}
+\bibinfo{author}{Liu, H.}, \bibinfo{author}{Chen, Y.}, \bibinfo{author}{Wang, H.}, \bibinfo{author}{Yang, Z.}, \bibinfo{author}{Li, T.}, \bibinfo{author}{Zeng, J.}, \bibinfo{author}{Chen, L.}, \bibinfo{author}{Li, H.}, \bibinfo{author}{Wang, L.}, \bibinfo{year}{2024}.
+\newblock \bibinfo{title}{Fully sparse 3d occupancy prediction}, in: \bibinfo{booktitle}{Proceedings of the European Conference on Computer Vision}.
 %Type = Inproceedings
 \bibitem[{Liu et~al.(2022)Liu, Wang, Zhang and Sun}]{li2022petr}
-\bibinfo{author}{Liu, Y.}, \bibinfo{author}{Wang, T.}, \bibinfo{author}{Zhang,
-  X.}, \bibinfo{author}{Sun, J.}, \bibinfo{year}{2022}.
-\newblock \bibinfo{title}{Petr: Position embedding transformation for
-  multi-view 3d object detection}, in: \bibinfo{booktitle}{Computer Vision --
-  ECCV 2022}, pp. \bibinfo{pages}{531--548}.
+\bibinfo{author}{Liu, Y.}, \bibinfo{author}{Wang, T.}, \bibinfo{author}{Zhang, X.}, \bibinfo{author}{Sun, J.}, \bibinfo{year}{2022}.
+\newblock \bibinfo{title}{Petr: Position embedding transformation for multi-view 3d object detection}, in: \bibinfo{booktitle}{Computer Vision -- ECCV 2022}, pp. \bibinfo{pages}{531--548}.
 \newblock \DOIprefix\doi{10.1007/978-3-031-19812-0_31}.
 %Type = Inproceedings
-\bibitem[{Liu et~al.(2023a)Liu, Yan, Jia, Li, Gao, Wang, Zhang and
-  Sun}]{liu2023petrv2}
-\bibinfo{author}{Liu, Y.}, \bibinfo{author}{Yan, J.}, \bibinfo{author}{Jia,
-  F.}, \bibinfo{author}{Li, S.}, \bibinfo{author}{Gao, Q.},
-  \bibinfo{author}{Wang, T.}, \bibinfo{author}{Zhang, X.},
-  \bibinfo{author}{Sun, J.}, \bibinfo{year}{2023}a.
-\newblock \bibinfo{title}{Petrv2: A unified framework for 3d perception from
-  multi-camera images}, in: \bibinfo{booktitle}{Proceedings of the IEEE/CVF
-  International Conference on Computer Vision}.
+\bibitem[{Liu et~al.(2023a)Liu, Yan, Jia, Li, Gao, Wang, Zhang and Sun}]{liu2023petrv2}
+\bibinfo{author}{Liu, Y.}, \bibinfo{author}{Yan, J.}, \bibinfo{author}{Jia, F.}, \bibinfo{author}{Li, S.}, \bibinfo{author}{Gao, Q.}, \bibinfo{author}{Wang, T.}, \bibinfo{author}{Zhang, X.}, \bibinfo{author}{Sun, J.}, \bibinfo{year}{2023}a.
+\newblock \bibinfo{title}{Petrv2: A unified framework for 3d perception from multi-camera images}, in: \bibinfo{booktitle}{Proceedings of the IEEE/CVF International Conference on Computer Vision}.
 %Type = Inproceedings
-\bibitem[{Liu et~al.(2023b)Liu, Tang, Amini, Yang, Mao, Rus and
-  Han}]{liu2023bevfusion}
-\bibinfo{author}{Liu, Z.}, \bibinfo{author}{Tang, H.}, \bibinfo{author}{Amini,
-  A.}, \bibinfo{author}{Yang, X.}, \bibinfo{author}{Mao, H.},
-  \bibinfo{author}{Rus, D.}, \bibinfo{author}{Han, S.}, \bibinfo{year}{2023}b.
-\newblock \bibinfo{title}{Bevfusion: Multi-task multi-sensor fusion with
-  unified bird's-eye view representation}, in: \bibinfo{booktitle}{2023 IEEE
-  International Conference on Robotics and Automation}, pp.
-  \bibinfo{pages}{2774--2781}.
+\bibitem[{Liu et~al.(2023b)Liu, Tang, Amini, Yang, Mao, Rus and Han}]{liu2023bevfusion}
+\bibinfo{author}{Liu, Z.}, \bibinfo{author}{Tang, H.}, \bibinfo{author}{Amini, A.}, \bibinfo{author}{Yang, X.}, \bibinfo{author}{Mao, H.}, \bibinfo{author}{Rus, D.}, \bibinfo{author}{Han, S.}, \bibinfo{year}{2023}b.
+\newblock \bibinfo{title}{Bevfusion: Multi-task multi-sensor fusion with unified bird's-eye view representation}, in: \bibinfo{booktitle}{2023 IEEE International Conference on Robotics and Automation}, pp. \bibinfo{pages}{2774--2781}.
 %Type = Inproceedings
 \bibitem[{Ma et~al.(2024)Ma, Tan, Qu, Ma, Zhang and Xie}]{ma2024cotr}
-\bibinfo{author}{Ma, Q.}, \bibinfo{author}{Tan, X.}, \bibinfo{author}{Qu, Y.},
-  \bibinfo{author}{Ma, L.}, \bibinfo{author}{Zhang, Z.}, \bibinfo{author}{Xie,
-  Y.}, \bibinfo{year}{2024}.
-\newblock \bibinfo{title}{Cotr: Compact occupancy transformer for vision-based
-  3d occupancy prediction}, in: \bibinfo{booktitle}{Proceedings of the IEEE/CVF
-  Conference on Computer Vision and Pattern Recognition}, pp.
-  \bibinfo{pages}{19936--19945}.
+\bibinfo{author}{Ma, Q.}, \bibinfo{author}{Tan, X.}, \bibinfo{author}{Qu, Y.}, \bibinfo{author}{Ma, L.}, \bibinfo{author}{Zhang, Z.}, \bibinfo{author}{Xie, Y.}, \bibinfo{year}{2024}.
+\newblock \bibinfo{title}{Cotr: Compact occupancy transformer for vision-based 3d occupancy prediction}, in: \bibinfo{booktitle}{Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition}, pp. \bibinfo{pages}{19936--19945}.
 \newblock \DOIprefix\doi{10.1109/CVPR52733.2024.01884}.
 %Type = Misc
 \bibitem[{Mei et~al.(2025)Mei, Yang, Yang, Wen, Lv, Shi and Liu}]{mei2025irwm}
-\bibinfo{author}{Mei, J.}, \bibinfo{author}{Yang, Y.}, \bibinfo{author}{Yang,
-  X.}, \bibinfo{author}{Wen, L.}, \bibinfo{author}{Lv, J.},
-  \bibinfo{author}{Shi, B.}, \bibinfo{author}{Liu, Y.}, \bibinfo{year}{2025}.
-\newblock \bibinfo{title}{Vision-{{Centric 4D Occupancy Forecasting}} and
-  {{Planning}} via {{Implicit Residual World Models}}}.
-\newblock \DOIprefix\doi{10.48550/arXiv.2510.16729},
-  \href{http://arxiv.org/abs/2510.16729}{\tt arXiv:2510.16729}.
+\bibinfo{author}{Mei, J.}, \bibinfo{author}{Yang, Y.}, \bibinfo{author}{Yang, X.}, \bibinfo{author}{Wen, L.}, \bibinfo{author}{Lv, J.}, \bibinfo{author}{Shi, B.}, \bibinfo{author}{Liu, Y.}, \bibinfo{year}{2025}.
+\newblock \bibinfo{title}{Vision-{{Centric 4D Occupancy Forecasting}} and {{Planning}} via {{Implicit Residual World Models}}}.
+\newblock \DOIprefix\doi{10.48550/arXiv.2510.16729}, \href{http://arxiv.org/abs/2510.16729}{\tt arXiv:2510.16729}.
 %Type = Article
-\bibitem[{Mohan et~al.(2026)Mohan, Hurtado, Mohan and
-  Valada}]{mohan2026forecastocc}
-\bibinfo{author}{Mohan, R.}, \bibinfo{author}{Hurtado, J.V.},
-  \bibinfo{author}{Mohan, R.}, \bibinfo{author}{Valada, A.},
-  \bibinfo{year}{2026}.
-\newblock \bibinfo{title}{Forecastocc: Vision-based semantic occupancy
-  forecasting}.
+\bibitem[{Mohan et~al.(2026)Mohan, Hurtado, Mohan and Valada}]{mohan2026forecastocc}
+\bibinfo{author}{Mohan, R.}, \bibinfo{author}{Hurtado, J.V.}, \bibinfo{author}{Mohan, R.}, \bibinfo{author}{Valada, A.}, \bibinfo{year}{2026}.
+\newblock \bibinfo{title}{Forecastocc: Vision-based semantic occupancy forecasting}.
 \newblock \bibinfo{journal}{arXiv preprint arXiv:2602.08006} .
 %Type = Article
-\bibitem[{Nkwocha et~al.(2025)Nkwocha, Adewumi, Folorunsho, Eze, Jjagwe,
-  Kemeshi and Wang}]{nkwochaComprehensiveReviewSensing2025}
-\bibinfo{author}{Nkwocha, C.L.}, \bibinfo{author}{Adewumi, A.},
-  \bibinfo{author}{Folorunsho, S.O.}, \bibinfo{author}{Eze, C.},
-  \bibinfo{author}{Jjagwe, P.}, \bibinfo{author}{Kemeshi, J.},
-  \bibinfo{author}{Wang, N.}, \bibinfo{year}{2025}.
-\newblock \bibinfo{title}{A {{Comprehensive Review}} of {{Sensing}},
-  {{Control}}, and {{Networking}} in {{Agricultural Robots}}: {{From
-  Perception}} to {{Coordination}}}.
-\newblock \bibinfo{journal}{Robotics} \bibinfo{volume}{14},
-  \bibinfo{pages}{159}.
+\bibitem[{Nkwocha et~al.(2025)Nkwocha, Adewumi, Folorunsho, Eze, Jjagwe, Kemeshi and Wang}]{nkwochaComprehensiveReviewSensing2025}
+\bibinfo{author}{Nkwocha, C.L.}, \bibinfo{author}{Adewumi, A.}, \bibinfo{author}{Folorunsho, S.O.}, \bibinfo{author}{Eze, C.}, \bibinfo{author}{Jjagwe, P.}, \bibinfo{author}{Kemeshi, J.}, \bibinfo{author}{Wang, N.}, \bibinfo{year}{2025}.
+\newblock \bibinfo{title}{A {{Comprehensive Review}} of {{Sensing}}, {{Control}}, and {{Networking}} in {{Agricultural Robots}}: {{From Perception}} to {{Coordination}}}.
+\newblock \bibinfo{journal}{Robotics} \bibinfo{volume}{14}, \bibinfo{pages}{159}.
 \newblock \DOIprefix\doi{10.3390/robotics14110159}.
 %Type = Inproceedings
-\bibitem[{Pan et~al.(2024)Pan, Liu, Zhang, Huang, Li, Wang, Xie, Liu and
-  Zhang}]{pan2024renderocc}
-\bibinfo{author}{Pan, M.}, \bibinfo{author}{Liu, J.}, \bibinfo{author}{Zhang,
-  R.}, \bibinfo{author}{Huang, P.}, \bibinfo{author}{Li, X.},
-  \bibinfo{author}{Wang, B.}, \bibinfo{author}{Xie, H.}, \bibinfo{author}{Liu,
-  L.}, \bibinfo{author}{Zhang, S.}, \bibinfo{year}{2024}.
-\newblock \bibinfo{title}{Renderocc: Vision-centric 3d occupancy prediction
-  with 2d rendering supervision}, in: \bibinfo{booktitle}{2024 IEEE
-  International Conference on Robotics and Automation}, pp.
-  \bibinfo{pages}{12404--12411}.
+\bibitem[{Pan et~al.(2024)Pan, Liu, Zhang, Huang, Li, Wang, Xie, Liu and Zhang}]{pan2024renderocc}
+\bibinfo{author}{Pan, M.}, \bibinfo{author}{Liu, J.}, \bibinfo{author}{Zhang, R.}, \bibinfo{author}{Huang, P.}, \bibinfo{author}{Li, X.}, \bibinfo{author}{Wang, B.}, \bibinfo{author}{Xie, H.}, \bibinfo{author}{Liu, L.}, \bibinfo{author}{Zhang, S.}, \bibinfo{year}{2024}.
+\newblock \bibinfo{title}{Renderocc: Vision-centric 3d occupancy prediction with 2d rendering supervision}, in: \bibinfo{booktitle}{2024 IEEE International Conference on Robotics and Automation}, pp. \bibinfo{pages}{12404--12411}.
 %Type = Inproceedings
-\bibitem[{Peng et~al.(2018)Peng, Andrychowicz, Zaremba and
-  Abbeel}]{peng2018sim2real}
-\bibinfo{author}{Peng, X.B.}, \bibinfo{author}{Andrychowicz, M.},
-  \bibinfo{author}{Zaremba, W.}, \bibinfo{author}{Abbeel, P.},
-  \bibinfo{year}{2018}.
-\newblock \bibinfo{title}{Sim-to-real transfer of robotic control with dynamics
-  randomization}, in: \bibinfo{booktitle}{2018 IEEE International Conference on
-  Robotics and Automation}, pp. \bibinfo{pages}{3803--3810}.
+\bibitem[{Peng et~al.(2018)Peng, Andrychowicz, Zaremba and Abbeel}]{peng2018sim2real}
+\bibinfo{author}{Peng, X.B.}, \bibinfo{author}{Andrychowicz, M.}, \bibinfo{author}{Zaremba, W.}, \bibinfo{author}{Abbeel, P.}, \bibinfo{year}{2018}.
+\newblock \bibinfo{title}{Sim-to-real transfer of robotic control with dynamics randomization}, in: \bibinfo{booktitle}{2018 IEEE International Conference on Robotics and Automation}, pp. \bibinfo{pages}{3803--3810}.
 \newblock \DOIprefix\doi{10.1109/ICRA.2018.8460528}.
 %Type = Inproceedings
 \bibitem[{Philion and Fidler(2020)}]{philion2020lift}
-\bibinfo{author}{Philion, J.}, \bibinfo{author}{Fidler, S.},
-  \bibinfo{year}{2020}.
-\newblock \bibinfo{title}{Lift, splat, shoot: Encoding images from arbitrary
-  camera rigs by implicitly unprojecting to 3d}, in:
-  \bibinfo{booktitle}{Computer Vision -- ECCV 2020}, pp.
-  \bibinfo{pages}{194--210}.
+\bibinfo{author}{Philion, J.}, \bibinfo{author}{Fidler, S.}, \bibinfo{year}{2020}.
+\newblock \bibinfo{title}{Lift, splat, shoot: Encoding images from arbitrary camera rigs by implicitly unprojecting to 3d}, in: \bibinfo{booktitle}{Computer Vision -- ECCV 2020}, pp. \bibinfo{pages}{194--210}.
 %Type = Inproceedings
-\bibitem[{Shi et~al.(2026)Shi, Wang, Guo, Duan, Wang, Chen, Yang, Wang and
-  Wang}]{shi2026oneocc}
-\bibinfo{author}{Shi, H.}, \bibinfo{author}{Wang, Z.}, \bibinfo{author}{Guo,
-  S.}, \bibinfo{author}{Duan, M.}, \bibinfo{author}{Wang, S.},
-  \bibinfo{author}{Chen, T.}, \bibinfo{author}{Yang, K.},
-  \bibinfo{author}{Wang, L.}, \bibinfo{author}{Wang, K.}, \bibinfo{year}{2026}.
-\newblock \bibinfo{title}{Oneocc: Semantic occupancy prediction for legged
-  robots with a single panoramic camera}, in: \bibinfo{booktitle}{Proceedings
-  of the IEEE/CVF Conference on Computer Vision and Pattern Recognition}, pp.
-  \bibinfo{pages}{14229--14240}.
+\bibitem[{Shi et~al.(2026)Shi, Wang, Guo, Duan, Wang, Chen, Yang, Wang and Wang}]{shi2026oneocc}
+\bibinfo{author}{Shi, H.}, \bibinfo{author}{Wang, Z.}, \bibinfo{author}{Guo, S.}, \bibinfo{author}{Duan, M.}, \bibinfo{author}{Wang, S.}, \bibinfo{author}{Chen, T.}, \bibinfo{author}{Yang, K.}, \bibinfo{author}{Wang, L.}, \bibinfo{author}{Wang, K.}, \bibinfo{year}{2026}.
+\newblock \bibinfo{title}{Oneocc: Semantic occupancy prediction for legged robots with a single panoramic camera}, in: \bibinfo{booktitle}{Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition}, pp. \bibinfo{pages}{14229--14240}.
 %Type = Inproceedings
-\bibitem[{Tang et~al.(2024)Tang, Wang, Wang, Zheng, Ren, Feng and
-  Ma}]{tang2024sparseocc}
-\bibinfo{author}{Tang, P.}, \bibinfo{author}{Wang, Z.}, \bibinfo{author}{Wang,
-  G.}, \bibinfo{author}{Zheng, J.}, \bibinfo{author}{Ren, X.},
-  \bibinfo{author}{Feng, B.}, \bibinfo{author}{Ma, C.}, \bibinfo{year}{2024}.
-\newblock \bibinfo{title}{Sparseocc: Rethinking sparse latent representation
-  for vision-based semantic occupancy prediction}, in:
-  \bibinfo{booktitle}{Proceedings of the IEEE/CVF Conference on Computer Vision
-  and Pattern Recognition}.
+\bibitem[{Tang et~al.(2024)Tang, Wang, Wang, Zheng, Ren, Feng and Ma}]{tang2024sparseocc}
+\bibinfo{author}{Tang, P.}, \bibinfo{author}{Wang, Z.}, \bibinfo{author}{Wang, G.}, \bibinfo{author}{Zheng, J.}, \bibinfo{author}{Ren, X.}, \bibinfo{author}{Feng, B.}, \bibinfo{author}{Ma, C.}, \bibinfo{year}{2024}.
+\newblock \bibinfo{title}{Sparseocc: Rethinking sparse latent representation for vision-based semantic occupancy prediction}, in: \bibinfo{booktitle}{Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition}.
 %Type = Inproceedings
-\bibitem[{Tobin et~al.(2017)Tobin, Fong, Ray, Schneider, Zaremba and
-  Abbeel}]{tobin2017domainrandomization}
-\bibinfo{author}{Tobin, J.}, \bibinfo{author}{Fong, R.}, \bibinfo{author}{Ray,
-  A.}, \bibinfo{author}{Schneider, J.}, \bibinfo{author}{Zaremba, W.},
-  \bibinfo{author}{Abbeel, P.}, \bibinfo{year}{2017}.
-\newblock \bibinfo{title}{Domain randomization for transferring deep neural
-  networks from simulation to the real world}, in: \bibinfo{booktitle}{2017
-  IEEE/RSJ International Conference on Intelligent Robots and Systems}, pp.
-  \bibinfo{pages}{23--30}.
+\bibitem[{Tobin et~al.(2017)Tobin, Fong, Ray, Schneider, Zaremba and Abbeel}]{tobin2017domainrandomization}
+\bibinfo{author}{Tobin, J.}, \bibinfo{author}{Fong, R.}, \bibinfo{author}{Ray, A.}, \bibinfo{author}{Schneider, J.}, \bibinfo{author}{Zaremba, W.}, \bibinfo{author}{Abbeel, P.}, \bibinfo{year}{2017}.
+\newblock \bibinfo{title}{Domain randomization for transferring deep neural networks from simulation to the real world}, in: \bibinfo{booktitle}{2017 IEEE/RSJ International Conference on Intelligent Robots and Systems}, pp. \bibinfo{pages}{23--30}.
 \newblock \DOIprefix\doi{10.1109/IROS.2017.8202133}.
 %Type = Inproceedings
-\bibitem[{Wang et~al.(2023)Wang, Zhu, Xu, Zhang, Wei, Chi, Ye, Du, Lu and
-  Wang}]{wang2023openoccupancy}
-\bibinfo{author}{Wang, X.}, \bibinfo{author}{Zhu, Z.}, \bibinfo{author}{Xu,
-  W.}, \bibinfo{author}{Zhang, Y.}, \bibinfo{author}{Wei, Y.},
-  \bibinfo{author}{Chi, X.}, \bibinfo{author}{Ye, Y.}, \bibinfo{author}{Du,
-  D.}, \bibinfo{author}{Lu, J.}, \bibinfo{author}{Wang, X.},
-  \bibinfo{year}{2023}.
-\newblock \bibinfo{title}{Openoccupancy: A large scale benchmark for
-  surrounding semantic occupancy perception}, in:
-  \bibinfo{booktitle}{Proceedings of the IEEE/CVF International Conference on
-  Computer Vision}.
+\bibitem[{Wang et~al.(2023)Wang, Zhu, Xu, Zhang, Wei, Chi, Ye, Du, Lu and Wang}]{wang2023openoccupancy}
+\bibinfo{author}{Wang, X.}, \bibinfo{author}{Zhu, Z.}, \bibinfo{author}{Xu, W.}, \bibinfo{author}{Zhang, Y.}, \bibinfo{author}{Wei, Y.}, \bibinfo{author}{Chi, X.}, \bibinfo{author}{Ye, Y.}, \bibinfo{author}{Du, D.}, \bibinfo{author}{Lu, J.}, \bibinfo{author}{Wang, X.}, \bibinfo{year}{2023}.
+\newblock \bibinfo{title}{Openoccupancy: A large scale benchmark for surrounding semantic occupancy perception}, in: \bibinfo{booktitle}{Proceedings of the IEEE/CVF International Conference on Computer Vision}.
 %Type = Inproceedings
 \bibitem[{Wang et~al.(2024)Wang, Chen, Liao, Fan and Zhang}]{wang2024panoocc}
-\bibinfo{author}{Wang, Y.}, \bibinfo{author}{Chen, Y.}, \bibinfo{author}{Liao,
-  X.}, \bibinfo{author}{Fan, L.}, \bibinfo{author}{Zhang, Z.},
-  \bibinfo{year}{2024}.
-\newblock \bibinfo{title}{Panoocc: Unified occupancy representation for
-  camera-based 3d panoptic segmentation}, in: \bibinfo{booktitle}{Proceedings
-  of the IEEE/CVF Conference on Computer Vision and Pattern Recognition}, pp.
-  \bibinfo{pages}{17158--17168}.
+\bibinfo{author}{Wang, Y.}, \bibinfo{author}{Chen, Y.}, \bibinfo{author}{Liao, X.}, \bibinfo{author}{Fan, L.}, \bibinfo{author}{Zhang, Z.}, \bibinfo{year}{2024}.
+\newblock \bibinfo{title}{Panoocc: Unified occupancy representation for camera-based 3d panoptic segmentation}, in: \bibinfo{booktitle}{Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition}, pp. \bibinfo{pages}{17158--17168}.
 %Type = Inproceedings
-\bibitem[{Wang et~al.(2022)Wang, Guizilini, Zhang, Wang, Zhao and
-  Solomon}]{wang2022detr3d}
-\bibinfo{author}{Wang, Y.}, \bibinfo{author}{Guizilini, V.C.},
-  \bibinfo{author}{Zhang, T.}, \bibinfo{author}{Wang, Y.},
-  \bibinfo{author}{Zhao, H.}, \bibinfo{author}{Solomon, J.},
-  \bibinfo{year}{2022}.
-\newblock \bibinfo{title}{Detr3d: 3d object detection from multi-view images
-  via 3d-to-2d queries}, in: \bibinfo{booktitle}{Proceedings of the 5th
-  Conference on Robot Learning}, pp. \bibinfo{pages}{180--191}.
+\bibitem[{Wang et~al.(2022)Wang, Guizilini, Zhang, Wang, Zhao and Solomon}]{wang2022detr3d}
+\bibinfo{author}{Wang, Y.}, \bibinfo{author}{Guizilini, V.C.}, \bibinfo{author}{Zhang, T.}, \bibinfo{author}{Wang, Y.}, \bibinfo{author}{Zhao, H.}, \bibinfo{author}{Solomon, J.}, \bibinfo{year}{2022}.
+\newblock \bibinfo{title}{Detr3d: 3d object detection from multi-view images via 3d-to-2d queries}, in: \bibinfo{booktitle}{Proceedings of the 5th Conference on Robot Learning}, pp. \bibinfo{pages}{180--191}.
 %Type = Inproceedings
-\bibitem[{Wei et~al.(2023)Wei, Zhao, Zheng, Zhu, Zhou and
-  Lu}]{wei2023surroundocc}
-\bibinfo{author}{Wei, Y.}, \bibinfo{author}{Zhao, L.}, \bibinfo{author}{Zheng,
-  W.}, \bibinfo{author}{Zhu, Z.}, \bibinfo{author}{Zhou, J.},
-  \bibinfo{author}{Lu, J.}, \bibinfo{year}{2023}.
-\newblock \bibinfo{title}{Surroundocc: Multi-camera 3d occupancy prediction for
-  autonomous driving}, in: \bibinfo{booktitle}{Proceedings of the IEEE/CVF
-  International Conference on Computer Vision}.
+\bibitem[{Wei et~al.(2023)Wei, Zhao, Zheng, Zhu, Zhou and Lu}]{wei2023surroundocc}
+\bibinfo{author}{Wei, Y.}, \bibinfo{author}{Zhao, L.}, \bibinfo{author}{Zheng, W.}, \bibinfo{author}{Zhu, Z.}, \bibinfo{author}{Zhou, J.}, \bibinfo{author}{Lu, J.}, \bibinfo{year}{2023}.
+\newblock \bibinfo{title}{Surroundocc: Multi-camera 3d occupancy prediction for autonomous driving}, in: \bibinfo{booktitle}{Proceedings of the IEEE/CVF International Conference on Computer Vision}.
 %Type = Article
-\bibitem[{Yang et~al.(2025)Yang, Mei, Ma, Du, Chen, Qian, Feng and
-  Liu}]{yangDrivingOccupancyWorld2025}
-\bibinfo{author}{Yang, Y.}, \bibinfo{author}{Mei, J.}, \bibinfo{author}{Ma,
-  Y.}, \bibinfo{author}{Du, S.}, \bibinfo{author}{Chen, W.},
-  \bibinfo{author}{Qian, Y.}, \bibinfo{author}{Feng, Y.}, \bibinfo{author}{Liu,
-  Y.}, \bibinfo{year}{2025}.
-\newblock \bibinfo{title}{Driving in the {{Occupancy World}}: {{Vision-Centric
-  4D Occupancy Forecasting}} and {{Planning}} via {{World Models}} for
-  {{Autonomous Driving}}}.
-\newblock \bibinfo{journal}{Proceedings of the AAAI Conference on Artificial
-  Intelligence} \bibinfo{volume}{39}, \bibinfo{pages}{9327--9335}.
+\bibitem[{Yang et~al.(2025)Yang, Mei, Ma, Du, Chen, Qian, Feng and Liu}]{yangDrivingOccupancyWorld2025}
+\bibinfo{author}{Yang, Y.}, \bibinfo{author}{Mei, J.}, \bibinfo{author}{Ma, Y.}, \bibinfo{author}{Du, S.}, \bibinfo{author}{Chen, W.}, \bibinfo{author}{Qian, Y.}, \bibinfo{author}{Feng, Y.}, \bibinfo{author}{Liu, Y.}, \bibinfo{year}{2025}.
+\newblock \bibinfo{title}{Driving in the {{Occupancy World}}: {{Vision-Centric 4D Occupancy Forecasting}} and {{Planning}} via {{World Models}} for {{Autonomous Driving}}}.
+\newblock \bibinfo{journal}{Proceedings of the AAAI Conference on Artificial Intelligence} \bibinfo{volume}{39}, \bibinfo{pages}{9327--9335}.
 \newblock \DOIprefix\doi{10.1609/aaai.v39i9.33010}.
 %Type = Article
-\bibitem[{Yu et~al.(2023)Yu, Shu, Deng, Lu, Liu, Yu, Yang, Li and
-  Chen}]{yu2023flashocc}
-\bibinfo{author}{Yu, Z.}, \bibinfo{author}{Shu, C.}, \bibinfo{author}{Deng,
-  J.}, \bibinfo{author}{Lu, K.}, \bibinfo{author}{Liu, Z.},
-  \bibinfo{author}{Yu, J.}, \bibinfo{author}{Yang, D.}, \bibinfo{author}{Li,
-  H.}, \bibinfo{author}{Chen, Y.}, \bibinfo{year}{2023}.
-\newblock \bibinfo{title}{Flashocc: Fast and memory-efficient occupancy
-  prediction via channel-to-height plugin}.
+\bibitem[{Yu et~al.(2023)Yu, Shu, Deng, Lu, Liu, Yu, Yang, Li and Chen}]{yu2023flashocc}
+\bibinfo{author}{Yu, Z.}, \bibinfo{author}{Shu, C.}, \bibinfo{author}{Deng, J.}, \bibinfo{author}{Lu, K.}, \bibinfo{author}{Liu, Z.}, \bibinfo{author}{Yu, J.}, \bibinfo{author}{Yang, D.}, \bibinfo{author}{Li, H.}, \bibinfo{author}{Chen, Y.}, \bibinfo{year}{2023}.
+\newblock \bibinfo{title}{Flashocc: Fast and memory-efficient occupancy prediction via channel-to-height plugin}.
 \newblock \bibinfo{journal}{arXiv preprint arXiv:2311.12058} .
 %Type = Inproceedings
 \bibitem[{Zhang et~al.(2023)Zhang, Zhu and Du}]{zhang2023occformer}
-\bibinfo{author}{Zhang, Y.}, \bibinfo{author}{Zhu, Z.}, \bibinfo{author}{Du,
-  D.}, \bibinfo{year}{2023}.
-\newblock \bibinfo{title}{Occformer: Dual-path transformer for vision-based 3d
-  semantic occupancy prediction}, in: \bibinfo{booktitle}{Proceedings of the
-  IEEE/CVF International Conference on Computer Vision}, pp.
-  \bibinfo{pages}{9433--9443}.
+\bibinfo{author}{Zhang, Y.}, \bibinfo{author}{Zhu, Z.}, \bibinfo{author}{Du, D.}, \bibinfo{year}{2023}.
+\newblock \bibinfo{title}{Occformer: Dual-path transformer for vision-based 3d semantic occupancy prediction}, in: \bibinfo{booktitle}{Proceedings of the IEEE/CVF International Conference on Computer Vision}, pp. \bibinfo{pages}{9433--9443}.
 %Type = Inproceedings
-\bibitem[{Zheng et~al.(2024)Zheng, Chen, Huang, Zhang, Duan and
-  Lu}]{zheng2024occworld}
-\bibinfo{author}{Zheng, W.}, \bibinfo{author}{Chen, W.},
-  \bibinfo{author}{Huang, Y.}, \bibinfo{author}{Zhang, B.},
-  \bibinfo{author}{Duan, Y.}, \bibinfo{author}{Lu, J.}, \bibinfo{year}{2024}.
-\newblock \bibinfo{title}{Occworld: Learning a 3d occupancy world model for
-  autonomous driving}, in: \bibinfo{booktitle}{Proceedings of the European
-  Conference on Computer Vision}.
+\bibitem[{Zheng et~al.(2024)Zheng, Chen, Huang, Zhang, Duan and Lu}]{zheng2024occworld}
+\bibinfo{author}{Zheng, W.}, \bibinfo{author}{Chen, W.}, \bibinfo{author}{Huang, Y.}, \bibinfo{author}{Zhang, B.}, \bibinfo{author}{Duan, Y.}, \bibinfo{author}{Lu, J.}, \bibinfo{year}{2024}.
+\newblock \bibinfo{title}{Occworld: Learning a 3d occupancy world model for autonomous driving}, in: \bibinfo{booktitle}{Proceedings of the European Conference on Computer Vision}.
 \newblock \DOIprefix\doi{10.1007/978-3-031-72624-8_4}.
 %Type = Article
 \bibitem[{Zhou et~al.(2022)Zhou, Ge, Li and Zhang}]{zhou2022matrixvt}
-\bibinfo{author}{Zhou, H.}, \bibinfo{author}{Ge, Z.}, \bibinfo{author}{Li, Z.},
-  \bibinfo{author}{Zhang, X.}, \bibinfo{year}{2022}.
-\newblock \bibinfo{title}{Matrixvt: Efficient multi-camera to bev
-  transformation for 3d perception}.
+\bibinfo{author}{Zhou, H.}, \bibinfo{author}{Ge, Z.}, \bibinfo{author}{Li, Z.}, \bibinfo{author}{Zhang, X.}, \bibinfo{year}{2022}.
+\newblock \bibinfo{title}{Matrixvt: Efficient multi-camera to bev transformation for 3d perception}.
 \newblock \bibinfo{journal}{arXiv preprint arXiv:2211.10593} .
 %Type = Inproceedings
 \bibitem[{Zhu et~al.(2021)Zhu, Su, Lu, Li, Wang and Dai}]{zhu2021deformable}
-\bibinfo{author}{Zhu, X.}, \bibinfo{author}{Su, W.}, \bibinfo{author}{Lu, L.},
-  \bibinfo{author}{Li, B.}, \bibinfo{author}{Wang, X.}, \bibinfo{author}{Dai,
-  J.}, \bibinfo{year}{2021}.
-\newblock \bibinfo{title}{Deformable detr: Deformable transformers for
-  end-to-end object detection}, in: \bibinfo{booktitle}{International
-  Conference on Learning Representations}.
+\bibinfo{author}{Zhu, X.}, \bibinfo{author}{Su, W.}, \bibinfo{author}{Lu, L.}, \bibinfo{author}{Li, B.}, \bibinfo{author}{Wang, X.}, \bibinfo{author}{Dai, J.}, \bibinfo{year}{2021}.
+\newblock \bibinfo{title}{Deformable detr: Deformable transformers for end-to-end object detection}, in: \bibinfo{booktitle}{International Conference on Learning Representations}.
 
 \end{thebibliography}
