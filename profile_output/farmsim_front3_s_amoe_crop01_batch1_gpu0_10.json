@@ -1,0 +1,41 @@
+{
+  "config": "/data/HL/Drive-OccWorld/work_dirs/front3_s_base_agri_amoe96_cropsample0.1_min500_nohis_b24_ep15_20261012_214738/farmsim_occ_front3_s.py",
+  "checkpoint": "/data/HL/Drive-OccWorld/work_dirs/front3_s_base_agri_amoe96_cropsample0.1_min500_nohis_b24_ep15_20261012_214738/epoch_15.pth",
+  "gpu": "NVIDIA GeForce RTX 4090",
+  "batch_size": 1,
+  "warmup_frames": 2,
+  "measured_frames": 10,
+  "timing_scope": "MMDataParallel model forward; excludes dataloader and GT metrics",
+  "wall_ms": [
+    62.60171509347856,
+    63.86931915767491,
+    63.72248684056103,
+    62.67031515017152,
+    61.46281911060214,
+    62.272605020552874,
+    63.24592814780772,
+    65.81400102004409,
+    65.43960585258901,
+    63.320523127913475
+  ],
+  "wall_mean_ms": 63.44193185213953,
+  "wall_median_ms": 63.283225637860596,
+  "wall_min_ms": 61.46281911060214,
+  "wall_max_ms": 65.81400102004409,
+  "cuda_event_ms": [
+    62.5601921081543,
+    63.8210563659668,
+    63.66310501098633,
+    62.629886627197266,
+    61.425662994384766,
+    62.23334503173828,
+    63.20614242553711,
+    65.76844787597656,
+    65.3987808227539,
+    63.268863677978516
+  ],
+  "cuda_mean_ms": 63.397548294067384,
+  "model_allocated_mib": 204.25,
+  "peak_allocated_mib": 1348.09375,
+  "peak_reserved_mib": 1450.0
+}

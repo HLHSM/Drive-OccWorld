@@ -2,7 +2,7 @@ PWD /data/HL/Drive-OccWorld/paper_en
 INPUT /data/HL/texlive/2026/texmf.cnf
 INPUT /data/HL/texlive/2026/texmf-dist/web2c/texmf.cnf
 INPUT /data/HL/texlive/2026/texmf-var/web2c/xetex/xelatex.fmt
-INPUT /data/HL/Drive-OccWorld/paper_en/main.tex
+INPUT main.tex
 OUTPUT main.log
 INPUT ./cas-sc.cls
 INPUT cas-sc.cls
@@ -485,6 +485,9 @@ INPUT /data/HL/texlive/2026/texmf-dist/fonts/tfm/jknappen/ec/ectt0900.tfm
 INPUT ./orad3d_transfer_qualitative.png
 INPUT ./orad3d_transfer_qualitative.png
 INPUT ./orad3d_transfer_qualitative.png
+INPUT ./realfield_zero_shot_qualitative.png
+INPUT ./realfield_zero_shot_qualitative.png
+INPUT ./realfield_zero_shot_qualitative.png
 INPUT /data/HL/texlive/2026/texmf-dist/fonts/tfm/public/lm/ec-lmri10.tfm
 INPUT ./farmsim_limitations_2x3.png
 INPUT ./farmsim_limitations_2x3.png

@@ -88,7 +88,7 @@ class FarmSimWorldDataset(torch.utils.data.Dataset):
                  image_size=(640, 360), front_only=False, test_mode=False,
                  future_pred_frame_num=0, future_traj_frame_num=0,
                  predict_trajectory=False,
-                 max_samples=None, pipeline=None,
+                 max_samples=None, occupancy_target_range=None, pipeline=None,
                  **kwargs):
         del pipeline, kwargs
         if camera_mode not in ('surround', 'front'):
@@ -96,6 +96,18 @@ class FarmSimWorldDataset(torch.utils.data.Dataset):
         self.queue_length = int(queue_length)
         self.camera_mode = camera_mode
         self.front_only = bool(front_only)
+        if occupancy_target_range is not None:
+            if len(occupancy_target_range) != 6:
+                raise ValueError('occupancy_target_range must contain six coordinates')
+            self.occupancy_target_range = tuple(float(value) for value in
+                                                occupancy_target_range)
+            if any(self.occupancy_target_range[axis] >=
+                   self.occupancy_target_range[axis + 3] for axis in range(3)):
+                raise ValueError('occupancy_target_range has an empty axis')
+            if self.front_only and self.occupancy_target_range[0] < 0:
+                raise ValueError('front_only occupancy_target_range must start at x >= 0')
+        else:
+            self.occupancy_target_range = None
         self.test_mode = test_mode
         self.image_size = tuple(image_size)  # width, height
         self.future_pred_frame_num = int(future_pred_frame_num)
@@ -111,8 +123,10 @@ class FarmSimWorldDataset(torch.utils.data.Dataset):
         # [x, y, z] shape declared by each sequence rather than assuming the
         # original v9 0.2 m ``200 x 100 x 25`` surround grid.
         self._occupancy_shape_cache = {}
+        self._occupancy_target_indices_cache = {}
 
         ann_file = Path(ann_file).expanduser()
+        self.ann_file = ann_file.resolve()
         with ann_file.open('r', encoding='utf-8') as f:
             manifest = json.load(f)
         # Split manifests contain paths relative to the dataset root.  Keep
@@ -279,6 +293,51 @@ class FarmSimWorldDataset(torch.utils.data.Dataset):
         self._occupancy_shape_cache[seq_path] = dimensions
         return dimensions
 
+    def _occupancy_target_indices(self, seq_path):
+        """Nearest-neighbor labels at the centers of an exact metric ROI grid.
+
+        A 15 m-wide target centered at y=0 is half a source voxel out of
+        alignment with the original [-10, 10] m, 0.2 m FarmSim grid.  Sample
+        source voxels at target centers rather than silently shifting the ROI.
+        """
+        seq_path = Path(seq_path)
+        cached = self._occupancy_target_indices_cache.get(seq_path)
+        if cached is not None:
+            return cached
+        with (seq_path / 'occupancy_schema.json').open('r', encoding='utf-8') as f:
+            schema = json.load(f)
+        region = next((item for item in schema.get('regions', [])
+                       if item.get('id') == schema.get('region_mode')), None)
+        if region is None:
+            raise RuntimeError(f'{seq_path}: missing active occupancy region')
+        source_min = np.asarray(region['min_m_xyz'], dtype=np.float64)
+        source_max = np.asarray(region['max_m_xyz'], dtype=np.float64)
+        source_shape = np.asarray(region['dimensions_xyz'], dtype=np.int64)
+        voxel_size = (source_max - source_min) / source_shape
+        target = np.asarray(self.occupancy_target_range, dtype=np.float64)
+        target_min, target_max = target[:3], target[3:]
+        if np.any(target_min < source_min - 1e-5) or np.any(
+                target_max > source_max + 1e-5):
+            raise ValueError(f'{seq_path}: target occupancy range exceeds source region')
+        target_shape_float = (target_max - target_min) / voxel_size
+        target_shape = np.rint(target_shape_float).astype(np.int64)
+        if np.any(target_shape < 1) or not np.allclose(
+                target_shape_float, target_shape, atol=1e-4):
+            raise ValueError(f'{seq_path}: target occupancy range is not a '
+                             'whole number of source voxels')
+        indices = []
+        for axis in range(3):
+            centers = target_min[axis] + (
+                np.arange(target_shape[axis], dtype=np.float64) + 0.5) * voxel_size[axis]
+            index = np.floor((centers - source_min[axis]) /
+                             voxel_size[axis] + 1e-6).astype(np.int64)
+            if index.min() < 0 or index.max() >= source_shape[axis]:
+                raise ValueError(f'{seq_path}: target occupancy index outside source grid')
+            indices.append(index)
+        result = tuple(indices)
+        self._occupancy_target_indices_cache[seq_path] = result
+        return result
+
     def _load_occupancy(self, seq, frame_id):
         seq_path = self._sequence_path(seq)
         raw = np.fromfile(seq_path / 'occupancy' / f'{frame_id}.bin', dtype=np.uint8)
@@ -292,7 +351,9 @@ class FarmSimWorldDataset(torch.utils.data.Dataset):
         valid = valid.reshape(size_z, size_y, size_x).transpose(2, 1, 0)
         raw[valid == 0] = 255
         raw = FARMSIM_LABEL_REMAP[raw]
-        if self.front_only:
+        if self.occupancy_target_range is not None:
+            raw = raw[np.ix_(*self._occupancy_target_indices(seq_path))]
+        elif self.front_only:
             if size_x % 2:
                 raise RuntimeError(
                     f'{seq_path}: front-only cropping requires an even x dimension, '

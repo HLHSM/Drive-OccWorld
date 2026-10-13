@@ -1391,7 +1391,11 @@ class WorldHeadV1(WorldHeadBase):
 
         loss_dict = {}
 
-        loss_dict['loss_voxel_ce_{}'.format(tag)] = self.loss_voxel_ce_weight * CE_ssc_loss(output_voxels, target_voxels, self.class_weights.type_as(output_voxels), ignore_index=255)
+        voxel_ce = CE_ssc_loss(
+            output_voxels, target_voxels,
+            self.class_weights.type_as(output_voxels), ignore_index=255)
+        loss_dict['loss_voxel_ce_{}'.format(tag)] = (
+            self.loss_voxel_ce_weight * voxel_ce)
 
         if self.multi_loss:
             loss_dict['loss_voxel_sem_scal_{}'.format(tag)] = self.loss_voxel_sem_scal_weight * sem_scal_loss(output_voxels, target_voxels, ignore_index=255)

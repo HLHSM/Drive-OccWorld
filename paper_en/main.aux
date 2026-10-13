@@ -109,29 +109,35 @@
 \newlabel{sec:ablation}{{4.4}{12}{Ablation study}{subsection.4.4}{}}
 \@writefile{lot}{\contentsline {table}{\numberline {2}{\ignorespaces Ablation study on AgriOcc-Dataset. A checkmark indicates an enabled module. Training time is estimated from mean iteration time and iteration count in epoch 8; all configurations use four RTX 4090 GPUs and effective global batch size 24. Memory is peak allocated memory per GPU, measured after warm-up at fixed per-GPU batch size 2.}}{12}{table.2}\protected@file@percent }
 \newlabel{tab:ablation}{{2}{12}{Ablation study on AgriOcc-Dataset. A checkmark indicates an enabled module. Training time is estimated from mean iteration time and iteration count in epoch 8; all configurations use four RTX 4090 GPUs and effective global batch size 24. Memory is peak allocated memory per GPU, measured after warm-up at fixed per-GPU batch size 2}{table.2}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {4.5}Sim-to-real transfer to off-road scenes}{12}{subsection.4.5}\protected@file@percent }
-\newlabel{sec:sim2real}{{4.5}{12}{Sim-to-real transfer to off-road scenes}{subsection.4.5}{}}
-\citation{behley2019semantickitti,li2024sscbench}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.5}Real-world experiments}{12}{subsection.4.5}\protected@file@percent }
+\newlabel{sec:sim2real}{{4.5}{12}{Real-world experiments}{subsection.4.5}{}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.5.1}Sim-to-real transfer to an off-road dataset}{12}{subsubsection.4.5.1}\protected@file@percent }
+\newlabel{sec:orad_transfer}{{4.5.1}{12}{Sim-to-real transfer to an off-road dataset}{subsubsection.4.5.1}{}}
 \@writefile{lot}{\contentsline {table}{\numberline {3}{\ignorespaces Sim-to-real transfer results on ORAD-3D (\%). Both AgriOcc variants use the full ORAD-3D training set and only the center forward camera. The transfer model is initialized by AgriOcc-Dataset pretraining and adapted for two epochs. \texttt  {Test (w/o Free)} excludes Free; \texttt  {Test} is nine-class mIoU; \texttt  {Test\_farm} is mIoU over classes in the farmland subset. Baseline results are from the ORAD-3D paper.}}{13}{table.3}\protected@file@percent }
 \newlabel{tab:orad}{{3}{13}{Sim-to-real transfer results on ORAD-3D (\%). Both AgriOcc variants use the full ORAD-3D training set and only the center forward camera. The transfer model is initialized by AgriOcc-Dataset pretraining and adapted for two epochs. \texttt {Test (w/o Free)} excludes Free; \texttt {Test} is nine-class mIoU; \texttt {Test\_farm} is mIoU over classes in the farmland subset. Baseline results are from the ORAD-3D paper}{table.3}{}}
 \@writefile{lof}{\contentsline {figure}{\numberline {9}{\ignorespaces Qualitative transfer comparison on ORAD-3D. Each row is the same official test sample. From left to right: input RGB image, ground truth, a model trained from scratch using all ORAD-3D training data, and a model transferred from AgriOcc-Dataset pretraining using all ORAD-3D training data (100\% Transfer).}}{13}{figure.9}\protected@file@percent }
 \newlabel{fig:orad_qualitative}{{9}{13}{Qualitative transfer comparison on ORAD-3D. Each row is the same official test sample. From left to right: input RGB image, ground truth, a model trained from scratch using all ORAD-3D training data, and a model transferred from AgriOcc-Dataset pretraining using all ORAD-3D training data (100\% Transfer)}{figure.9}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {4.6}Voxel-resolution transfer}{13}{subsection.4.6}\protected@file@percent }
-\newlabel{sec:resolution_transfer}{{4.6}{13}{Voxel-resolution transfer}{subsection.4.6}{}}
-\@writefile{lot}{\contentsline {table}{\numberline {4}{\ignorespaces Transfer results at $0.1\,\mathrm  {m}$ voxel resolution (IoU in \%; time is end-to-end wall-clock time for 8 epochs including per-epoch validation). Transfer methods first train at $0.2\times 0.2\times 0.2\,\mathrm  {m}$, then freeze the backbone and adapt to $0.1\times 0.1\times 0.2\,\mathrm  {m}$.}}{14}{table.4}\protected@file@percent }
-\newlabel{tab:resolution_transfer}{{4}{14}{Transfer results at $0.1\,\mathrm {m}$ voxel resolution (IoU in \%; time is end-to-end wall-clock time for 8 epochs including per-epoch validation). Transfer methods first train at $0.2\times 0.2\times 0.2\,\mathrm {m}$, then freeze the backbone and adapt to $0.1\times 0.1\times 0.2\,\mathrm {m}$}{table.4}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {4.7}Discussion and limitations}{14}{subsection.4.7}\protected@file@percent }
-\newlabel{sec:discussion}{{4.7}{14}{Discussion and limitations}{subsection.4.7}{}}
-\@writefile{toc}{\contentsline {section}{\numberline {5}Conclusion and future work}{14}{section.5}\protected@file@percent }
-\newlabel{sec:conclusion}{{5}{14}{Conclusion and future work}{section.5}{}}
-\@writefile{lof}{\contentsline {figure}{\numberline {10}{\ignorespaces Examples of limitations on AgriOcc-Dataset. The first row shows ground truth and the second row shows AgriOcc predictions; columns show cabbage, corn, and potato scenes. Inter-plant gaps in dense crops tend to become connected regions, while small early-stage crops may be missed or incompletely recovered.}}{15}{figure.10}\protected@file@percent }
-\newlabel{fig:limitations}{{10}{15}{Examples of limitations on AgriOcc-Dataset. The first row shows ground truth and the second row shows AgriOcc predictions; columns show cabbage, corn, and potato scenes. Inter-plant gaps in dense crops tend to become connected regions, while small early-stage crops may be missed or incompletely recovered}{figure.10}{}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.5.2}Zero-shot qualitative analysis on real farmland}{13}{subsubsection.4.5.2}\protected@file@percent }
+\newlabel{sec:realfield_zeroshot}{{4.5.2}{13}{Zero-shot qualitative analysis on real farmland}{subsubsection.4.5.2}{}}
+\citation{behley2019semantickitti,li2024sscbench}
+\@writefile{lof}{\contentsline {figure}{\numberline {10}{\ignorespaces Zero-shot 3D semantic occupancy prediction in real farmland.}}{14}{figure.10}\protected@file@percent }
+\newlabel{fig:realfield_zeroshot}{{10}{14}{Zero-shot 3D semantic occupancy prediction in real farmland}{figure.10}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.6}Voxel-resolution transfer}{14}{subsection.4.6}\protected@file@percent }
+\newlabel{sec:resolution_transfer}{{4.6}{14}{Voxel-resolution transfer}{subsection.4.6}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {4}{\ignorespaces Transfer results at $0.1\,\mathrm  {m}$ voxel resolution (IoU in \%; time is end-to-end wall-clock time for 8 epochs including per-epoch validation). Transfer methods first train at $0.2\times 0.2\times 0.2\,\mathrm  {m}$, then freeze the backbone and adapt to $0.1\times 0.1\times 0.2\,\mathrm  {m}$.}}{15}{table.4}\protected@file@percent }
+\newlabel{tab:resolution_transfer}{{4}{15}{Transfer results at $0.1\,\mathrm {m}$ voxel resolution (IoU in \%; time is end-to-end wall-clock time for 8 epochs including per-epoch validation). Transfer methods first train at $0.2\times 0.2\times 0.2\,\mathrm {m}$, then freeze the backbone and adapt to $0.1\times 0.1\times 0.2\,\mathrm {m}$}{table.4}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.7}Discussion and limitations}{15}{subsection.4.7}\protected@file@percent }
+\newlabel{sec:discussion}{{4.7}{15}{Discussion and limitations}{subsection.4.7}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {11}{\ignorespaces Examples of limitations on AgriOcc-Dataset. The first row shows ground truth and the second row shows AgriOcc predictions; columns show cabbage, corn, and potato scenes. Inter-plant gaps in dense crops tend to become connected regions, while small early-stage crops may be missed or incompletely recovered.}}{15}{figure.11}\protected@file@percent }
+\newlabel{fig:limitations}{{11}{15}{Examples of limitations on AgriOcc-Dataset. The first row shows ground truth and the second row shows AgriOcc predictions; columns show cabbage, corn, and potato scenes. Inter-plant gaps in dense crops tend to become connected regions, while small early-stage crops may be missed or incompletely recovered}{figure.11}{}}
 \bibstyle{cas-model2-names}
 \bibdata{references}
 \bibcite{baiVisionbasedNavigationGuidance2023}{{1}{2023}{{Bai et~al.}}{{Bai, Zhang, Xu, Zhou, Shi and Diao}}}
 \bibcite{behley2019semantickitti}{{2}{2019}{{Behley et~al.}}{{Behley, Garbade, Milioto, Quenzel, Behnke, Stachniss and Gall}}}
 \bibcite{caesar2020nuscenes}{{3}{2020}{{Caesar et~al.}}{{Caesar, Bankiti, Lang, Vora, Liong, Xu, Krishnan, Pan, Baldan and Beijbom}}}
 \bibcite{cao2022monoscene}{{4}{2022}{{Cao and de~Charette}}{{}}}
+\@writefile{toc}{\contentsline {section}{\numberline {5}Conclusion and future work}{16}{section.5}\protected@file@percent }
+\newlabel{sec:conclusion}{{5}{16}{Conclusion and future work}{section.5}{}}
 \bibcite{chen2025orad3d}{{5}{2025}{{Chen et~al.}}{{Chen, Mei, Zhai, Wang, Sun, Kong, Li, Mao, Liu, Wang, Nie, Zhu, Xiao, Zhao and Hu}}}
 \bibcite{dosovitskiy2017carla}{{6}{2017}{{Dosovitskiy et~al.}}{{Dosovitskiy, Ros, Codevilla, Lopez and Koltun}}}
 \bibcite{geiger2012kitti}{{7}{2012}{{Geiger et~al.}}{{Geiger, Lenz and Urtasun}}}
@@ -171,5 +177,5 @@
 \bibcite{zheng2024occworld}{{41}{2024}{{Zheng et~al.}}{{Zheng, Chen, Huang, Zhang, Duan and Lu}}}
 \bibcite{zhou2022matrixvt}{{42}{2022}{{Zhou et~al.}}{{Zhou, Ge, Li and Zhang}}}
 \bibcite{zhu2021deformable}{{43}{2021}{{Zhu et~al.}}{{Zhu, Su, Lu, Li, Wang and Dai}}}
-\csxdef{lastpage}{17}
-\gdef \@abspage@last{17}
+\csxdef{lastpage}{18}
+\gdef \@abspage@last{18}

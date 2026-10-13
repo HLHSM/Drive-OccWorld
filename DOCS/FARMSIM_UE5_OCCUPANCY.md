@@ -79,6 +79,27 @@ bash tools/train_farmsim_6cam.sh
 bash tools/train_farmsim_front3.sh
 ```
 
+前视三相机训练的每轮验证会在文本日志和 `.log.json` 中记录
+`occ_current_F1_crop`、`occ_all_F1_crop`，与 crop IoU 使用相同有效体素和多卡汇总混淆矩阵。
+F1 按 `2TP / (2TP + FP + FN)` 计算，日志数值范围为 0--1；未预测的未来时刻不会记录虚假的 F1。
+
+`tools/train_farmsim_front3.sh` 默认 `AUTO_SAVE_VISUALIZATION=1`：每个任务训练完成后，
+使用本任务导出的完整配置及最终 `epoch_N.pth` 检查点，重新推理验证集，
+按序列均衡保存 100 个 `.npz` 到任务目录的 `prediction/`，并生成
+`visualization/*_prediction.png`；GT 图片沿用 `work_dirs/_shared_gt_previews/farmsim/` 缓存。
+推理日志和混淆矩阵保存为 `evaluation_epoch_N.log`、`evaluation_epoch_N_metrics.pkl`。
+这一步会额外运行一次验证集推理；`PREDICTION_COUNT` 限制保存数量，不限制评估样本数。
+默认单卡使用训练卡列表中的第一张卡，推理 batch 为 1；可通过
+`PREVIEW_GPU`、`PREVIEW_BATCH_SIZE`、`PREDICTION_COUNT`、`SAVE_SAMPLING`、`GT_CACHE_ROOT` 覆盖。
+
+```bash
+# 只训练和每轮评估，关闭训练结束后的预测与图片保存。
+AUTO_SAVE_VISUALIZATION=0 bash tools/train_farmsim_front3.sh
+
+# 默认自动导出，可调整保存数量和推理 batch。
+PREDICTION_COUNT=100 PREVIEW_BATCH_SIZE=3 bash tools/train_farmsim_front3.sh
+```
+
 若进程在保存 checkpoint 后中断，可在 `tools/train_farmsim_front3.sh` 顶部将 `WORK_DIR` 设为原工作目录、`RESUME_FROM` 设为对应 checkpoint（例如 `epoch_1.pth`），然后重新执行脚本。
 
 两个脚本顶部都有可直接修改的训练开关：
@@ -220,7 +241,7 @@ CUDA_VISIBLE_DEVICES=0 PYTHONPATH="$PWD" \
 ```bash
 /home/HL/.conda/envs/dow2/bin/python \
   tools/visualize_farmsim_predictions.py \
-  work_dirs/front3_gvad_adhr_nearfar_r0.6_s2_nohis_ep8_20260904_163459/prediction
+  work_dirs/front3_s_base_nohis_ep15_20261009_131823/prediction
 ```
 
 命令会先预加载全部 `.npz` 并显示进度，随后输出类似 `http://127.0.0.1:8000/` 的地址；在浏览器打开它后，可通过样本下拉框或 `Previous`/`Next` 逐条查看保存的结果。浏览器也会在后台预取全部样本，因此预加载完成后切换样本无需再等待 NPZ 读取或体素转换；代价是启动会变慢且服务端、浏览器会占用更多内存。页面左侧固定显示标签（GT），右侧固定显示预测结果；预测会使用同一帧 GT 的有效区域（非 ignore）掩码，避免未标注区域占用绘制点数，状态栏会显示两侧有效非 free 体素数。底部图例标明 6 类 FarmSim taxonomy 的颜色，其中 crop 为黄绿色、drivable 为天蓝色。存在未来占用时可切换未来时间步，存在轨迹时会自动叠加 GT 与预测轨迹。为控制浏览器性能，每侧默认最多显示 30,000 个有效非 free 体素；可通过 `--max-points 50000` 调大。需要自动打开浏览器时添加 `--open-browser`；默认仅本机可访问，需让局域网其他机器访问时可添加 `--host 0.0.0.0`。按 `Ctrl-C` 停止服务。页面仍使用 Plotly CDN，浏览器首次打开时需要可访问该 CDN。

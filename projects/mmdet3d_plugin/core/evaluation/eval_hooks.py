@@ -94,8 +94,18 @@ def _with_occupancy_summaries(results, class_names=None):
             ordered[f'{prefix}_IoU_occupied'] = occupied_iou
             ordered[f'{prefix}_IoU_free_binary'] = free_iou
             ordered[f'{prefix}_mIoU_binary'] = (occupied_iou + free_iou) / 2.0
-        for class_name, class_iou in zip(names, iou):
+        crop_f1_suffix = ''
+        for class_index, (class_name, class_iou) in enumerate(zip(names, iou)):
             ordered[f'{prefix}_IoU_{class_name}'] = float(class_iou)
+            if class_name == 'crop':
+                # Compute voxel-level F1 after aggregating all ranks, using
+                # the same valid voxels as crop IoU (2TP / (2TP + FP + FN)).
+                denominator = float(hist[class_index, :].sum() +
+                                    hist[:, class_index].sum())
+                crop_f1 = (2.0 * float(diagonal[class_index]) / denominator
+                           if denominator else 0.0)
+                ordered[f'{prefix}_F1_crop'] = crop_f1
+                crop_f1_suffix = f', crop_F1={crop_f1:.4f}'
 
         per_class = ', '.join(
             f'{class_name}={class_iou:.4f}'
@@ -109,7 +119,7 @@ def _with_occupancy_summaries(results, class_names=None):
             f'{prefix}: mIoU={ordered[f"{prefix}_mIoU"]:.4f}, '
             f'mIoU_all={ordered[f"{prefix}_mIoU_all"]:.4f}, '
             f'voxel_acc={ordered[f"{prefix}_voxel_acc"]:.4f}'
-            f'{binary_suffix}; '
+            f'{binary_suffix}{crop_f1_suffix}; '
             f'IoU[{per_class}]')
     return ordered, summary
 

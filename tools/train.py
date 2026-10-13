@@ -107,6 +107,15 @@ def parse_args():
     farmsim.add_argument('--agri-amoe-gate-temperature', type=float,
                          default=1.0,
                          help='positive softmax temperature for Agri-AMoE routing')
+    farmsim.add_argument('--use-crop-positive-sampling', type=int,
+                         choices=(0, 1),
+                         help='replace a small training-sample quota with crop-rich frames')
+    farmsim.add_argument('--crop-stats-file',
+                         help='precomputed valid front-grid crop counts for training')
+    farmsim.add_argument('--crop-oversample-ratio', type=float, default=0.1,
+                         help='fraction of each epoch replaced by crop-rich frames')
+    farmsim.add_argument('--crop-oversample-min-voxels', type=int, default=1000,
+                         help='minimum valid crop voxels in a crop-rich frame')
     farmsim.add_argument('--use-dual-hardness-refinement', type=int,
                          choices=(0, 1),
                          help='enable ADHR training-only agricultural hard-voxel refinement')
@@ -399,6 +408,15 @@ def apply_farmsim_options(cfg, args):
     if args.data_root is not None and not osp.isdir(args.data_root):
         raise FileNotFoundError(
             f'FarmSim --data-root does not exist: {args.data_root}')
+    if args.use_crop_positive_sampling:
+        if not 0 < args.crop_oversample_ratio < 1:
+            raise ValueError('--crop-oversample-ratio must be in (0, 1)')
+        if args.crop_oversample_min_voxels < 1:
+            raise ValueError('--crop-oversample-min-voxels must be positive')
+        if not args.crop_stats_file or not osp.isfile(args.crop_stats_file):
+            raise FileNotFoundError(
+                '--use-crop-positive-sampling requires an existing '
+                '--crop-stats-file')
     if args.predict_future_occ == 1 and args.future_occ_steps < 1:
         raise ValueError('--future-occ-steps must be at least 1 when '
                          '--predict-future-occ=1.')
@@ -445,6 +463,7 @@ def apply_farmsim_options(cfg, args):
         args.predict_future_traj, args.use_fp16, args.use_crop_gap_refinement,
         args.use_selective_c2f, args.use_dual_hardness_refinement,
         args.use_agri_amoe_decoder,
+        args.use_crop_positive_sampling,
         args.use_gap_residual_refiner,
         args.use_nearfar_bev,
         args.disable_temporal_self_attention,
@@ -499,6 +518,12 @@ def apply_farmsim_options(cfg, args):
         if args.workers_per_gpu < 0:
             raise ValueError('--workers-per-gpu cannot be negative.')
         overrides['data.workers_per_gpu'] = args.workers_per_gpu
+    if args.use_crop_positive_sampling:
+        cfg.data.shuffler_sampler = dict(
+            type='CropAwareDistributedGroupSampler',
+            crop_stats_file=args.crop_stats_file,
+            crop_oversample_ratio=args.crop_oversample_ratio,
+            crop_min_voxels=args.crop_oversample_min_voxels)
     if args.epochs is not None:
         overrides.update({'total_epochs': args.epochs,
                           'runner.max_epochs': args.epochs})

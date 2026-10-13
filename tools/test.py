@@ -51,6 +51,13 @@ def _print_occupancy_metrics(outputs, classes):
         for name, value, present in zip(names, iou, valid):
             suffix = '' if present else ' (absent)'
             print(f'  {name}: {value:.4f}{suffix}')
+        if 'crop' in names:
+            crop_index = names.index('crop')
+            denominator = float(hist[crop_index, :].sum() +
+                                hist[:, crop_index].sum())
+            crop_f1 = (2.0 * float(diagonal[crop_index]) / denominator
+                       if denominator else 0.0)
+            print(f'{key} crop F1: {crop_f1:.4f}')
         print(f'{key} mIoU (present classes): {iou[valid].mean():.4f} '
               f'({valid.sum()}/{len(iou)})')
         print(f'{key} mIoU (all classes): {iou.mean():.4f}')
