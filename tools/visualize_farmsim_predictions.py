@@ -35,6 +35,8 @@ def parse_args():
                         help='maximum non-free voxels per label/prediction panel (default: 30000)')
     parser.add_argument('--open-browser', action='store_true',
                         help='open the viewer URL in the default browser')
+    parser.add_argument('--row-prediction-dir', type=Path,
+                        help='row JSON directory (default: prediction_dir/../row_prediction)')
     return parser.parse_args()
 
 
@@ -51,11 +53,17 @@ def voxel_points(labels, point_cloud_range, max_points, valid_mask=None):
         mask &= valid_mask
     indices = np.argwhere(mask)
     total = len(indices)
+    # Measure the full visible canopy before point subsampling, so an overlay
+    # cannot sink below a tall crop that was omitted by --max-points.
+    crop_layers = np.flatnonzero(np.any((labels == 1) & mask, axis=(0, 1)))
+    z0, z1 = float(point_cloud_range[2]), float(point_cloud_range[5])
+    crop_top_z = (z0 + (int(crop_layers[-1]) + 1) * (z1 - z0) / labels.shape[2]
+                  if len(crop_layers) else None)
     if len(indices) > max_points:
         indices = indices[np.linspace(0, len(indices) - 1, max_points,
                                       dtype=np.int64)]
     if not len(indices):
-        return dict(x=[], y=[], z=[], color=[], total=0, drawn=0)
+        return dict(x=[], y=[], z=[], color=[], total=0, drawn=0, crop_top_z=crop_top_z)
     labels = labels[tuple(indices.T)]
     x0, y0, z0, x1, y1, z1 = point_cloud_range
     shape = np.asarray(mask.shape, dtype=np.float32)
@@ -68,16 +76,37 @@ def voxel_points(labels, point_cloud_range, max_points, valid_mask=None):
     return dict(x=xyz[:, 0].round(3).tolist(),
                 y=xyz[:, 1].round(3).tolist(),
                 z=xyz[:, 2].round(3).tolist(), color=colors,
-                total=total, drawn=len(indices))
+                total=total, drawn=len(indices), crop_top_z=crop_top_z)
 
 
-def load_sample(path, max_points):
+def load_row_overlay(path, sample, row_prediction_dir):
+    """Attach matching row artifacts, ignoring stale occupancy-derived files."""
+    row_path = row_prediction_dir / (path.stem + '.json')
+    sample['row_overlay_status'] = 'No row result for this sample'
+    if not row_path.exists():
+        return
+    try:
+        artifact = json.loads(row_path.read_text())
+        stat = path.stat()
+        source = dict(name=path.name, size_bytes=stat.st_size, mtime_ns=stat.st_mtime_ns)
+        if artifact.get('schema_version') != 1 or artifact.get('source') != source:
+            sample['row_overlay_status'] = 'Stale row result; rerun row_det/generate_row_predictions.py'
+            return
+        sample['current']['row_prediction'] = artifact['current']
+        for frame, rows in zip(sample['future'], artifact.get('future', [])):
+            frame['row_prediction'] = rows
+        sample['row_overlay_status'] = 'Row result loaded'
+    except (OSError, ValueError, KeyError, TypeError) as error:
+        sample['row_overlay_status'] = f'Cannot load row result: {error}'
+
+
+def load_sample(path, max_points, row_prediction_dir=None):
     """Read one NPZ only when the browser requests it."""
     with np.load(path, allow_pickle=False) as item:
         pc_range = item['point_cloud_range'].astype(float)
         current_gt = item['current_gt']
         current_valid = current_gt != 255
-        sample = dict(name=path.stem,
+        sample = dict(name=path.stem, point_cloud_range=pc_range.tolist(),
                       current=dict(pred=voxel_points(item['current_pred'], pc_range, max_points,
                                                      valid_mask=current_valid),
                                    gt=voxel_points(current_gt, pc_range, max_points,
@@ -94,6 +123,8 @@ def load_sample(path, max_points):
             sample['trajectory_pred'] = item['trajectory_pred'].astype(float).tolist()
         if 'trajectory_gt' in item:
             sample['trajectory_gt'] = item['trajectory_gt'].astype(float).tolist()
+    row_prediction_dir = row_prediction_dir or path.parent.parent / 'row_prediction'
+    load_row_overlay(path, sample, row_prediction_dir)
     return sample
 
 
@@ -111,35 +142,62 @@ select{{min-width:340px}} button{{margin-left:6px}} .hint{{color:#555}} #status{
 <body><h2>FarmSim 3D Occupancy: label vs prediction</h2>
 <label>Sample <select id="sample"></select></label><button id="previous">Previous</button><button id="next">Next</button>
 <label> Time <select id="time"></select></label>
+<label><input type="checkbox" id="show-rows">Crop row lines</label>
+<label><input type="checkbox" id="show-reference">Navigation reference</label>
 <span class="hint">Each panel is capped at {max_points:,} valid non-free voxels. All samples are preloaded.</span><span id="status"></span><span id="preload-status" class="hint"></span>
+<div id="row-status" class="hint"></div>
+<div id="line-hint" class="hint" hidden>Lines are displayed above the crop canopy for visibility; saved coordinates are unchanged.</div>
 <div id="plot"></div><div id="class-legend"><strong>Semantic colours:</strong>{class_legend}</div><script>
 const sampleSelect=document.querySelector('#sample'), timeSelect=document.querySelector('#time'), status=document.querySelector('#status'), preloadStatus=document.querySelector('#preload-status');
+const showRows=document.querySelector('#show-rows'), showReference=document.querySelector('#show-reference'), rowStatus=document.querySelector('#row-status');
 let samples=[], current=null; const sampleCache=new Map();
 function trace(points,name,scene) {{ return {{type:'scatter3d',mode:'markers',name:name,scene:scene,x:points.x,y:points.y,z:points.z,marker:{{size:2,color:points.color,opacity:.78}}}}; }}
 function trajectory(points,name,scene,color) {{ return {{type:'scatter3d',mode:'lines+markers',name:name,scene:scene,x:points.map(p=>p[0]),y:points.map(p=>p[1]),z:points.map(_=>0),line:{{color:color,width:6}},marker:{{size:3}}}}; }}
+function rowLine(points,name,scene,color,width,group,showlegend,hovertext) {{ return {{type:'scatter3d',mode:'lines',name:name,scene:scene,x:points.map(p=>p[0]),y:points.map(p=>p[1]),z:points.map(p=>p[2]),line:{{color:color,width:width}},legendgroup:group,showlegend:showlegend,text:hovertext,hovertemplate:'%{{text}}<br>x=%{{x:.2f}} m<br>y=%{{y:.2f}} m<extra>%{{fullData.name}}</extra>'}}; }}
+function highlightedLine(traces,points,name,scene,color,width,group,showlegend,hovertext,canopyTop) {{
+ const top=points.reduce((height,p)=>Math.max(height,p[2]),canopyTop??-Infinity)+.2;
+ const lifted=points.map(p=>[p[0],p[1],top]);
+ const outline=rowLine(lifted.map(p=>[p[0],p[1],p[2]-.005]),name+' outline',scene,'#ffffff',width+4,group,false,hovertext);
+ outline.hoverinfo='skip'; delete outline.hovertemplate;
+ traces.push(outline,rowLine(lifted,name,scene,color,width,group,showlegend,hovertext));
+}}
+function addRows(traces,result,scene,prefix,canopyTop) {{ if(!result) return;
+ if(showRows.checked) (result.rows||[]).forEach((row,index)=>highlightedLine(traces,row.points,prefix+' crop rows',scene,'#f0009b',7,prefix+'-rows',index===0,`Row ${{row.id}}; fit RMSE ${{row.fit_rmse_m}} m; ${{row.support_cells}} crop cells`,canopyTop));
+ const reference=result.reference_path;
+ if(showReference.checked && reference?.points?.length) highlightedLine(traces,reference.points,prefix+' navigation reference',scene,'#007dff',10,prefix+'-reference',true,reference.status+'; rows '+reference.row_ids.join(', '),canopyTop);
+}}
 function render() {{ if(!current) return; const t=+timeSelect.value, frame=t===0?current.current:current.future[t-1]; const label=[trace(frame.gt,'Label','scene')], pred=[trace(frame.pred,'Prediction','scene2')];
  if(current.trajectory_gt) label.push(trajectory(current.trajectory_gt,'GT trajectory','scene','#111'));
  if(current.trajectory_pred) pred.push(trajectory(current.trajectory_pred,'Predicted trajectory','scene2','#e60000'));
- const makeScene=(domain)=>({{domain:{{x:domain,y:[0,1]}},xaxis:{{title:'forward x'}},yaxis:{{title:'right y'}},zaxis:{{title:'up z'}},aspectmode:'data'}});
+ const rows=frame.row_prediction;
+ showRows.disabled=!rows; showReference.disabled=!rows;
+ addRows(label,rows?.gt,'scene','GT',frame.gt.crop_top_z); addRows(pred,rows?.pred,'scene2','Predicted',frame.pred.crop_top_z);
+ document.querySelector('#line-hint').hidden=!(rows && (showRows.checked || showReference.checked));
+ rowStatus.textContent=rows ? ['gt','pred'].filter(side=>rows[side]).map(side=>`${{side==='gt'?'GT':'Prediction'}}: ${{rows[side].rows.length}} crop rows; reference ${{rows[side].reference_path.status}}`).join(' | ') : (t ? 'No row result for this future frame' : current.row_overlay_status);
+ const pc=current.point_cloud_range;
+ let zTop=Math.max(pc[5],(frame.gt.crop_top_z??pc[2])+.4,(frame.pred.crop_top_z??pc[2])+.4);
+ for(const side of [rows?.gt,rows?.pred]) {{ for(const row of side?.rows||[]) {{ for(const p of row.points) zTop=Math.max(zTop,p[2]+.4); }} for(const p of side?.reference_path?.points||[]) zTop=Math.max(zTop,p[2]+.4); }}
+ const makeScene=(domain)=>({{domain:{{x:domain,y:[0,1]}},xaxis:{{title:'forward x',range:[pc[0],pc[3]]}},yaxis:{{title:'right y',range:[pc[1],pc[4]]}},zaxis:{{title:'up z',range:[pc[2],zTop]}},aspectmode:'data',camera:{{eye:{{x:1.4,y:1.4,z:1.4}}}}}});
  status.textContent=` (${{+sampleSelect.value+1}} / ${{samples.length}}; valid non-free: GT ${{frame.gt.total.toLocaleString()}}, Prediction ${{frame.pred.total.toLocaleString()}})`;
- Plotly.react('plot',label.concat(pred),{{title:current.name+(t?' — future '+t:' — current'),scene:makeScene([0,.48]),scene2:makeScene([.52,1]),annotations:[{{text:'<b>Label (GT)</b>',x:.24,y:1.04,xref:'paper',yref:'paper',showarrow:false}},{{text:'<b>Prediction</b>',x:.76,y:1.04,xref:'paper',yref:'paper',showarrow:false}}],margin:{{l:0,r:0,t:80,b:0}},legend:{{orientation:'h'}}}},{{responsive:true}}); }}
+ Plotly.react('plot',label.concat(pred),{{title:current.name+(t?' — future '+t:' — current'),uirevision:current.name,scene:makeScene([0,.48]),scene2:makeScene([.52,1]),annotations:[{{text:'<b>Label (GT)</b>',x:.24,y:1.04,xref:'paper',yref:'paper',showarrow:false}},{{text:'<b>Prediction</b>',x:.76,y:1.04,xref:'paper',yref:'paper',showarrow:false}}],margin:{{l:0,r:0,t:80,b:0}},legend:{{orientation:'h'}}}},{{responsive:true}}); }}
  function setTimes() {{ timeSelect.innerHTML='<option value="0">current</option>'; for(let i=0;i<current.future.length;i++) timeSelect.innerHTML+=`<option value="${{i+1}}">future ${{i+1}}</option>`; render(); }}
  async function getSample(index) {{ if(!sampleCache.has(index)) {{ const request=fetch('/api/sample/'+index).then(async response=>{{ if(!response.ok) throw new Error(await response.text()); return response.json(); }}); sampleCache.set(index,request); }} return sampleCache.get(index); }}
  async function loadSample(index) {{ if(index<0 || index>=samples.length) return; sampleSelect.value=index; status.textContent='Loading…'; try {{ current=await getSample(index); setTimes(); }} catch(error) {{ status.textContent='Failed to load sample'; console.error(error); }} }}
  async function preloadSamples() {{ let nextIndex=1, completed=1; const update=()=>preloadStatus.textContent=` Preloading ${{completed}} / ${{samples.length}}…`; update(); async function worker() {{ while(nextIndex<samples.length) {{ const index=nextIndex++; try {{ await getSample(index); }} catch(error) {{ console.error('Failed to preload sample',index,error); }} completed++; update(); }} }} await Promise.all(Array.from({{length:4}},worker)); preloadStatus.textContent=' All samples preloaded.'; }}
  sampleSelect.onchange=()=>loadSample(+sampleSelect.value); timeSelect.onchange=render;
+ showRows.onchange=render; showReference.onchange=render;
  document.querySelector('#previous').onclick=()=>loadSample(+sampleSelect.value-1);
  document.querySelector('#next').onclick=()=>loadSample(+sampleSelect.value+1);
  (async()=>{{ const response=await fetch('/api/samples'); samples=await response.json(); sampleSelect.innerHTML=samples.map((name,i)=>`<option value="${{i}}">${{name}}</option>`).join(''); await loadSample(0); preloadSamples(); }})();
 </script></body></html>'''
 
 
-def preload_samples(paths, max_points):
+def preload_samples(paths, max_points, row_prediction_dir=None):
     """Materialise all visualisation payloads once before accepting requests."""
     payloads = []
     total = len(paths)
     for index, path in enumerate(paths, 1):
-        sample = load_sample(path, max_points)
+        sample = load_sample(path, max_points, row_prediction_dir)
         payloads.append(json.dumps(sample, separators=(',', ':')).encode('utf-8'))
         if index == total or index % 10 == 0:
             print(f'Preloaded {index}/{total} prediction files.', flush=True)
@@ -197,9 +255,14 @@ def main():
     paths = sorted(prediction_dir.glob('*.npz'))
     if not paths:
         raise FileNotFoundError(f'No .npz files found in {prediction_dir}')
+    row_prediction_dir = args.row_prediction_dir or prediction_dir.parent / 'row_prediction'
+    if args.row_prediction_dir is not None and not row_prediction_dir.is_dir():
+        raise FileNotFoundError(f'Row prediction directory not found: {row_prediction_dir}')
 
     print(f'Preloading {len(paths)} prediction files from {prediction_dir.resolve()} ...')
-    payloads = preload_samples(paths, args.max_points)
+    if row_prediction_dir.is_dir():
+        print(f'Loading optional crop rows and navigation references from {row_prediction_dir.resolve()}')
+    payloads = preload_samples(paths, args.max_points, row_prediction_dir)
     server = ThreadingHTTPServer((args.host, args.port),
                                  make_handler(paths, payloads, args.max_points))
     address, port = server.server_address[:2]

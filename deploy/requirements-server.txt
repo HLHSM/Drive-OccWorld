@@ -1,0 +1,5 @@
+numpy==1.26.4
+onnx==1.16.2
+onnxruntime==1.18.1
+tensorrt-cu12==10.3.0
+ninja==1.11.1.1

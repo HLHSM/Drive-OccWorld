@@ -245,3 +245,17 @@ CUDA_VISIBLE_DEVICES=0 PYTHONPATH="$PWD" \
 ```
 
 命令会先预加载全部 `.npz` 并显示进度，随后输出类似 `http://127.0.0.1:8000/` 的地址；在浏览器打开它后，可通过样本下拉框或 `Previous`/`Next` 逐条查看保存的结果。浏览器也会在后台预取全部样本，因此预加载完成后切换样本无需再等待 NPZ 读取或体素转换；代价是启动会变慢且服务端、浏览器会占用更多内存。页面左侧固定显示标签（GT），右侧固定显示预测结果；预测会使用同一帧 GT 的有效区域（非 ignore）掩码，避免未标注区域占用绘制点数，状态栏会显示两侧有效非 free 体素数。底部图例标明 6 类 FarmSim taxonomy 的颜色，其中 crop 为黄绿色、drivable 为天蓝色。存在未来占用时可切换未来时间步，存在轨迹时会自动叠加 GT 与预测轨迹。为控制浏览器性能，每侧默认最多显示 30,000 个有效非 free 体素；可通过 `--max-points 50000` 调大。需要自动打开浏览器时添加 `--open-browser`；默认仅本机可访问，需让局域网其他机器访问时可添加 `--host 0.0.0.0`。按 `Ctrl-C` 停止服务。页面仍使用 Plotly CDN，浏览器首次打开时需要可访问该 CDN。
+
+### 作物行线与局部导航参考线
+
+先从占用 NPZ 生成同一任务下的 `row_prediction/`，再用上面的命令启动查看器：
+
+```bash
+/home/HL/.conda/envs/dow2/bin/python row_det/generate_row_predictions.py \
+  work_dirs/front3_s_base_nohis_ep15_20261009_131823 \
+  --preview-count 6
+```
+
+脚本按占用文件名保存 JSON，分别提取预测与 GT 的作物行和行间参考路径，并写入 `summary.json`。查看器自动发现同级 `row_prediction/`，通过 **Crop row lines**（粉色）和 **Navigation reference**（蓝色）两个复选框控制叠加，默认关闭。左侧显示 GT 提取结果，右侧显示预测提取结果；状态栏显示无参考路径的原因。行线显示在可见作物冠层上方 0.2 m，并加粗和添加白色描边；保存的原始坐标不受显示抬升影响。输入占用文件更新后需要重跑提取并重启服务，避免使用过期行线。
+
+默认车宽为 0，输出标记为 `geometry_only`；按实际车辆设置 `--vehicle-width`（米）和 `--clearance-margin` 后才启用车宽检查。该模块是逐帧几何基线，尚未包含车辆控制、跨帧跟踪或闭环驾驶验证。参数、输出结构、未来帧支持及使用限制详见 [row_det/README.md](../row_det/README.md)。
