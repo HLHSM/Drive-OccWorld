@@ -259,3 +259,36 @@ CUDA_VISIBLE_DEVICES=0 PYTHONPATH="$PWD" \
 脚本按占用文件名保存 JSON，分别提取预测与 GT 的作物行和行间参考路径，并写入 `summary.json`。查看器自动发现同级 `row_prediction/`，通过 **Crop row lines**（粉色）和 **Navigation reference**（蓝色）两个复选框控制叠加，默认关闭。左侧显示 GT 提取结果，右侧显示预测提取结果；状态栏显示无参考路径的原因。行线显示在可见作物冠层上方 0.2 m，并加粗和添加白色描边；保存的原始坐标不受显示抬升影响。输入占用文件更新后需要重跑提取并重启服务，避免使用过期行线。
 
 默认车宽为 0，输出标记为 `geometry_only`；按实际车辆设置 `--vehicle-width`（米）和 `--clearance-margin` 后才启用车宽检查。该模块是逐帧几何基线，尚未包含车辆控制、跨帧跟踪或闭环驾驶验证。参数、输出结构、未来帧支持及使用限制详见 [row_det/README.md](../row_det/README.md)。
+
+对于带世界坐标作物行真值的新序列，使用 `row_det/prepare_croprow_evaluation.py` 准备完整评估集，用原任务配置和 checkpoint 保存全部占用预测，再用 `row_det/evaluate_croprow.py` 对比几何真值、标签拟合、预测拟合。评估使用每帧 `grid_frame_world_ue` 转换与 XY 裁剪、完整真值行段等距采样、85% 距离覆盖门限及一对一最大匹配，汇总 F1@0.10/0.20/0.30 m。输出独立保存到任务的 `croprow_evaluation_日期/`，并在其中的 `visualization/` 按既有序列均衡规则保存 100 张三列对比图；完整命令和指标定义见 [世界坐标行真值评估](../row_det/README.md#使用世界坐标作物行真值评估)。
+
+**地面网格相机标定修复（2026-10-20）**：对于提供 `semantic_occupancy.grid_frame_world_ue` 和传感器 `world_transform_ue` 的导出，新增 `FarmSimWorldDataset(camera_geometry='grid_world')`，通过相机世界位姿和网格世界位姿组合真实 `lidar2cam/lidar2img`，使用 UE 的 pitch/roll 符号约定。旧默认 `legacy` 用于复现已有训练任务；新训练应在 train/val/test 中统一启用新模式。既有权重需要评估标定切换的影响，不能假定只换外参即可提升。校准微调及完整行线复测脚本见 [row_det/README.md](../row_det/README.md)，使用原训练/验证集，保留新采集行线数据用于评估。
+
+`tools/train_farmsim_front3_s.sh` 现在默认训练 **R101 base + Agri-AMoE（96 通道）+ crop sampling（0.1/min500）**，采用 `512×288` 前三相机、无历史帧、15 epochs，默认 GPU 1、2、3 三卡、每卡 batch 4、累积 2 步，有效 batch 24。默认设置 `CAMERA_GEOMETRY=grid_world`；`tools/train.py --camera-geometry` 将该模式同时写入 train/val/test，保存在任务配置中，任务目录名也包含模式。直接运行：
+
+```bash
+# 开启修正后的投影（默认），从 R101 预训练权重开始新训练。
+CAMERA_GEOMETRY=grid_world bash tools/train_farmsim_front3_s.sh
+
+# 关闭修正，使用旧投影作对照。
+CAMERA_GEOMETRY=legacy bash tools/train_farmsim_front3_s.sh
+```
+
+`CAMERA_GEOMETRY` 只接受 `grid_world`、`legacy`。直接调用 `tools/train.py` 时若不传 `--camera-geometry`，保留配置文件中的模式，数据集默认仍为 `legacy`。独立测试应使用新任务保存的配置，以继承同一模式。当前脚本中的蒸馏启动段已注释，旧投影学生/教师 checkpoint 若用于蒸馏，应使用 `CAMERA_GEOMETRY=legacy`。
+
+若 torchrun 报 `exitcode: -15`、`Signal 15 (SIGTERM)`，表示该训练进程被终止信号结束。其余 rank 随后被关闭及 semaphore 清理提示是退出过程中的现象，不能据此认定 CUDA OOM、DataLoader 或相机投影出错。普通 Linux OOM kill 通常表现为 SIGKILL（-9）；只凭 SIGTERM 不能判断信号发送者。
+
+front3-s 启动脚本现在在任务目录保存 `launcher.log`（包含完整 torchrun 汇总）、`launcher.exitcode` 以及 `torchrun/*/attempt_*/<rank>/stdout.log`、`stderr.log`。`tools/train.py` 用 PyTorch `@record` 保存未捕获 Python 异常的 `error.json`；启动日志记录 rank/PID。脚本启用 `FARMSIM_TRACE_SIGTERM=1`，收到 SIGTERM 时输出 Python 调用栈后继续按信号正常退出，不忽略终止、不自动重试。SIGTERM/SIGKILL 不保证生成 `error.json`；调用栈说明被中断的位置，不能证明该位置存在代码错误，也不记录信号发送者。
+
+需要脱离当前终端运行时，可使用下面的命令；它避免常见的终端挂断影响，不能阻止外部 `kill` 或调度器主动终止：
+
+```bash
+nohup bash tools/train_farmsim_front3_s.sh \
+  > work_dirs/front3_s_grid_world_launch.log 2>&1 < /dev/null &
+```
+
+2026-10-20 22:04 中断的 `front3_s_base_agri_amoe96_cropsample0.1_min500_nohis_grid_world_b24_ep15_20261020_215512` 尚未结束第一个 epoch，目录没有 `.pth`，无法从第 720 步恢复，只能重新训练。已有完整 checkpoint 的任务可用 `tools/train.py <保存的配置> --resume-from <checkpoint>` 恢复；不要同时传 `--load-from`。当前启动脚本仍按新任务初始化，没有自动续训或自动重跑行为。
+
+**梯度累积续训修复（2026-10-21）**：当前环境的 MMCV 1.4.0 累积梯度 hook 在续训时用剩余步数计算边界，却与绝对 `runner.iter` 比较，可能提前进入尾部累积区间并出现 `loss / 0`。例如每轮 2699 步、共 15 轮、累积 2 步，从第 7 轮 checkpoint 恢复时，会在第 9 轮开始持续产生 NaN 梯度；AMP 跳过更新，但训练日志仍可继续显示有限 loss。项目训练 API 现在自动为 FP32/FP16 梯度累积选择 `ResumeSafeGradientCumulative*OptimizerHook`，使用绝对迭代边界；FP16 scale 为 0 或非有限值时明确报错。从头训练的累积行为保持一致，恢复点不对齐累积窗口时仍保留 MMCV 的警告。
+
+`20261021_145224` 任务第 8～15 轮验证指标逐项一致，第 9～15 轮所有记录的 `grad_norm` 均为 NaN，最终 checkpoint 的 FP16 scale 为 0、Adam step 仅 10787，不能作为完整 15 轮训练结果评价投影模式。修复不会补回已有 checkpoint 缺失的更新。应从故障前 checkpoint 续训，或在独立目录加载有限权重、重建优化器和 scaler 后设置补训计划；不要按该故障 checkpoint 的 epoch 15 计数直接续训。详细对照见该任务目录的 `TRAINING_PROJECTION_AUDIT.md`。

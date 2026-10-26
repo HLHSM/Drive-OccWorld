@@ -13,4 +13,11 @@ class SetEpochInfoHook(Hook):
         if is_module_wrapper(model):
             model = model.module
         model.set_epoch(epoch)
-        
+
+    def before_train_iter(self, runner):
+        model = runner.model
+        if is_module_wrapper(model):
+            model = model.module
+        if hasattr(model, 'set_distillation_progress'):
+            model.set_distillation_progress(
+                runner.epoch + runner.inner_iter / max(len(runner.data_loader), 1))

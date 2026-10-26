@@ -1,7 +1,7 @@
 """The one FarmSim data contract used by all external occupancy baselines.
 
 The native Drive-OccWorld adapter is deliberately the reference for geometry:
-all returned occupancy tensors use ``[x, y, z]`` order in the forward 20 m
+all returned occupancy tensors use ``[x, y, z]`` order in the forward 15 m
 crop.  Labels are the common evaluation labels: free=0, crop=1, soil=2,
 drivable=3, vegetation=4, obstacle=5 and ignore=255.
 """
@@ -9,6 +9,7 @@ drivable=3, vegetation=4, obstacle=5 and ignore=255.
 from __future__ import annotations
 
 import json
+from functools import lru_cache
 from pathlib import Path
 from typing import Dict, Iterable, Tuple
 
@@ -16,8 +17,8 @@ import numpy as np
 
 
 RGB_CAMERAS = ('front_left_rgb', 'front_rgb', 'front_right_rgb')
-OCC_SIZE = (100, 100, 25)
-PC_RANGE = (0.0, -10.0, -2.0, 20.0, 10.0, 3.0)
+OCC_SIZE = (75, 75, 25)
+PC_RANGE = (0.0, -7.5, -2.0, 15.0, 7.5, 3.0)
 VOXEL_SIZE = (0.2, 0.2, 0.2)
 CLASS_NAMES = ('free', 'crop', 'soil_ground', 'drivable',
                'other_vegetation', 'other_obstacle')
@@ -38,17 +39,45 @@ def resolve_sequence(data_root: str | Path, sequence: Dict) -> Path:
     return path if path.is_absolute() else Path(data_root).expanduser() / path
 
 
+@lru_cache(maxsize=512)
+def _source_grid_and_target_indices(sequence_path):
+    """Match native front3-s target-center sampling, including half-cell Y."""
+    schema = read_manifest(Path(sequence_path) / 'occupancy_schema.json')
+    region = next((r for r in schema['regions']
+                   if r['id'] == schema['region_mode']), None)
+    if region is None:
+        raise ValueError(f'{sequence_path}: missing active occupancy region')
+    shape = np.asarray(region['dimensions_xyz'], dtype=np.int64)
+    source_min = np.asarray(region['min_m_xyz'], dtype=np.float64)
+    source_max = np.asarray(region['max_m_xyz'], dtype=np.float64)
+    pitch = (source_max - source_min) / shape
+    lower, upper = np.asarray(PC_RANGE[:3]), np.asarray(PC_RANGE[3:])
+    if not np.allclose(pitch, VOXEL_SIZE) or np.any(lower < source_min - 1e-5) or np.any(upper > source_max + 1e-5):
+        raise ValueError(f'{sequence_path}: incompatible source voxel size or ROI')
+    indices = []
+    for axis in range(3):
+        centers = lower[axis] + (np.arange(OCC_SIZE[axis]) + 0.5) * pitch[axis]
+        index = np.floor((centers - source_min[axis]) / pitch[axis] + 1e-6).astype(np.int64)
+        if index.min() < 0 or index.max() >= shape[axis]:
+            raise ValueError(f'{sequence_path}: target centers exceed source grid')
+        indices.append(index)
+    return tuple(int(n) for n in shape), tuple(indices)
+
+
 def load_common_occupancy(sequence_path: str | Path, frame_id: str) -> Tuple[np.ndarray, np.ndarray]:
     """Read FarmSim's on-disk [z, y, x] target into the common front grid."""
     sequence_path = Path(sequence_path)
     raw = np.fromfile(sequence_path / 'occupancy' / f'{frame_id}.bin', dtype=np.uint8)
     valid = np.fromfile(sequence_path / 'occupancy_valid' / f'{frame_id}.bin', dtype=np.uint8)
-    expected = 25 * 100 * 200
+    shape, indices = _source_grid_and_target_indices(str(sequence_path.resolve()))
+    size_x, size_y, size_z = shape
+    expected = size_x * size_y * size_z
     if raw.size != expected or valid.size != expected:
         raise RuntimeError(f'Unexpected occupancy size in {sequence_path} frame {frame_id}')
-    raw = raw.reshape(25, 100, 200).transpose(2, 1, 0)[100:, :, :]
-    valid = valid.reshape(25, 100, 200).transpose(2, 1, 0)[100:, :, :].astype(bool)
+    raw = raw.reshape(size_z, size_y, size_x).transpose(2, 1, 0)[np.ix_(*indices)]
+    valid = valid.reshape(size_z, size_y, size_x).transpose(2, 1, 0)[np.ix_(*indices)].astype(bool)
     labels = _RAW_TO_COMMON[raw]
+    valid &= labels != 255
     labels[~valid] = 255
     return labels, valid
 

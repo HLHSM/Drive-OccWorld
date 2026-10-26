@@ -108,3 +108,109 @@ python row_det/generate_row_predictions.py work_dirs/<训练任务> \
 ```bash
 /home/HL/.conda/envs/dow2/bin/python -m unittest row_det.test_row_detection -v
 ```
+
+## 使用世界坐标作物行真值评估
+
+对于带有 `evaluation_ground_truth.grid_frame_world_ue` 和 `crop_rows_file` 的新采集序列，可以用独立几何真值评估标签占用和模型预测占用的行拟合质量。脚本仍放在 `row_det/`，该次新数据评估结果放到训练任务下的独立目录，避免与旧验证集混合。
+
+已执行的示例：
+
+```bash
+TASK_DIR=work_dirs/front3_s_base_agri_amoe96_cropsample0.1_min500_nohis_b24_ep15_20261012_214738
+EVAL_DIR="$TASK_DIR/croprow_evaluation_20261020"
+PYTHON_BIN=/home/HL/.conda/envs/dow2/bin/python
+
+"$PYTHON_BIN" row_det/prepare_croprow_evaluation.py \
+  /data/HL/SimData-croprow "$EVAL_DIR"
+
+CUDA_VISIBLE_DEVICES=0 PYTHONPATH=. "$PYTHON_BIN" tools/test.py \
+  "$TASK_DIR/farmsim_occ_front3_s.py" "$TASK_DIR/epoch_15.pth" \
+  --out "$EVAL_DIR/occupancy_metrics.pkl" \
+  --save-predictions "$EVAL_DIR/prediction" --save-prediction-count -1 \
+  --cfg-options data.test.ann_file="$EVAL_DIR/evaluation_manifest.json" \
+  data.test.data_root=/data/HL/SimData-croprow \
+  data.test.samples_per_gpu=2 data.workers_per_gpu=2
+
+OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 "$PYTHON_BIN" row_det/evaluate_croprow.py \
+  "$EVAL_DIR" --data-root /data/HL/SimData-croprow \
+  --checkpoint "$TASK_DIR/epoch_15.pth" --workers 4
+```
+
+评估协议：
+
+- 用该帧 `grid_frame_world_ue` 的平移（cm 转 m）和逆 yaw 将世界 XY 行段变换到占用网格 XY；不使用车辆中心位姿代替网格位姿。若网格非水平而只有世界 XY 标注，直接报错，避免假造世界 Z。
+- 过滤 `fit_valid=false`，将几何真值和拟合结果都裁剪到模型评价范围。几何真值不按拟合器的最小长度过滤，不根据模型预测或 GT 可见掩码删除真值行。
+- 在裁剪后的**完整参考行段**上等距采样（包含两端点，间距不超过 0.05 m），计算采样点到估计有限行段/折线的欧氏距离。禁止仅截取两行重叠部分比较，也不外推拟合线端点。
+- 至少 85% 的采样点距离严格小于阈值，才允许匹配；用最大匹配数的一对一二分图匹配统计 TP、FP、FN。每帧没有 GT 时仍保留其 FP；全空帧的单帧 F1 为 null。
+- 在全部帧汇总 TP、FP、FN 后计算 micro F1，报告 F1@0.10/0.20/0.30 m。该数据集上不事后选择主阈值。可视化仅用 0.20 m 指示匹配颜色，不代表已选定主阈值。
+- 标签拟合和预测拟合使用完全相同的固定 `RowConfig`，模型拟合不读取几何真值、GT 掩码或行方向。可用 `--row-config` 显式指定事先固定的配置 JSON；重新评估应使用单独目录保存不同配置的结果。
+
+指标借鉴 [RowDetr 的覆盖率匹配思想](https://arxiv.org/html/2412.10525v2#S3.SS1)，距离改为米制网格 XY 到有限行段的距离；数值不能与其图像坐标结果直接比较。
+
+输出包括：
+
+- `dataset_audit.json`、`evaluation_manifest.json`、`frame_index.json`：数据完整性、完整评估集和全局样本索引。
+- `prediction/`：全部帧占用 NPZ；`row_prediction/`：每帧几何真值、标签拟合、模型拟合、三阈值匹配明细和坐标变换信息。可直接将 `prediction/` 传给已有查看器，叠加标签/预测拟合线。
+- `row_metrics.json`、`per_frame_metrics.csv`、`grouped_metrics.csv`：总体、作物、生长阶段、序列级结果。主要比较为 `label_fit_vs_geometry`、`model_fit_vs_geometry`；`model_fit_vs_label_fit` 仅是附加重建诊断。
+- `visualization/`：100 张三列 BEV 对比图（几何真值 / 标签占用拟合 / 模型占用拟合）。沿用占用预览的按序列均衡、序列内居中连续窗口规则，以及 `<全局样本索引>_<scenario>_<frame>_prediction.png` 文件命名；选择索引固定保存到 `visualization_indices.txt`。
+- `REPORT.md`、`run_config.json`、`inference.log`、`occupancy_metrics.pkl`：结果说明、固定拟合参数、协议、checkpoint SHA256 和原模型推理日志。推理保留原模型的相机适配方式，不在评估中调整标定。
+
+指标测试：
+
+```bash
+python -m unittest row_det.test_geometric_evaluation row_det.test_row_detection -v
+```
+
+### 独立复核匹配并定位低分来源
+
+`audit_croprow_matching.py` 使用 GEOS/Shapely 独立裁剪和计算有限行段距离，
+用 SciPy 最大二分图匹配复核每帧三个阈值的 TP/FP/FN、已保存匹配的覆盖率、
+平均距离和采样数量；另用 SciPy 逆旋转复核世界行段到网格的变换。
+它只读取 `row_prediction`，不修改占用、拟合线或正式指标。
+审计依赖 NumPy、SciPy、Shapely >= 2；当前系统 `python` 可运行，`dow2` 不包含后两者。
+
+```bash
+TASK_DIR=work_dirs/front3_s_base_agri_amoe96_cropsample0.1_min500_nohis_b24_ep15_20261012_214738
+OPENBLAS_NUM_THREADS=1 OMP_NUM_THREADS=1 python row_det/audit_croprow_matching.py \
+  --evaluation-dir "$TASK_DIR/croprow_evaluation_20261020" \
+  --evaluation-dir "$TASK_DIR/croprow_evaluation_20261020_grid_fixed" \
+  --output-dir "$TASK_DIR/croprow_matching_audit_20261020" --workers 8
+```
+
+输出 `matching_audit.json`、`REPORT.md` 和逐真值行的 `reference_diagnostics_0p20m.csv`。
+CSV 包含完整真值覆盖率、达到 85% 覆盖所需的距离次序统计量 `d85`、最佳候选线方向差和中点横向误差。
+这些最佳候选由几何距离选出，不代表已确认物理行身份；没有候选的真值不进入误差分位数统计。
+诊断把未匹配真值分为：无预测行、有合格候选但一对一竞争、仅无限延长后存在合格候选、位置/方向偏差或缺行。
+无限延长只用于区分端点支持不足，不作为正式分数或导航路径。正式评估仍覆盖完整有限真值行段，保持 85% 门限。
+
+注意前文旧 `comparison` 字段的贪心重建诊断，与几何真值评估是两套独立用途；
+`evaluate_croprow.py` 的正式 F1 调用 `geometric_evaluation.py` 的最大匹配。
+
+### 修复地面网格与相机投影不一致
+
+旧适配器把相机 `relative_transform_ue` 直接当成相对于占用网格的外参。但采集数据的占用网格是地面原点、只含 yaw 的坐标系，相机挂点还可能与车辆中心存在根组件偏移。这会让倾斜、起伏地形上的图像特征采样偏移；原训练数据也存在此问题。
+
+`FarmSimWorldDataset(camera_geometry='grid_world')` 使用逐帧 `semantic_occupancy.grid_frame_world_ue` 和各相机的 `world_transform_ue`：
+
+```text
+optical_from_grid = UE_to_optical @ inverse(world_from_camera) @ world_from_grid
+lidar2img = K @ optical_from_grid
+```
+
+世界姿态采用 [UE FRotator 约定](https://dev.epicgames.com/documentation/en-us/unreal-engine/API/Runtime/Core/TRotator)，即列向量形式 `Rz(yaw) @ Ry(-pitch) @ Rx(-roll)`。图像缩放继续同步缩放投影矩阵。该路径不读取作物行真值或占用类别；时序运动也改用同一个网格位姿。缺失必需世界位姿时直接报错。
+
+默认仍为 `legacy`，以便复现旧 checkpoint；旧权重是在旧采样方式下学习的，直接换外参不能保证各项指标改善。新训练应在 `data.train/val/test` 三处统一设置 `camera_geometry='grid_world'`。
+
+本次修复另外进行固定两轮的校准微调：每个原训练序列均匀抽取 8 帧，共 1,984 帧，原验证序列各取 4 帧，共 200 帧；冻结图像 backbone，学习率 `5e-5`，有效 batch 12，seed 0。按原验证集作物体素 IoU 选择 checkpoint，不用 SimData-croprow 的行线分数选择模型。原 epoch_15.pth 保留，行线拟合配置、XY 范围和完整真值覆盖指标保持一致。
+
+可复现整个流程（默认 GPU 0；日志写入各输出目录）：
+
+```bash
+GPU_ID=0 bash row_det/repair_croprow_calibration.sh \
+  work_dirs/front3_s_base_agri_amoe96_cropsample0.1_min500_nohis_b24_ep15_20261012_214738 \
+  /data/HL/SimData-croprow
+```
+
+微调产物保存在 `<task>/grid_calibration_finetune_20261020/`，新评估保存在 `<task>/croprow_evaluation_20261020_grid_fixed/`。其中 `prediction/`、`row_prediction/` 和 `visualization/` 与原评估分开；100 张图仍按原序列均衡、居中连续窗口规则生成。`selected_checkpoint.json` 记录两轮原验证集结果和选择依据。
+
+本次全量复测（1,540 帧）的行线 F1@0.20m 为 `0.1573 → 0.1735`，F1@0.30m 为 `0.2851 → 0.3075`；F1@0.10m 为 `0.0441 → 0.0421`，作物体素 IoU 为 `0.2003 → 0.1850`。这是有限的校准适配收益，不能作为整体优于原模型的结论；原模型未替换。详细对照和限制见新评估目录的 `REPAIR_REPORT.md`。后续训练应保持标定一致，并在独立验证集上验证足够训练后的收益。

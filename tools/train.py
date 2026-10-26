@@ -8,6 +8,9 @@ from __future__ import division
 
 import argparse
 import copy
+import faulthandler
+import signal
+import sys
 import mmcv
 import os
 import time
@@ -16,6 +19,7 @@ import warnings
 from mmcv import Config, DictAction
 from mmcv.runner import get_dist_info, init_dist
 from os import path as osp
+from torch.distributed.elastic.multiprocessing.errors import record
 
 # ``dow2`` uses lightweight MMCV for occupancy-only training.  Importing this
 # repository hook before MMDetection keeps unrelated generic deformable-attn
@@ -61,6 +65,9 @@ def parse_args():
                          help='FarmSim input image width')
     farmsim.add_argument('--image-height', type=int,
                          help='FarmSim input image height')
+    farmsim.add_argument('--camera-geometry', choices=('legacy', 'grid_world'),
+                         help='camera projection mode for train/val/test; '
+                              'omit to preserve the config setting')
     farmsim.add_argument('--epochs', type=int, help='number of training epochs')
     farmsim.add_argument('--history-frames', type=int,
                          help='number of historical frames, excluding current')
@@ -107,6 +114,22 @@ def parse_args():
     farmsim.add_argument('--agri-amoe-gate-temperature', type=float,
                          default=1.0,
                          help='positive softmax temperature for Agri-AMoE routing')
+    farmsim.add_argument('--distill-teacher-checkpoint',
+                         help='frozen R101 FarmSim checkpoint for R50 distillation')
+    farmsim.add_argument('--distill-teacher-config',
+                         help='saved training config for the frozen R101 teacher')
+    farmsim.add_argument('--distill-logit-weight', type=float, default=0.0,
+                         help='class-balanced final occupancy KL weight; zero disables')
+    farmsim.add_argument('--distill-fpn-weight', type=float, default=0.0,
+                         help='channel-wise FPN feature KL weight; zero disables')
+    farmsim.add_argument('--distill-logit-temperature', type=float, default=2.0)
+    farmsim.add_argument('--distill-fpn-temperature', type=float, default=1.0)
+    farmsim.add_argument('--distill-fpn-levels', type=int, nargs='+', default=[0, 1],
+                         help='zero-based image FPN levels used for feature distillation')
+    farmsim.add_argument('--distill-warmup-epochs', type=float, default=0.5,
+                         help='linearly increase KD weights during this many epochs')
+    farmsim.add_argument('--fp16-initial-scale', type=float,
+                         help='initial dynamic AMP scale when creating a new optimizer')
     farmsim.add_argument('--use-crop-positive-sampling', type=int,
                          choices=(0, 1),
                          help='replace a small training-sample quota with crop-rich frames')
@@ -322,6 +345,16 @@ def apply_farmsim_options(cfg, args):
         raise ValueError('--agri-amoe-channels must be at least 8.')
     if args.agri_amoe_gate_temperature <= 0:
         raise ValueError('--agri-amoe-gate-temperature must be positive.')
+    if args.fp16_initial_scale is not None and args.fp16_initial_scale <= 0:
+        raise ValueError('--fp16-initial-scale must be positive.')
+    if min(args.distill_logit_weight, args.distill_fpn_weight,
+           args.distill_warmup_epochs) < 0:
+        raise ValueError('Distillation weights and warm-up epochs must be non-negative.')
+    if min(args.distill_logit_temperature, args.distill_fpn_temperature) <= 0:
+        raise ValueError('Distillation temperatures must be positive.')
+    if (min(args.distill_fpn_levels) < 0 or
+            len(set(args.distill_fpn_levels)) != len(args.distill_fpn_levels)):
+        raise ValueError('Distillation FPN levels must be distinct and non-negative.')
     if not 0.0 < args.dual_hardness_active_ratio <= 1.0:
         raise ValueError('--dual-hardness-active-ratio must be in (0, 1].')
     if not 0.0 <= args.dual_hardness_gap_ratio <= 1.0:
@@ -459,6 +492,7 @@ def apply_farmsim_options(cfg, args):
 
     has_farmsim_option = any(value is not None for value in (
         args.data_root, args.batch_size, args.image_width, args.image_height,
+        args.camera_geometry,
         args.epochs, args.history_frames, args.predict_future_occ,
         args.predict_future_traj, args.use_fp16, args.use_crop_gap_refinement,
         args.use_selective_c2f, args.use_dual_hardness_refinement,
@@ -472,6 +506,7 @@ def apply_farmsim_options(cfg, args):
         args.use_gvadv2_attention,
         args.use_directional_decay_retention,
         args.use_efficient_baseline,
+        args.distill_teacher_checkpoint,
         args.num_gpus, args.train_ann_file, args.val_ann_file,
         args.workers_per_gpu, args.total_batch_size, args.grad_accum_steps))
     if not has_farmsim_option:
@@ -480,6 +515,11 @@ def apply_farmsim_options(cfg, args):
     occ_steps = args.future_occ_steps if args.predict_future_occ else 0
     trajectory_enabled = bool(args.predict_future_traj)
     overrides = {}
+    if args.camera_geometry is not None:
+        overrides.update({
+            f'data.{split}.camera_geometry': args.camera_geometry
+            for split in ('train', 'val', 'test')
+        })
     if args.batch_size is not None:
         overrides.update({
             'data.samples_per_gpu': args.batch_size,
@@ -778,8 +818,58 @@ def apply_farmsim_options(cfg, args):
         # BF16 optimizer hook), so efficient mode always enables FP16.
         cfg.fp16 = dict(loss_scale='dynamic')
 
+    if args.fp16_initial_scale is not None:
+        if 'fp16' not in cfg:
+            raise ValueError('--fp16-initial-scale requires FP16 training.')
+        cfg.fp16 = dict(loss_scale=dict(init_scale=args.fp16_initial_scale))
 
+    if args.distill_logit_weight > 0 or args.distill_fpn_weight > 0:
+        if cfg.model.type not in ('Drive_OccWorld_V2', 'FarmSimOccupancyDistiller'):
+            raise ValueError('Occupancy distillation requires Drive_OccWorld_V2.')
+        if (cfg.model.img_backbone.depth != 50 or
+                cfg.model.future_pred_frame_num != 0 or
+                cfg.model.future_pred_head.history_queue_length != 0 or
+                cfg.model.turn_on_plan):
+            raise ValueError('Distillation requires an R50, zero-history, current-occupancy student.')
+        if args.freeze_gap_refiner_base or args.freeze_resolution_transfer_base:
+            raise ValueError('The distillation student must remain trainable; do not freeze its base.')
+        if not args.distill_teacher_checkpoint:
+            raise ValueError('Nonzero KD weights require --distill-teacher-checkpoint.')
+        teacher_checkpoint = osp.abspath(args.distill_teacher_checkpoint)
+        teacher_config = osp.abspath(args.distill_teacher_config or osp.join(
+            osp.dirname(teacher_checkpoint), osp.basename(args.config)))
+        for path in (teacher_checkpoint, teacher_config):
+            if not osp.isfile(path):
+                raise FileNotFoundError(f'Distillation teacher file does not exist: {path}')
+        cfg.model.type = 'FarmSimOccupancyDistiller'
+        cfg.model.occupancy_distillation = dict(
+            teacher_checkpoint=teacher_checkpoint, teacher_config=teacher_config,
+            logit_weight=args.distill_logit_weight,
+            fpn_weight=args.distill_fpn_weight,
+            logit_temperature=args.distill_logit_temperature,
+            fpn_temperature=args.distill_fpn_temperature,
+            fpn_levels=args.distill_fpn_levels,
+            warmup_epochs=args.distill_warmup_epochs)
+
+
+def configure_worker_diagnostics():
+    """Keep fault evidence without swallowing or retrying termination signals."""
+    faulthandler.enable(all_threads=True)
+    if os.environ.get('FARMSIM_TRACE_SIGTERM') == '1':
+        # Dump the last Python stacks, then chain to normal SIGTERM handling.
+        # A killed rank must still exit so peers cannot hang in collectives.
+        faulthandler.register(signal.SIGTERM, all_threads=True, chain=True)
+    print(
+        f"[worker-start] pid={os.getpid()} ppid={os.getppid()} "
+        f"rank={os.environ.get('RANK', '0')} "
+        f"local_rank={os.environ.get('LOCAL_RANK', '0')} "
+        f"error_file={os.environ.get('TORCHELASTIC_ERROR_FILE', '<unset>')}",
+        file=sys.stderr, flush=True)
+
+
+@record
 def main():
+    configure_worker_diagnostics()
     args = parse_args()
 
     if args.use_r50_image_encoder == 1 and args.load_from is None:

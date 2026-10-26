@@ -72,6 +72,38 @@ def _camera_matrices(sensor):
     return ego_to_cam_optical, cam2img
 
 
+def _ue_world_matrix(pose):
+    """World-from-local UE FRotator transform, in metres (column vectors).
+
+    FRotator pitch/roll have the opposite sign to mathematical Ry/Rx;
+    yaw has the same sign. Keep the legacy adapter above unchanged for old
+    checkpoints, whose image sampling was trained with that convention.
+    """
+    roll, pitch, yaw = pose['rotation_deg_rpy']
+    matrix = np.eye(4, dtype=np.float64)
+    matrix[:3, :3] = _rpy_matrix_deg((-roll, -pitch, yaw))
+    matrix[:3, 3] = np.asarray(pose['location_cm'], dtype=np.float64) / 100.
+    return matrix
+
+
+def _grid_camera_matrices(sensor, metadata):
+    """Optical-camera-from-occupancy-grid using measured world transforms.
+
+    Sensor mount offsets are not necessarily relative to vehicle_center:
+    use the exported camera world pose directly, including root offsets.
+    No occupancy values or crop-row annotations enter this calibration.
+    """
+    grid = metadata['semantic_occupancy']['grid_frame_world_ue']
+    world_from_grid = _ue_world_matrix(grid)
+    world_from_camera = _ue_world_matrix(sensor['world_transform_ue'])
+    optical_from_ue = np.array(
+        ((0, 1, 0, 0), (0, 0, -1, 0), (1, 0, 0, 0), (0, 0, 0, 1)),
+        dtype=np.float64)
+    ext = optical_from_ue @ np.linalg.solve(world_from_camera, world_from_grid)
+    _, intr = _camera_matrices(sensor)
+    return ext.astype(np.float32), intr
+
+
 @DATASETS.register_module()
 class FarmSimWorldDataset(torch.utils.data.Dataset):
     """Sequence-safe UE5 occupancy dataset.
@@ -89,11 +121,17 @@ class FarmSimWorldDataset(torch.utils.data.Dataset):
                  future_pred_frame_num=0, future_traj_frame_num=0,
                  predict_trajectory=False,
                  max_samples=None, occupancy_target_range=None, pipeline=None,
+                 camera_geometry='legacy',
                  **kwargs):
         del pipeline, kwargs
         if camera_mode not in ('surround', 'front'):
             raise ValueError("camera_mode must be 'surround' or 'front'")
         self.queue_length = int(queue_length)
+        if camera_geometry not in ('legacy', 'grid_world'):
+            raise ValueError("camera_geometry must be legacy or grid_world")
+        # This change affects the feature sampling learnt by a checkpoint;
+        # never silently switch existing training/inference configurations.
+        self.camera_geometry = camera_geometry
         self.camera_mode = camera_mode
         self.front_only = bool(front_only)
         if occupancy_target_range is not None:
@@ -176,7 +214,10 @@ class FarmSimWorldDataset(torch.utils.data.Dataset):
             raise RuntimeError(f"{seq['path']} frame {frame_id}: missing cameras {missing}")
         lidar2cam, lidar2img = [], []
         for name in self.camera_names:
-            ext, intr = _camera_matrices(sensors[name])
+            if self.camera_geometry == 'grid_world':
+                ext, intr = _grid_camera_matrices(sensors[name], meta)
+            else:
+                ext, intr = _camera_matrices(sensors[name])
             lidar2cam.append(ext)
             lidar2img.append(intr @ ext)
 
@@ -185,6 +226,12 @@ class FarmSimWorldDataset(torch.utils.data.Dataset):
         # A level yaw rotation is sufficient for BEV temporal alignment.
         yaw = np.rad2deg(np.arctan2(2 * (quat_wxyz[0] * quat_wxyz[3] + quat_wxyz[1] * quat_wxyz[2]),
                                     1 - 2 * (quat_wxyz[2] ** 2 + quat_wxyz[3] ** 2)))
+        if self.camera_geometry != 'legacy':
+            grid = meta['semantic_occupancy']['grid_frame_world_ue']
+            if not np.allclose(grid['rotation_deg_rpy'][:2], 0, atol=1e-5):
+                raise ValueError('grid_world temporal alignment requires a level occupancy grid')
+            pos = np.asarray(grid['location_cm'], dtype=np.float32) / 100.
+            yaw = float(grid['rotation_deg_rpy'][2])
         can_bus = np.zeros(18, dtype=np.float32)
         if previous_pose is not None:
             can_bus[:3] = pos - previous_pose[0]

@@ -9,6 +9,7 @@ RGB cameras, which is the controlled baseline setting for this project.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import pickle
 from pathlib import Path
 
@@ -48,7 +49,10 @@ def build_infos(manifest_path: Path, data_root: Path):
                 occ_size=OCC_SIZE,
                 pc_range=PC_RANGE,
             ))
-    return dict(metadata=dict(dataset='FarmSim', setting='front3_current_occ',
+    return dict(metadata=dict(dataset='FarmSim', setting='front3_s_current_occ',
+                              occ_size=OCC_SIZE, pc_range=PC_RANGE,
+                              source_root=str(data_root.resolve()),
+                              manifest_sha256=hashlib.sha256(manifest_path.read_bytes()).hexdigest(),
                               split=manifest['split'], source_manifest=str(manifest_path)),
                 infos=infos)
 
@@ -58,7 +62,21 @@ def main():
     parser.add_argument('--manifest', type=Path, required=True)
     parser.add_argument('--data-root', type=Path, required=True)
     parser.add_argument('--output', type=Path, required=True)
+    parser.add_argument('--reuse-if-current', action='store_true',
+                        help='reuse only an index matching manifest/root/ROI')
     args = parser.parse_args()
+    if args.output.exists() and args.reuse_if_current:
+        with args.output.open('rb') as stream:
+            cached = pickle.load(stream)
+        meta = cached.get('metadata', {})
+        if (meta.get('setting') == 'front3_s_current_occ' and
+                tuple(meta.get('occ_size', ())) == OCC_SIZE and
+                tuple(meta.get('pc_range', ())) == PC_RANGE and
+                meta.get('source_root') == str(args.data_root.resolve()) and
+                meta.get('manifest_sha256') == hashlib.sha256(args.manifest.read_bytes()).hexdigest()):
+            print(f"Reusing {args.output} ({len(cached['infos'])} frames)")
+            return
+        raise ValueError(f'{args.output} does not match this split/root/ROI; choose a fresh FARMSIM_INFOS_ROOT')
     payload = build_infos(args.manifest, args.data_root)
     args.output.parent.mkdir(parents=True, exist_ok=True)
     with args.output.open('wb') as stream:

@@ -18,6 +18,7 @@ import sitecustomize  # noqa: F401,E402
 import torch
 from mmcv import Config
 from mmdet3d.models import build_model
+from tools.adapt_farmsim_checkpoint_to_0p1 import resized_tensor
 
 
 CAMERA_EMBED_KEY = 'pts_bbox_head.transformer.cams_embeds'
@@ -64,7 +65,7 @@ def main():
     source = checkpoint.get('state_dict', checkpoint)
     source = {key[7:] if key.startswith('module.') else key: value
               for key, value in source.items()}
-    adapted, shape_mismatch, missing_target = {}, [], []
+    adapted, shape_mismatch, missing_target, resized = {}, [], [], []
     for key, value in source.items():
         if key not in target:
             missing_target.append(key)
@@ -80,6 +81,14 @@ def main():
                     0 <= index < value.shape[0]):
                 adapted[key] = value[index:index + 1].clone()
                 continue
+        # The reduced FarmSim ROI has 75 x 75 learned queries, whereas the
+        # official ORAD lattice stays 100 x 100. Transfer the query/position
+        # prior by interpolation rather than silently randomizing it.
+        value_resized = resized_tensor(key, value, target[key])
+        if value_resized is not None:
+            adapted[key] = value_resized
+            resized.append((key, tuple(value.shape), tuple(target[key].shape)))
+            continue
         shape_mismatch.append(
             (key, tuple(value.shape), tuple(target[key].shape)))
 
@@ -96,6 +105,7 @@ def main():
         loaded_tensor_count=len(adapted),
         initialized_tensor_count=len(never_initialized),
         initialization_seed=args.seed,
+        resized_tensor_count=len(resized),
     ))
     args.output.parent.mkdir(parents=True, exist_ok=True)
     torch.save(dict(meta=meta, state_dict=target), str(args.output))
@@ -103,6 +113,9 @@ def main():
     print(f'wrote {args.output}')
     print(f'loaded compatible tensors: {len(adapted)}')
     print(f'target tensors left at ORAD initialization: {len(never_initialized)}')
+    print(f'interpolated BEV/position tensors: {len(resized)}')
+    for key, source_shape, target_shape in resized:
+        print(f'  {key}: {source_shape} -> {target_shape}')
     print('shape-mismatched tensors replaced by ORAD modules:')
     for key, source_shape, target_shape in shape_mismatch:
         print(f'  {key}: {source_shape} -> {target_shape}')

@@ -32,3 +32,4 @@ from .bevformer.dense_heads.plan_head import PlanHead_v2
 from .bevformer.losses.planning_loss import PlanningLoss, CollisionLoss
 from .bevformer.detectors.bevformer import BEVFormer
 from .bevformer.detectors.drive_occworldV2 import Drive_OccWorld_V2
+from .bevformer.detectors.farmsim_distiller import FarmSimOccupancyDistiller

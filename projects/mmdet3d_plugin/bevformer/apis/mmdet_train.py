@@ -12,7 +12,7 @@ import torch.distributed as dist
 from mmcv.parallel import MMDataParallel, MMDistributedDataParallel
 from mmcv.runner import (HOOKS, DistSamplerSeedHook, EpochBasedRunner,
                          Fp16OptimizerHook,
-                         GradientCumulativeFp16OptimizerHook, OptimizerHook,
+                         OptimizerHook,
                          build_optimizer, build_runner, get_dist_info)
 from mmcv.utils import build_from_cfg
 
@@ -26,6 +26,9 @@ import os.path as osp
 from projects.mmdet3d_plugin.datasets.builder import build_dataloader
 from projects.mmdet3d_plugin.core.evaluation.eval_hooks import (
     CustomDistEvalHook, CustomEvalHook)
+from projects.mmdet3d_plugin.core.hooks.resume_safe_optimizer import (
+    ResumeSafeGradientCumulativeFp16OptimizerHook,
+    ResumeSafeGradientCumulativeOptimizerHook)
 from projects.mmdet3d_plugin.datasets import custom_build_dataset
 def custom_train_detector(model,
                    dataset,
@@ -139,8 +142,10 @@ def custom_train_detector(model,
         if optimizer_type in (None, 'Fp16OptimizerHook'):
             optimizer_hook = Fp16OptimizerHook
         elif optimizer_type in ('GradientCumulativeOptimizerHook',
-                                'GradientCumulativeFp16OptimizerHook'):
-            optimizer_hook = GradientCumulativeFp16OptimizerHook
+                                'GradientCumulativeFp16OptimizerHook',
+                                'ResumeSafeGradientCumulativeOptimizerHook',
+                                'ResumeSafeGradientCumulativeFp16OptimizerHook'):
+            optimizer_hook = ResumeSafeGradientCumulativeFp16OptimizerHook
         else:
             raise ValueError(
                 'FP16 training supports Fp16OptimizerHook or '
@@ -148,6 +153,13 @@ def custom_train_detector(model,
                 f'{optimizer_type!r}.')
         optimizer_config = optimizer_hook(
             **optimizer_cfg, distributed=distributed)
+    elif cfg.optimizer_config.get('type') in (
+            'GradientCumulativeOptimizerHook',
+            'ResumeSafeGradientCumulativeOptimizerHook'):
+        optimizer_cfg = cfg.optimizer_config.copy()
+        optimizer_cfg.pop('type')
+        optimizer_config = ResumeSafeGradientCumulativeOptimizerHook(
+            **optimizer_cfg)
     elif distributed and 'type' not in cfg.optimizer_config:
         optimizer_config = OptimizerHook(**cfg.optimizer_config)
     else:

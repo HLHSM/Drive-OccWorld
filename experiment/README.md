@@ -20,7 +20,20 @@ not copy the dataset.  The checked-in manifests produce 32,385 train and
 ## Common contract
 
 - Cameras: `front_left_rgb`, `front_rgb`, `front_right_rgb` in that order.
-- Range: `[0,-10,-2,20,10,3]` metres; grid `[100,100,25]`; voxel size `0.2m`.
+- Range: `[0,-7.5,-2,15,7.5,3]` metres; grid `[75,75,25]`; voxel size `0.2m`.
+- All shared loaders sample the original occupancy at the new target voxel
+  centers, exactly matching native `farmsim_occ_front3_s.py`. This matters
+  because the lateral -7.5 m boundary is halfway through an original voxel.
+- The launcher builds/reuses matching indexes in `common/infos_front3_s/`;
+  old `common/infos/` indexes and old 20 m result directories are untouched.
+  New work directories/run names contain `front3_s`.
+- This ROI update leaves existing camera calibration implementations intact.
+  The external shared camera loader still uses the legacy mount-only geometry;
+  comparing against native `CAMERA_GEOMETRY=grid_world` results also requires
+  a separate calibration-parity update.
+- SurroundOcc uses 75/38/19 feature grids and aligns odd-sized skip features;
+  COTR uses a 19-cell coarse grid spanning the same 15 m ROI and aligns its
+  deconvolution output back to 75 cells. Both retain 0.2 m final predictions.
 - Reporting labels: `free, crop, soil_ground, drivable, other_vegetation,
   other_obstacle`, with `255` ignored.
 - SparseOcc and COTR internally use `crop..obstacle=0..4, free=5`; their
@@ -101,9 +114,77 @@ bash experiment/train_farmsim_all.sh cotr
 bash experiment/train_farmsim_all.sh sparseocc
 ```
 
-It also contains the native Drive-OccWorld and optional IR-WM commands.  Set
+### SparseOcc geometry-corrected retraining
+
+The corrected FarmSim port keeps metric query coordinates in FP32, normalizes
+camera indices by `num_cams - 1`, and expands coarse supervision by its exact
+integer scale before cropping odd grid boundaries. Its cosine LR schedule
+tracks the actual runner length rather than inheriting nuScenes' epoch-22/24
+decay milestones. Online evaluation restores the training precision flag;
+the custom float-only CUDA sampler explicitly promotes its inputs to FP32.
+
+Retrain from the configured nuImages image-backbone weights, **not** from the
+old geometry-broken occupancy checkpoint:
+
+```bash
+CUDA_VISIBLE_DEVICES=1,2,3 NUM_GPUS=3 BATCH_SIZE=4 TOTAL_BATCH_SIZE=24 \
+  EPOCHS=15 USE_FP16=1 \
+  bash experiment/train_farmsim_all.sh sparseocc
+```
+
+The new default output is
+`official/SparseOcc/outputs/SparseOcc/farmsim_front3_s_geomfix_ep15`; the old
+`farmsim_front3_s_ep15` logs/checkpoint remain untouched. An existing output
+directory is rejected; set a new `SPARSE_RUN_NAME` to run another experiment.
+The user's editable `all` queue is not changed by this fix; select `sparseocc`
+explicitly to retrain only this method.
+
+For a bounded integration check (8 training / 4 validation samples, two epochs,
+FP16 plus two-step gradient accumulation, evaluation after each epoch):
+
+```bash
+CUDA_VISIBLE_DEVICES=0 bash tools/train_sparseocc_farmsim_smoke.sh
+```
+
+This uses the existing full split indexes and a dataset length override; it
+does not modify the original split manifests. Each smoke run gets a unique
+output directory. Smoke metrics check pipeline operation, not model quality.
+
+It also contains the native Drive-OccWorld and optional IR-WM commands. Their
+configs now use `farmsim_occ_front3_s.py`; history/future/planning flags are
+otherwise unchanged. An old 20 m IR-WM result cannot replace the new ROI run. Set
 `CUDA_VISIBLE_DEVICES`, `NUM_GPUS`, `EPOCHS`, and the environment variables
-before use.  `EPOCHS` is forwarded to each selected method (default: `8`).
+before use. `NUM_GPUS` defaults to the visible GPU count; `EPOCHS` is forwarded
+to each selected method (default: `15`). Preview launch commands without
+starting training or regenerating info files with:
+
+```bash
+DRY_RUN=1 bash experiment/train_farmsim_all.sh all
+```
+
+Resume COTR from its latest complete epoch and then run the remaining jobs
+(SparseOcc, SurroundOcc, IR-WM) in the launcher's current `all` order:
+
+```bash
+CUDA_VISIBLE_DEVICES=1,2,3 NUM_GPUS=3 BATCH_SIZE=4 TOTAL_BATCH_SIZE=24 \
+  EPOCHS=15 COTR_RESUME_FROM=auto \
+  bash experiment/train_farmsim_all.sh all
+```
+
+Resume reuses `work_dirs/cotr_farmsim_front3_s_ep15/cotr_farmsim_front3.py`,
+the normal checkpoint's optimizer/runner state, and the matching
+`epoch_N_ema.pth` through `MEGVIIEMAHook.resume`. An interrupted epoch is
+repeated; `EPOCHS=15` is the total target, not 15 additional epochs. Supply an
+absolute checkpoint path as `COTR_RESUME_FROM` to select a specific epoch;
+`COTR_WORK_DIR` optionally selects the directory for `auto`. Missing saved
+config or matching EMA checkpoint stops execution instead of silently
+reinitializing them. With no `COTR_RESUME_FROM`, the fresh-run behavior is
+unchanged. Add `DRY_RUN=1` to preview the complete queue without launching it.
+
+`PREPARE_INFOS=0` skips automatic index preparation when matching indexes
+already exist. To use custom split manifests, pass absolute `TRAIN_ANN_FILE`,
+`VAL_ANN_FILE`, and a separate `FARMSIM_INFOS_ROOT` directory. The index cache
+checks the manifest hash, data root, and ROI before reuse.
 
 For example, a two-GPU, full-precision COTR run with an effective batch of 8
 uses four accumulation steps:

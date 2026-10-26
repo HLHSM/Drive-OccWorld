@@ -1,13 +1,14 @@
-"""Runtime compatibility for the occupancy-only ``dow2`` environment.
+"""Runtime compatibility for occupancy training environments.
 
 MMDetection 2.x imports MMCV's generic ``MultiScaleDeformableAttention``
 while loading every model registry entry.  FarmSim occupancy configurations
 use this repository's ``MSDeformableAttention3D`` instead, so a CUDA-backed
 generic MMCV operator is not required merely to import ResNet/FPN.
 
-When ``mmcv-full`` is present this module is a no-op.  With the lightweight
-``mmcv`` package it supplies an explicit placeholder which fails only if a
-configuration actually requests the unsupported generic operator.
+With ``mmcv-full`` installed, native operators are preserved.  With lightweight
+``mmcv`` it supplies a placeholder which fails only if a configuration actually
+requests the unsupported generic operator.  Parallel-runtime compatibility
+also applies to the external baselines, which use older PyTorch versions.
 """
 
 try:
@@ -50,19 +51,33 @@ try:
     from mmcv.parallel import MMDistributedDataParallel as _MMDDP
     if not hasattr(_MMDDP, '_sync_params'):
         _MMDDP._sync_params = lambda self: None
-    # MMCV 1.4 passes integer GPU IDs to PyTorch's scatter helper; PyTorch
-    # 2.7 expects ``torch.device``.  Preserve the old caller contract.
+    # MMCV passes integer GPU IDs, but PyTorch changed this private helper's
+    # contract from int (e.g. Torch 2.0) to torch.device (e.g. Torch 2.7).
+    # Detect the actual signature rather than imposing dow2's API on COTR
+    # and SurroundOcc.  Keep PyTorch's original helper even on module reload.
+    import inspect as _inspect
     import torch as _torch
     import mmcv.parallel._functions as _mmcv_parallel_functions
-    _torch_get_stream = _mmcv_parallel_functions._get_stream
+    from torch.nn.parallel._functions import _get_stream as _torch_get_stream
+    _torch_stream_uses_device = (
+        _inspect.signature(_torch_get_stream).parameters['device'].annotation
+        in (_torch.device, 'torch.device'))
+
     def _dow2_get_stream(device):
-        # MMCV callers use an integer GPU ID, while Torch 2.7 dereferences
-        # ``device.type`` and ``device.index``.  Keep an explicit index even
-        # for a bare ``cuda`` device so PyTorch can address its stream cache.
-        if isinstance(device, int):
-            device = _torch.device('cuda', device)
-        elif isinstance(device, _torch.device) and device.type == 'cuda' and device.index is None:
-            device = _torch.device('cuda', _torch.cuda.current_device())
+        if _torch_stream_uses_device:
+            if isinstance(device, int):
+                device = (_torch.device('cpu') if device == -1
+                          else _torch.device('cuda', device))
+            elif isinstance(device, _torch.device) and device.type == 'cuda' and device.index is None:
+                device = _torch.device('cuda', _torch.cuda.current_device())
+        elif isinstance(device, _torch.device):
+            if device.type == 'cpu':
+                device = -1
+            elif device.type == 'cuda':
+                device = (device.index if device.index is not None
+                          else _torch.cuda.current_device())
+            else:
+                raise ValueError(f'Legacy CUDA scatter does not support {device.type}.')
         return _torch_get_stream(device)
     _mmcv_parallel_functions._get_stream = _dow2_get_stream
 
