@@ -1,0 +1,12 @@
+[
+  "/home/HL/.conda/envs/dow2/bin/python",
+  "tools/infer_realfield_synthetic_multiview.py",
+  "--config",
+  "/data/HL/Drive-OccWorld/work_dirs/front3_s_base_agri_amoe96_cropsample0.1_min500_nohis_b24_ep15_20261012_214738/farmsim_occ_front3_s.py",
+  "--checkpoint",
+  "/data/HL/Drive-OccWorld/work_dirs/front3_s_base_agri_amoe96_cropsample0.1_min500_nohis_b24_ep15_20261012_214738/epoch_15.pth",
+  "--views-dir",
+  "/data/HL/Drive-OccWorld/work_dirs/qualitative_realfield_gvad_amoe_nearfar/inputs",
+  "--output-dir",
+  "/data/HL/Drive-OccWorld/paper_cn_v2/artifacts/realfield"
+]

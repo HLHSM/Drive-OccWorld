@@ -1,0 +1,7 @@
+{
+  "checkpoint": "/data/HL/Drive-OccWorld/work_dirs/front3_s_base_agri_amoe96_cropsample0.1_min500_nohis_b24_ep15_20261012_214738/epoch_15.pth",
+  "config": "/data/HL/Drive-OccWorld/work_dirs/front3_s_base_agri_amoe96_cropsample0.1_min500_nohis_b24_ep15_20261012_214738/farmsim_occ_front3_s.py",
+  "source_note": "legacy_prediction contains the 20261012 main model outputs; its parent grid_world directory is only an audit storage location, not the weight source.",
+  "source_dir": "/data/HL/Drive-OccWorld/work_dirs/front3_s_base_agri_amoe96_cropsample0.1_min500_nohis_grid_world_b24_ep15_20261022_000423/projection_crop_audit_20261022/legacy_prediction",
+  "view": "rear-upper"
+}

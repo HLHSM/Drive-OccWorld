@@ -1,0 +1,9 @@
+[
+  "/home/HL/.conda/envs/sparseocc/bin/python",
+  "/data/HL/Drive-OccWorld/paper_cn_v2/scripts/export_external.py",
+  "sparseocc",
+  "/data/HL/Drive-OccWorld/experiment/official/SparseOcc/configs/farmsim_front3_current.py",
+  "/data/HL/Drive-OccWorld/experiment/official/SparseOcc/outputs/SparseOcc/farmsim_front3_s_geomfix_ep15/epoch_15.pth",
+  "/data/HL/Drive-OccWorld/paper_cn_v2/artifacts/farmsim_manifest.json",
+  "/data/HL/Drive-OccWorld/paper_cn_v2/artifacts/sparseocc"
+]

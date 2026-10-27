@@ -1,0 +1,9 @@
+[
+  "/home/HL/.conda/envs/cotr118/bin/python",
+  "/data/HL/Drive-OccWorld/paper_cn_v2/scripts/export_external.py",
+  "cotr",
+  "/data/HL/Drive-OccWorld/work_dirs/cotr_farmsim_front3_s_ep15/cotr_farmsim_front3.py",
+  "/data/HL/Drive-OccWorld/work_dirs/cotr_farmsim_front3_s_ep15/epoch_15.pth",
+  "/data/HL/Drive-OccWorld/paper_cn_v2/artifacts/farmsim_manifest.json",
+  "/data/HL/Drive-OccWorld/paper_cn_v2/artifacts/cotr"
+]

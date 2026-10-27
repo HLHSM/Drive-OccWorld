@@ -1,0 +1,17 @@
+[
+  "/home/HL/.conda/envs/dow2/bin/python",
+  "tools/test.py",
+  "/data/HL/Drive-OccWorld/work_dirs/simdata_occ0p1_s_tsa_amoe_scratch_image_pretrained_b24_ep15_20261016_130850/farmsim_occ_front3_s_0p1_tsa_amoe.py",
+  "/data/HL/Drive-OccWorld/work_dirs/simdata_occ0p1_s_tsa_amoe_scratch_image_pretrained_b24_ep15_20261016_130850/epoch_15.pth",
+  "--batch-size",
+  "1",
+  "--save-predictions",
+  "/data/HL/Drive-OccWorld/paper_cn_v2/artifacts/resolution_scratch",
+  "--save-prediction-indices",
+  "/data/HL/Drive-OccWorld/paper_cn_v2/artifacts/resolution_scratch_indices.txt",
+  "--prediction-subset-only",
+  "--out",
+  "/data/HL/Drive-OccWorld/paper_cn_v2/artifacts/resolution_scratch_subset_metrics.pkl",
+  "--cfg-options",
+  "data.workers_per_gpu=0"
+]

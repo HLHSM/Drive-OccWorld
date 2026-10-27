@@ -29,5 +29,11 @@
         "latexmk-xelatex-texlive2026"
       ]
     }
-  ]
+  ],
+  "chat.tools.terminal.autoApprove": {
+    "/^git status --short && printf '\\\\nLaTeX tools:\\\\n' && command -v latexmk \\|\\| true && command -v pdflatex \\|\\| true && command -v xelatex \\|\\| true && command -v bibtex \\|\\| true$/": {
+      "approve": true,
+      "matchCommandLine": true
+    }
+  }
 }

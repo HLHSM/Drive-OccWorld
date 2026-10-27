@@ -1,0 +1,42 @@
+{
+  "config": "/data/HL/Drive-OccWorld/work_dirs/surroundocc_farmsim_front3_s_ep15/surroundocc_farmsim_front3.py",
+  "checkpoint": "/data/HL/Drive-OccWorld/work_dirs/surroundocc_farmsim_front3_s_ep15/epoch_15.pth",
+  "selections": [
+    {
+      "sample_index": 143,
+      "frame_id": "000064",
+      "token": "cabbage_early_night_sunny_route_20260727_111821_seed1744107009_sequence_20260820_140856_542_000064",
+      "sequence_path": "/data/HL/SimData-Occ/SimData/cabbage_early_night_sunny_route_20260727_111821_seed1744107009/sequence_20260820_140856_542",
+      "filename": "000143_cabbage_early_night_sunny_route_20260727_111821_seed1744107009_000064.npz",
+      "cameras": {
+        "front_left_rgb": "/data/HL/SimData-Occ/SimData/cabbage_early_night_sunny_route_20260727_111821_seed1744107009/sequence_20260820_140856_542/front_left_rgb/000064.jpg",
+        "front_rgb": "/data/HL/SimData-Occ/SimData/cabbage_early_night_sunny_route_20260727_111821_seed1744107009/sequence_20260820_140856_542/front_rgb/000064.jpg",
+        "front_right_rgb": "/data/HL/SimData-Occ/SimData/cabbage_early_night_sunny_route_20260727_111821_seed1744107009/sequence_20260820_140856_542/front_right_rgb/000064.jpg"
+      }
+    },
+    {
+      "sample_index": 2077,
+      "frame_id": "000042",
+      "token": "potato_mature_evening_sunny_route_20260727_152645_seed1723141633_sequence_20260820_161221_808_000042",
+      "sequence_path": "/data/HL/SimData-Occ/SimData/potato_mature_evening_sunny_route_20260727_152645_seed1723141633/sequence_20260820_161221_808",
+      "filename": "002077_potato_mature_evening_sunny_route_20260727_152645_seed1723141633_000042.npz",
+      "cameras": {
+        "front_left_rgb": "/data/HL/SimData-Occ/SimData/potato_mature_evening_sunny_route_20260727_152645_seed1723141633/sequence_20260820_161221_808/front_left_rgb/000042.jpg",
+        "front_rgb": "/data/HL/SimData-Occ/SimData/potato_mature_evening_sunny_route_20260727_152645_seed1723141633/sequence_20260820_161221_808/front_rgb/000042.jpg",
+        "front_right_rgb": "/data/HL/SimData-Occ/SimData/potato_mature_evening_sunny_route_20260727_152645_seed1723141633/sequence_20260820_161221_808/front_right_rgb/000042.jpg"
+      }
+    },
+    {
+      "sample_index": 3569,
+      "frame_id": "000047",
+      "token": "redbeet_mature_night_cloudy_route_20260727_194708_seed646833409_sequence_20260820_181207_209_000047",
+      "sequence_path": "/data/HL/SimData-Occ/SimData/redbeet_mature_night_cloudy_route_20260727_194708_seed646833409/sequence_20260820_181207_209",
+      "filename": "003569_redbeet_mature_night_cloudy_route_20260727_194708_seed646833409_000047.npz",
+      "cameras": {
+        "front_left_rgb": "/data/HL/SimData-Occ/SimData/redbeet_mature_night_cloudy_route_20260727_194708_seed646833409/sequence_20260820_181207_209/front_left_rgb/000047.jpg",
+        "front_rgb": "/data/HL/SimData-Occ/SimData/redbeet_mature_night_cloudy_route_20260727_194708_seed646833409/sequence_20260820_181207_209/front_rgb/000047.jpg",
+        "front_right_rgb": "/data/HL/SimData-Occ/SimData/redbeet_mature_night_cloudy_route_20260727_194708_seed646833409/sequence_20260820_181207_209/front_right_rgb/000047.jpg"
+      }
+    }
+  ]
+}

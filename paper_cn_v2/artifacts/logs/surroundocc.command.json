@@ -1,0 +1,9 @@
+[
+  "/home/HL/.conda/envs/surroundocc20/bin/python",
+  "/data/HL/Drive-OccWorld/paper_cn_v2/scripts/export_external.py",
+  "surroundocc",
+  "/data/HL/Drive-OccWorld/work_dirs/surroundocc_farmsim_front3_s_ep15/surroundocc_farmsim_front3.py",
+  "/data/HL/Drive-OccWorld/work_dirs/surroundocc_farmsim_front3_s_ep15/epoch_15.pth",
+  "/data/HL/Drive-OccWorld/paper_cn_v2/artifacts/farmsim_manifest.json",
+  "/data/HL/Drive-OccWorld/paper_cn_v2/artifacts/surroundocc"
+]

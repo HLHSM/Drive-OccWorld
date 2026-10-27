@@ -1,0 +1,14 @@
+{
+  "purpose": "qualitative-only synthetic multi-view real-field inference",
+  "checkpoint": "/data/HL/Drive-OccWorld/work_dirs/front3_s_base_agri_amoe96_cropsample0.1_min500_nohis_b24_ep15_20261012_214738/epoch_15.pth",
+  "config": "/data/HL/Drive-OccWorld/work_dirs/front3_s_base_agri_amoe96_cropsample0.1_min500_nohis_b24_ep15_20261012_214738/farmsim_occ_front3_s.py",
+  "camera_calibration_source": "FarmSim validation sample index 0; used only for the three-camera extrinsics/intrinsics",
+  "input_provenance": "left/front/right images were generated or reconstructed from real forward photographs; they are not synchronised measurements",
+  "ground_truth_occupancy_available": false,
+  "cases": [
+    "bare_soil",
+    "crop_rows",
+    "urban_bare_soil",
+    "urban_crop_rows"
+  ]
+}

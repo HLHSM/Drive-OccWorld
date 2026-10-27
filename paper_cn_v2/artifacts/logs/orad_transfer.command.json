@@ -1,0 +1,18 @@
+[
+  "/home/HL/.conda/envs/dow2/bin/python",
+  "tools/test.py",
+  "/data/HL/Drive-OccWorld/work_dirs/orad3d_front3_s_tsa_amoe_farmsim_transfer_p100_ep2_20261016_084455/orad3d_occ_mono_tsa_amoe.py",
+  "/data/HL/Drive-OccWorld/work_dirs/orad3d_front3_s_tsa_amoe_farmsim_transfer_p100_ep2_20261016_084455/epoch_2.pth",
+  "--batch-size",
+  "1",
+  "--save-predictions",
+  "/data/HL/Drive-OccWorld/paper_cn_v2/artifacts/orad_transfer",
+  "--save-prediction-indices",
+  "/data/HL/Drive-OccWorld/paper_cn_v2/artifacts/orad_transfer_indices.txt",
+  "--prediction-subset-only",
+  "--out",
+  "/data/HL/Drive-OccWorld/paper_cn_v2/artifacts/orad_transfer_subset_metrics.pkl",
+  "--cfg-options",
+  "data.workers_per_gpu=0",
+  "data.test.ann_file=/data/HL/Drive-OccWorld/work_dirs/orad3d_farm_qualitative/farm_frames.json"
+]

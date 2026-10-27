@@ -1,0 +1,17 @@
+[
+  "/home/HL/.conda/envs/dow2/bin/python",
+  "tools/test.py",
+  "/data/HL/Drive-OccWorld/work_dirs/irwm_farmsim_front3_s_ep15/farmsim_occ_front3_s.py",
+  "/data/HL/Drive-OccWorld/work_dirs/irwm_farmsim_front3_s_ep15/epoch_15.pth",
+  "--batch-size",
+  "1",
+  "--save-predictions",
+  "/data/HL/Drive-OccWorld/paper_cn_v2/artifacts/irwm",
+  "--save-prediction-indices",
+  "/data/HL/Drive-OccWorld/paper_cn_v2/artifacts/irwm_indices.txt",
+  "--prediction-subset-only",
+  "--out",
+  "/data/HL/Drive-OccWorld/paper_cn_v2/artifacts/irwm_subset_metrics.pkl",
+  "--cfg-options",
+  "data.workers_per_gpu=0"
+]

@@ -1,0 +1,78 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1140 415" width="1140" height="415" font-family="Arial, Helvetica, sans-serif">
+  <rect width="1140" height="415" fill="#FFFFFF"/>
+  <defs>
+    <marker id="arrow-default" markerWidth="10" markerHeight="10" refX="8" refY="4" orient="auto" markerUnits="strokeWidth">
+      <polygon points="0 0, 8 4, 0 8" fill="#555555"/>
+    </marker>
+    <marker id="arrow-c0" markerWidth="10" markerHeight="10" refX="8" refY="4" orient="auto" markerUnits="strokeWidth">
+      <polygon points="0 0, 8 4, 0 8" fill="#2563EB"/>
+    </marker>
+    <marker id="arrow-c1" markerWidth="10" markerHeight="10" refX="8" refY="4" orient="auto" markerUnits="strokeWidth">
+      <polygon points="0 0, 8 4, 0 8" fill="#10B981"/>
+    </marker>
+    <marker id="arrow-c2" markerWidth="10" markerHeight="10" refX="8" refY="4" orient="auto" markerUnits="strokeWidth">
+      <polygon points="0 0, 8 4, 0 8" fill="#7C3AED"/>
+    </marker>
+    <marker id="arrow-c3" markerWidth="10" markerHeight="10" refX="8" refY="4" orient="auto" markerUnits="strokeWidth">
+      <polygon points="0 0, 8 4, 0 8" fill="#EA580C"/>
+    </marker>
+    <marker id="arrow-c4" markerWidth="10" markerHeight="10" refX="8" refY="4" orient="auto" markerUnits="strokeWidth">
+      <polygon points="0 0, 8 4, 0 8" fill="#C62828"/>
+    </marker>
+    <marker id="arrow-c5" markerWidth="10" markerHeight="10" refX="8" refY="4" orient="auto" markerUnits="strokeWidth">
+      <polygon points="0 0, 8 4, 0 8" fill="#0D47A1"/>
+    </marker>
+    <marker id="arrow-c6" markerWidth="10" markerHeight="10" refX="8" refY="4" orient="auto" markerUnits="strokeWidth">
+      <polygon points="0 0, 8 4, 0 8" fill="#1B5E20"/>
+    </marker>
+    <marker id="arrow-c7" markerWidth="10" markerHeight="10" refX="8" refY="4" orient="auto" markerUnits="strokeWidth">
+      <polygon points="0 0, 8 4, 0 8" fill="#4A148C"/>
+    </marker>
+    <marker id="arrow-c8" markerWidth="10" markerHeight="10" refX="8" refY="4" orient="auto" markerUnits="strokeWidth">
+      <polygon points="0 0, 8 4, 0 8" fill="#BF360C"/>
+    </marker>
+    <marker id="arrow-c9" markerWidth="10" markerHeight="10" refX="8" refY="4" orient="auto" markerUnits="strokeWidth">
+      <polygon points="0 0, 8 4, 0 8" fill="#37474F"/>
+    </marker>
+  </defs>
+  <path d="M 175.0,100.0 L 205.0,100.0" stroke="#607381" stroke-width="2" fill="none" marker-end="url(#arrow-default)"/>
+  <path d="M 395.0,100.0 L 435.0,100.0" stroke="#607381" stroke-width="2" fill="none" marker-end="url(#arrow-default)"/>
+  <path d="M 645.0,100.0 L 697.5,100.0" stroke="#607381" stroke-width="2" fill="none" marker-end="url(#arrow-default)"/>
+  <path d="M 872.5,100.0 L 920.0,100.0" stroke="#607381" stroke-width="2" fill="none" marker-end="url(#arrow-default)"/>
+  <path d="M 1010.0,132.0 L 1010.0,202.5" stroke="#607381" stroke-width="2" fill="none" marker-end="url(#arrow-default)"/>
+  <path d="M 783.8,132.0 L 781.2,203.0" stroke="#607381" stroke-width="2" fill="none" marker-end="url(#arrow-default)"/>
+  <path d="M 175.0,325.0 L 207.5,325.0" stroke="#607381" stroke-width="2" fill="none" marker-end="url(#arrow-default)" stroke-dasharray="8,4"/>
+  <path d="M 283.7,293.0 L 126.3,132.0" stroke="#607381" stroke-width="2" fill="none" marker-end="url(#arrow-default)" stroke-dasharray="8,4"/>
+  <path d="M 838.9,267.0 L 951.1,328.0" stroke="#607381" stroke-width="2" fill="none" marker-end="url(#arrow-default)" stroke-dasharray="8,4"/>
+  <path d="M 1010.0,267.5 L 1010.0,328.0" stroke="#607381" stroke-width="2" fill="none" marker-end="url(#arrow-default)" stroke-dasharray="8,4"/>
+  <rect x="15.0" y="68.0" width="160.0" height="64.0" fill="#EDF2F5" stroke="#607381" stroke-width="2" rx="8"/>
+  <text x="95.0" y="96.5" font-size="17" fill="#24333C" text-anchor="middle" font-weight="bold">3 front RGB views</text>
+  <text x="95.0" y="115.5" font-size="17" fill="#24333C" text-anchor="middle" font-weight="bold">512 × 288</text>
+  <rect x="205.0" y="68.0" width="190.0" height="64.0" fill="#EDF2F5" stroke="#607381" stroke-width="2" rx="8"/>
+  <text x="300.0" y="96.5" font-size="17" fill="#24333C" text-anchor="middle" font-weight="bold">ResNet-101 + FPN</text>
+  <text x="300.0" y="115.5" font-size="17" fill="#24333C" text-anchor="middle" font-weight="bold">4 image scales</text>
+  <rect x="435.0" y="68.0" width="210.0" height="64.0" fill="#EDF2F5" stroke="#607381" stroke-width="2" rx="8"/>
+  <text x="540.0" y="96.5" font-size="17" fill="#24333C" text-anchor="middle" font-weight="bold">TSA → SCA → FFN</text>
+  <text x="540.0" y="115.5" font-size="17" fill="#24333C" text-anchor="middle" font-weight="bold">BEV encoder × 6</text>
+  <rect x="697.5" y="68.0" width="175.0" height="64.0" fill="#EDF2F5" stroke="#607381" stroke-width="2" rx="8"/>
+  <text x="785.0" y="96.5" font-size="17" fill="#24333C" text-anchor="middle" font-weight="bold">Current BEV</text>
+  <text x="785.0" y="115.5" font-size="17" fill="#24333C" text-anchor="middle" font-weight="bold">75 × 75 × 256</text>
+  <rect x="920.0" y="68.0" width="180.0" height="64.0" fill="#E8EFE8" stroke="#607381" stroke-width="2" rx="8"/>
+  <text x="1010.0" y="96.5" font-size="17" fill="#24333C" text-anchor="middle" font-weight="bold">Agri-AMoE</text>
+  <text x="1010.0" y="115.5" font-size="17" fill="#24333C" text-anchor="middle" font-weight="bold">3D decoding</text>
+  <rect x="907.5" y="202.5" width="205.0" height="65.0" fill="#E8EFE8" stroke="#607381" stroke-width="2" rx="8"/>
+  <text x="1010.0" y="231.4" font-size="17" fill="#24333C" text-anchor="middle" font-weight="bold">Semantic occupancy</text>
+  <text x="1010.0" y="250.4" font-size="17" fill="#24333C" text-anchor="middle" font-weight="bold">75 × 75 × 25 × 6</text>
+  <rect x="680.0" y="203.0" width="200.0" height="64.0" fill="#EDF2F5" stroke="#607381" stroke-width="2" rx="8"/>
+  <text x="780.0" y="231.4" font-size="17" fill="#24333C" text-anchor="middle" font-weight="bold">Auxiliary MLP × 2</text>
+  <text x="780.0" y="250.4" font-size="17" fill="#24333C" text-anchor="middle" font-weight="bold">current frame only</text>
+  <rect x="907.5" y="328.0" width="205.0" height="64.0" fill="#EDF2F5" stroke="#607381" stroke-width="2" rx="8"/>
+  <text x="1010.0" y="356.4" font-size="17" fill="#24333C" text-anchor="middle" font-weight="bold">Training losses</text>
+  <text x="1010.0" y="375.4" font-size="17" fill="#24333C" text-anchor="middle" font-weight="bold">valid voxels only</text>
+  <rect x="15.0" y="293.0" width="160.0" height="64.0" fill="#F1EEE7" stroke="#607381" stroke-width="2" rx="8"/>
+  <text x="95.0" y="321.4" font-size="17" fill="#24333C" text-anchor="middle" font-weight="bold">Training frames</text>
+  <text x="95.0" y="340.4" font-size="17" fill="#24333C" text-anchor="middle" font-weight="bold">ROI crop counts</text>
+  <rect x="207.5" y="293.0" width="215.0" height="64.0" fill="#F1EEE7" stroke="#607381" stroke-width="2" rx="8"/>
+  <text x="315.0" y="321.4" font-size="17" fill="#24333C" text-anchor="middle" font-weight="bold">CropSample</text>
+  <text x="315.0" y="340.4" font-size="17" fill="#24333C" text-anchor="middle" font-weight="bold">10% quota replacement</text>
+</svg>
