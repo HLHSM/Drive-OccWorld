@@ -55,8 +55,8 @@
 \newlabel{fig:crop_distribution}{{3}{5}{AgriOcc-Dataset 的作物组成。扇区面积表示各作物的占比。}{figure.3}{}}
 \@writefile{lof}{\contentsline {figure}{\numberline {4}{\ignorespaces AgriOcc-Dataset 中十种作物的场景示例。}}{5}{figure.4}\protected@file@percent }
 \newlabel{fig:dataset}{{4}{5}{AgriOcc-Dataset 中十种作物的场景示例。}{figure.4}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {3.4}当前帧 BEV 编码}{5}{subsection.3.4}\protected@file@percent }
-\newlabel{sec:bev}{{3.4}{5}{当前帧 BEV 编码}{subsection.3.4}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.4}BEV 编码}{5}{subsection.3.4}\protected@file@percent }
+\newlabel{sec:bev}{{3.4}{5}{BEV 编码}{subsection.3.4}{}}
 \citation{shi2026oneocc}
 \@writefile{toc}{\contentsline {subsection}{\numberline {3.5}农业结构自适应混合专家解码}{6}{subsection.3.5}\protected@file@percent }
 \newlabel{sec:amoe}{{3.5}{6}{农业结构自适应混合专家解码}{subsection.3.5}{}}
@@ -85,38 +85,44 @@
 \@writefile{toc}{\contentsline {subsection}{\numberline {4.4}结构与训练策略消融}{8}{subsection.4.4}\protected@file@percent }
 \newlabel{sec:ablation}{{4.4}{8}{结构与训练策略消融}{subsection.4.4}{}}
 \@writefile{toc}{\contentsline {paragraph}{模型主要组件消融}{8}{section*.4}\protected@file@percent }
-\@writefile{toc}{\contentsline {paragraph}{Agri-AMoE消融}{8}{section*.5}\protected@file@percent }
 \@writefile{lof}{\contentsline {figure}{\numberline {6}{\ignorespaces 当前帧占用定性比较。从左至右为三路 RGB、GT、SurroundOcc、COTR与 AgriOcc。各占用效果图采用相同的正后上方视角、范围与有效体素掩码。}}{9}{figure.6}\protected@file@percent }
 \newlabel{fig:comparison}{{6}{9}{当前帧占用定性比较。从左至右为三路 RGB、GT、SurroundOcc、COTR与 AgriOcc。各占用效果图采用相同的正后上方视角、范围与有效体素掩码。}{figure.6}{}}
 \@writefile{lof}{\contentsline {figure}{\numberline {7}{\ignorespaces 与 SparseOcc和IR-WM 定性比较，列顺序为 RGB、GT、SparseOcc、IR-WM 与 AgriOcc。采用与图\ref {fig:comparison}一致的视角和语义颜色。}}{9}{figure.7}\protected@file@percent }
 \newlabel{fig:comparison_sparse}{{7}{9}{与 SparseOcc和IR-WM 定性比较，列顺序为 RGB、GT、SparseOcc、IR-WM 与 AgriOcc。采用与图\ref {fig:comparison}一致的视角和语义颜色。}{figure.7}{}}
 \citation{chen2025orad3d}
 \citation{chen2025orad3d}
-\citation{jiang2024openocc}
-\citation{zhang2023occformer}
-\citation{wei2023surroundocc}
 \@writefile{lot}{\contentsline {table}{\numberline {2}{\ignorespaces 消融实验。}}{10}{table.2}\protected@file@percent }
 \newlabel{tab:ablation}{{2}{10}{消融实验。}{table.2}{}}
+\@writefile{toc}{\contentsline {paragraph}{Agri-AMoE消融}{10}{section*.5}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {3}{\ignorespaces Agri-AMoE 专家、融合方式与路由信号消融。$\dagger $ 为示意数值。}}{10}{table.3}\protected@file@percent }
+\newlabel{tab:amoe_router}{{3}{10}{Agri-AMoE 专家、融合方式与路由信号消融。$\dagger $ 为示意数值。}{table.3}{}}
 \@writefile{toc}{\contentsline {paragraph}{采样策略消融}{10}{section*.6}\protected@file@percent }
-\@writefile{lot}{\contentsline {table}{\numberline {3}{\ignorespaces 采样敏感性结果。}}{10}{table.3}\protected@file@percent }
-\newlabel{tab:sampling}{{3}{10}{采样敏感性结果。}{table.3}{}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {4.5}真实场景迁移与定性分析}{10}{subsection.4.5}\protected@file@percent }
 \newlabel{sec:sim2real}{{4.5}{10}{真实场景迁移与定性分析}{subsection.4.5}{}}
 \@writefile{toc}{\contentsline {subsubsection}{\numberline {4.5.1}仿真到真实数据集的迁移}{10}{subsubsection.4.5.1}\protected@file@percent }
 \newlabel{sec:orad_transfer}{{4.5.1}{10}{仿真到真实数据集的迁移}{subsubsection.4.5.1}{}}
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.5.2}真实农田 Zero-shot 定性分析}{10}{subsubsection.4.5.2}\protected@file@percent }
-\newlabel{sec:realfield_zeroshot}{{4.5.2}{10}{真实农田 Zero-shot 定性分析}{subsubsection.4.5.2}{}}
-\@writefile{lot}{\contentsline {table}{\numberline {4}{\ignorespaces ORAD-3D 仿真到真实迁移结果（\%）。两组 AgriOcc 均使用完整 ORAD-3D 训练集， 并仅使用中心前视相机输入；迁移模型以 AgriOcc-Dataset 预训练权重初始化后进行 2 个 epoch 适配。 \texttt  {Test (w/o Free)} 为去除 Free 类别后的 mIoU，与 ORAD-3D 论文口径一致； \texttt  {Test} 为全部九类的 mIoU；\texttt  {Test\_farm} 为农田场景子集上按出现类别计算的 mIoU。 OpenOcc、OccFormer 与 SurroundOcc 的结果引自 ORAD-3D 论文.}}{11}{table.4}\protected@file@percent }
-\newlabel{tab:orad}{{4}{11}{ORAD-3D 仿真到真实迁移结果（\%）。两组 AgriOcc 均使用完整 ORAD-3D 训练集， 并仅使用中心前视相机输入；迁移模型以 AgriOcc-Dataset 预训练权重初始化后进行 2 个 epoch 适配。 \texttt {Test (w/o Free)} 为去除 Free 类别后的 mIoU，与 ORAD-3D 论文口径一致； \texttt {Test} 为全部九类的 mIoU；\texttt {Test\_farm} 为农田场景子集上按出现类别计算的 mIoU。 OpenOcc、OccFormer 与 SurroundOcc 的结果引自 ORAD-3D 论文}{table.4}{}}
-\@writefile{lof}{\contentsline {figure}{\numberline {8}{\ignorespaces ORAD-3D 定性迁移结果。列顺序为单目 RGB、GT、6 轮从头训练与 2 轮源域迁移。两模型均使用目标域官方网格，采用相同正后上方视角与 GT 有效掩码；自由空间不显示。}}{11}{figure.8}\protected@file@percent }
-\newlabel{fig:orad}{{8}{11}{ORAD-3D 定性迁移结果。列顺序为单目 RGB、GT、6 轮从头训练与 2 轮源域迁移。两模型均使用目标域官方网格，采用相同正后上方视角与 GT 有效掩码；自由空间不显示。}{figure.8}{}}
+\citation{jiang2024openocc}
+\citation{zhang2023occformer}
+\citation{wei2023surroundocc}
+\@writefile{lot}{\contentsline {table}{\numberline {4}{\ignorespaces 采样敏感性结果。}}{11}{table.4}\protected@file@percent }
+\newlabel{tab:sampling}{{4}{11}{采样敏感性结果。}{table.4}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {5}{\ignorespaces ORAD-3D 仿真到真实迁移结果（\%）。两组 AgriOcc 均使用完整 ORAD-3D 训练集， 并仅使用中心前视相机输入；迁移模型以 AgriOcc-Dataset 预训练权重初始化后进行 2 个 epoch 适配。 \texttt  {Test (w/o Free)} 为去除 Free 类别后的 mIoU，与 ORAD-3D 论文口径一致； \texttt  {Test} 为全部九类的 mIoU；\texttt  {Test\_farm} 为农田场景子集上按出现类别计算的 mIoU。 OpenOcc、OccFormer 与 SurroundOcc 的结果引自 ORAD-3D 论文.}}{11}{table.5}\protected@file@percent }
+\newlabel{tab:orad}{{5}{11}{ORAD-3D 仿真到真实迁移结果（\%）。两组 AgriOcc 均使用完整 ORAD-3D 训练集， 并仅使用中心前视相机输入；迁移模型以 AgriOcc-Dataset 预训练权重初始化后进行 2 个 epoch 适配。 \texttt {Test (w/o Free)} 为去除 Free 类别后的 mIoU，与 ORAD-3D 论文口径一致； \texttt {Test} 为全部九类的 mIoU；\texttt {Test\_farm} 为农田场景子集上按出现类别计算的 mIoU。 OpenOcc、OccFormer 与 SurroundOcc 的结果引自 ORAD-3D 论文}{table.5}{}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.5.2}真实农田 Zero-shot 定性分析}{11}{subsubsection.4.5.2}\protected@file@percent }
+\newlabel{sec:realfield_zeroshot}{{4.5.2}{11}{真实农田 Zero-shot 定性分析}{subsubsection.4.5.2}{}}
 \citation{behley2019semantickitti,li2024sscbench}
-\@writefile{lof}{\contentsline {figure}{\numberline {9}{\ignorespaces 真实农田 zero-shot 三维语义占用预测。}}{12}{figure.9}\protected@file@percent }
-\newlabel{fig:realfield_zeroshot}{{9}{12}{真实农田 zero-shot 三维语义占用预测。}{figure.9}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {8}{\ignorespaces ORAD-3D 定性迁移结果。列顺序为单目 RGB、GT、6 轮从头训练与 2 轮源域迁移。两模型均使用目标域官方网格，采用相同正后上方视角与 GT 有效掩码；自由空间不显示。}}{12}{figure.8}\protected@file@percent }
+\newlabel{fig:orad}{{8}{12}{ORAD-3D 定性迁移结果。列顺序为单目 RGB、GT、6 轮从头训练与 2 轮源域迁移。两模型均使用目标域官方网格，采用相同正后上方视角与 GT 有效掩码；自由空间不显示。}{figure.8}{}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {4.6}体素分辨率迁移}{12}{subsection.4.6}\protected@file@percent }
 \newlabel{sec:resolution}{{4.6}{12}{体素分辨率迁移}{subsection.4.6}{}}
-\@writefile{lot}{\contentsline {table}{\numberline {5}{\ignorespaces 体素分辨率迁移，IoU 单位为\%，时间为 15 轮目标分辨率训练与逐轮验证的日志墙钟小时数，不包含 $0.2\,\mathrm  {m}$ 源训练。所有行均输出 $150\times 150\times 25$。}}{12}{table.5}\protected@file@percent }
-\newlabel{tab:resolution}{{5}{12}{体素分辨率迁移，IoU 单位为\%，时间为 15 轮目标分辨率训练与逐轮验证的日志墙钟小时数，不包含 $0.2\,\mathrm {m}$ 源训练。所有行均输出 $150\times 150\times 25$。}{table.5}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {9}{\ignorespaces 真实农田 zero-shot 三维语义占用预测。}}{13}{figure.9}\protected@file@percent }
+\newlabel{fig:realfield_zeroshot}{{9}{13}{真实农田 zero-shot 三维语义占用预测。}{figure.9}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {6}{\ignorespaces 体素分辨率迁移，IoU 单位为\%，时间为 15 轮目标分辨率训练与逐轮验证的日志墙钟小时数，不包含 $0.2\,\mathrm  {m}$ 源训练。所有行均输出 $150\times 150\times 25$。}}{13}{table.6}\protected@file@percent }
+\newlabel{tab:resolution}{{6}{13}{体素分辨率迁移，IoU 单位为\%，时间为 15 轮目标分辨率训练与逐轮验证的日志墙钟小时数，不包含 $0.2\,\mathrm {m}$ 源训练。所有行均输出 $150\times 150\times 25$。}{table.6}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.7}讨论与局限}{13}{subsection.4.7}\protected@file@percent }
+\newlabel{sec:discussion}{{4.7}{13}{讨论与局限}{subsection.4.7}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {5}结论与展望}{13}{section.5}\protected@file@percent }
+\newlabel{sec:conclusion}{{5}{13}{结论与展望}{section.5}{}}
 \bibstyle{cas-model2-names}
 \bibdata{references}
 \bibcite{baiVisionbasedNavigationGuidance2023}{{1}{2023}{{Bai et~al.}}{{Bai, Zhang, Xu, Zhou, Shi and Diao}}}
@@ -124,10 +130,6 @@
 \bibcite{caesar2020nuscenes}{{3}{2020}{{Caesar et~al.}}{{Caesar, Bankiti, Lang, Vora, Liong, Xu, Krishnan, Pan, Baldan and Beijbom}}}
 \bibcite{cao2022monoscene}{{4}{2022}{{Cao and de~Charette}}{{}}}
 \bibcite{chen2025orad3d}{{5}{2025}{{Chen et~al.}}{{Chen, Mei, Zhai, Wang, Sun, Kong, Li, Mao, Liu, Wang, Nie, Zhu, Xiao, Zhao and Hu}}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {4.7}讨论与局限}{13}{subsection.4.7}\protected@file@percent }
-\newlabel{sec:discussion}{{4.7}{13}{讨论与局限}{subsection.4.7}{}}
-\@writefile{toc}{\contentsline {section}{\numberline {5}结论与展望}{13}{section.5}\protected@file@percent }
-\newlabel{sec:conclusion}{{5}{13}{结论与展望}{section.5}{}}
 \bibcite{dosovitskiy2017carla}{{6}{2017}{{Dosovitskiy et~al.}}{{Dosovitskiy, Ros, Codevilla, Lopez and Koltun}}}
 \bibcite{geiger2012kitti}{{7}{2012}{{Geiger et~al.}}{{Geiger, Lenz and Urtasun}}}
 \bibcite{hoffman2018cycada}{{8}{2018}{{Hoffman et~al.}}{{Hoffman, Tzeng, Park, Zhu, Isola, Saenko, Efros and Darrell}}}
