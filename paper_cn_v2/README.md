@@ -51,6 +51,8 @@
 bash paper_cn_v2/build.sh
 ```
 
+编译默认使用当前 WSL `PATH` 中的 TeX Live（需要 `latexmk`、`xelatex` 和 `bibtex`）；如需指定其他安装，可设置 `TEXLIVE_BIN`。VS Code LaTeX Workshop 的默认配方同样使用 WSL 中的 `latexmk`。
+
 重新提取日志、绘制已有预测（CPU）：
 
 ```bash

@@ -75,8 +75,7 @@
 \citation{tang2024sparseocc}
 \citation{ma2024cotr}
 \citation{yangDrivingOccupancyWorld2025}
-\citation{meiVisionCentric4DOccupancy2026}
-\citation{yangDrivingOccupancyWorld2025,mei2025irwm}
+\citation{mei2025irwm}
 \@writefile{toc}{\contentsline {subsection}{\numberline {4.2}实现细节}{8}{subsection.4.2}\protected@file@percent }
 \newlabel{sec:implementation}{{4.2}{8}{实现细节}{subsection.4.2}{}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {4.3}与现有方法比较}{8}{subsection.4.3}\protected@file@percent }
@@ -85,43 +84,39 @@
 \newlabel{tab:main}{{1}{8}{AgriOcc-Dataset上的三维语义占用性能（\%）。}{table.1}{}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {4.4}结构与训练策略消融}{8}{subsection.4.4}\protected@file@percent }
 \newlabel{sec:ablation}{{4.4}{8}{结构与训练策略消融}{subsection.4.4}{}}
-\@writefile{toc}{\contentsline {paragraph}{采样配额与背景竞争}{8}{section*.4}\protected@file@percent }
-\@writefile{lof}{\contentsline {figure}{\numberline {6}{\ignorespaces 当前帧占用定性比较。三行依次为卷心菜、马铃薯和红甜菜；从左至右为三路 RGB、GT、SurroundOcc、COTR与 AgriOcc。各占用面板采用相同的正后上方视角、范围与有效体素掩码。}}{9}{figure.6}\protected@file@percent }
-\newlabel{fig:comparison}{{6}{9}{当前帧占用定性比较。三行依次为卷心菜、马铃薯和红甜菜；从左至右为三路 RGB、GT、SurroundOcc、COTR与 AgriOcc。各占用面板采用相同的正后上方视角、范围与有效体素掩码。}{figure.6}{}}
-\@writefile{lof}{\contentsline {figure}{\numberline {7}{\ignorespaces 相同三帧上的 SparseOcc 与 IR-WM 定性比较，列顺序为 RGB、GT、SparseOcc、IR-WM 与 AgriOcc。采用与图\ref {fig:comparison}一致的视角和语义颜色。}}{9}{figure.7}\protected@file@percent }
-\newlabel{fig:comparison_sparse}{{7}{9}{相同三帧上的 SparseOcc 与 IR-WM 定性比较，列顺序为 RGB、GT、SparseOcc、IR-WM 与 AgriOcc。采用与图\ref {fig:comparison}一致的视角和语义颜色。}{figure.7}{}}
+\@writefile{toc}{\contentsline {paragraph}{模型主要组件消融}{8}{section*.4}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Agri-AMoE消融}{8}{section*.5}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {6}{\ignorespaces 当前帧占用定性比较。从左至右为三路 RGB、GT、SurroundOcc、COTR与 AgriOcc。各占用效果图采用相同的正后上方视角、范围与有效体素掩码。}}{9}{figure.6}\protected@file@percent }
+\newlabel{fig:comparison}{{6}{9}{当前帧占用定性比较。从左至右为三路 RGB、GT、SurroundOcc、COTR与 AgriOcc。各占用效果图采用相同的正后上方视角、范围与有效体素掩码。}{figure.6}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {7}{\ignorespaces 与 SparseOcc和IR-WM 定性比较，列顺序为 RGB、GT、SparseOcc、IR-WM 与 AgriOcc。采用与图\ref {fig:comparison}一致的视角和语义颜色。}}{9}{figure.7}\protected@file@percent }
+\newlabel{fig:comparison_sparse}{{7}{9}{与 SparseOcc和IR-WM 定性比较，列顺序为 RGB、GT、SparseOcc、IR-WM 与 AgriOcc。采用与图\ref {fig:comparison}一致的视角和语义颜色。}{figure.7}{}}
 \citation{chen2025orad3d}
-\@writefile{lot}{\contentsline {table}{\numberline {2}{\ignorespaces 主模型消融。参数为可训练参数，包含网络中保留的输出分支；冻结的图像层不计入。CropSample 不增加参数。所有配置使用 TSA、相同 ROI 和 15 个 epoch。}}{10}{table.2}\protected@file@percent }
-\newlabel{tab:ablation}{{2}{10}{主模型消融。参数为可训练参数，包含网络中保留的输出分支；冻结的图像层不计入。CropSample 不增加参数。所有配置使用 TSA、相同 ROI 和 15 个 epoch。}{table.2}{}}
-\@writefile{lot}{\contentsline {table}{\numberline {3}{\ignorespaces 采样敏感性结果。上四行均含 Agri-AMoE，训练 15 轮；不同运行的微批与 GPU 数以来源配置为准，保持有效 batch 为 24。末行为独立的基础网络采样参考。}}{10}{table.3}\protected@file@percent }
-\newlabel{tab:sampling}{{3}{10}{采样敏感性结果。上四行均含 Agri-AMoE，训练 15 轮；不同运行的微批与 GPU 数以来源配置为准，保持有效 batch 为 24。末行为独立的基础网络采样参考。}{table.3}{}}
-\@writefile{toc}{\contentsline {paragraph}{投影设置敏感性}{10}{section*.5}\protected@file@percent }
+\citation{chen2025orad3d}
+\citation{jiang2024openocc}
+\citation{zhang2023occformer}
+\citation{wei2023surroundocc}
+\@writefile{lot}{\contentsline {table}{\numberline {2}{\ignorespaces 消融实验。}}{10}{table.2}\protected@file@percent }
+\newlabel{tab:ablation}{{2}{10}{消融实验。}{table.2}{}}
+\@writefile{toc}{\contentsline {paragraph}{采样策略消融}{10}{section*.6}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {3}{\ignorespaces 采样敏感性结果。}}{10}{table.3}\protected@file@percent }
+\newlabel{tab:sampling}{{3}{10}{采样敏感性结果。}{table.3}{}}
 \@writefile{toc}{\contentsline {subsection}{\numberline {4.5}真实场景迁移与定性分析}{10}{subsection.4.5}\protected@file@percent }
 \newlabel{sec:sim2real}{{4.5}{10}{真实场景迁移与定性分析}{subsection.4.5}{}}
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.5.1}ORAD-3D 目标域适配}{10}{subsubsection.4.5.1}\protected@file@percent }
-\newlabel{sec:orad}{{4.5.1}{10}{ORAD-3D 目标域适配}{subsubsection.4.5.1}{}}
-\@writefile{lot}{\contentsline {table}{\numberline {4}{\ignorespaces ORAD-3D 迁移结果（\%）。时间仅包含目标域训练及逐 epoch 验证，不包括农业源域预训练、权重转换和最终测试。Farm 使用固定九类平均。}}{10}{table.4}\protected@file@percent }
-\newlabel{tab:orad}{{4}{10}{ORAD-3D 迁移结果（\%）。时间仅包含目标域训练及逐 epoch 验证，不包括农业源域预训练、权重转换和最终测试。Farm 使用固定九类平均。}{table.4}{}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.5.1}仿真到真实数据集的迁移}{10}{subsubsection.4.5.1}\protected@file@percent }
+\newlabel{sec:orad_transfer}{{4.5.1}{10}{仿真到真实数据集的迁移}{subsubsection.4.5.1}{}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.5.2}真实农田 Zero-shot 定性分析}{10}{subsubsection.4.5.2}\protected@file@percent }
+\newlabel{sec:realfield_zeroshot}{{4.5.2}{10}{真实农田 Zero-shot 定性分析}{subsubsection.4.5.2}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {4}{\ignorespaces ORAD-3D 仿真到真实迁移结果（\%）。两组 AgriOcc 均使用完整 ORAD-3D 训练集， 并仅使用中心前视相机输入；迁移模型以 AgriOcc-Dataset 预训练权重初始化后进行 2 个 epoch 适配。 \texttt  {Test (w/o Free)} 为去除 Free 类别后的 mIoU，与 ORAD-3D 论文口径一致； \texttt  {Test} 为全部九类的 mIoU；\texttt  {Test\_farm} 为农田场景子集上按出现类别计算的 mIoU。 OpenOcc、OccFormer 与 SurroundOcc 的结果引自 ORAD-3D 论文.}}{11}{table.4}\protected@file@percent }
+\newlabel{tab:orad}{{4}{11}{ORAD-3D 仿真到真实迁移结果（\%）。两组 AgriOcc 均使用完整 ORAD-3D 训练集， 并仅使用中心前视相机输入；迁移模型以 AgriOcc-Dataset 预训练权重初始化后进行 2 个 epoch 适配。 \texttt {Test (w/o Free)} 为去除 Free 类别后的 mIoU，与 ORAD-3D 论文口径一致； \texttt {Test} 为全部九类的 mIoU；\texttt {Test\_farm} 为农田场景子集上按出现类别计算的 mIoU。 OpenOcc、OccFormer 与 SurroundOcc 的结果引自 ORAD-3D 论文}{table.4}{}}
 \@writefile{lof}{\contentsline {figure}{\numberline {8}{\ignorespaces ORAD-3D 定性迁移结果。列顺序为单目 RGB、GT、6 轮从头训练与 2 轮源域迁移。两模型均使用目标域官方网格，采用相同正后上方视角与 GT 有效掩码；自由空间不显示。}}{11}{figure.8}\protected@file@percent }
 \newlabel{fig:orad}{{8}{11}{ORAD-3D 定性迁移结果。列顺序为单目 RGB、GT、6 轮从头训练与 2 轮源域迁移。两模型均使用目标域官方网格，采用相同正后上方视角与 GT 有效掩码；自由空间不显示。}{figure.8}{}}
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.5.2}真实农田输入的零样本定性展示}{11}{subsubsection.4.5.2}\protected@file@percent }
-\newlabel{sec:realfield}{{4.5.2}{11}{真实农田输入的零样本定性展示}{subsubsection.4.5.2}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {4.6}体素分辨率迁移}{11}{subsection.4.6}\protected@file@percent }
-\newlabel{sec:resolution}{{4.6}{11}{体素分辨率迁移}{subsection.4.6}{}}
-\@writefile{lof}{\contentsline {figure}{\numberline {9}{\ignorespaces 源模型对真实农田照片重建三视角输入的零样本定性响应。上行为正前照片，下行为模型占用输出。无体素 GT；重建视角与借用标定不等价于实采多相机几何。}}{12}{figure.9}\protected@file@percent }
-\newlabel{fig:realfield}{{9}{12}{源模型对真实农田照片重建三视角输入的零样本定性响应。上行为正前照片，下行为模型占用输出。无体素 GT；重建视角与借用标定不等价于实采多相机几何。}{figure.9}{}}
+\citation{behley2019semantickitti,li2024sscbench}
+\@writefile{lof}{\contentsline {figure}{\numberline {9}{\ignorespaces 真实农田 zero-shot 三维语义占用预测。}}{12}{figure.9}\protected@file@percent }
+\newlabel{fig:realfield_zeroshot}{{9}{12}{真实农田 zero-shot 三维语义占用预测。}{figure.9}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.6}体素分辨率迁移}{12}{subsection.4.6}\protected@file@percent }
+\newlabel{sec:resolution}{{4.6}{12}{体素分辨率迁移}{subsection.4.6}{}}
 \@writefile{lot}{\contentsline {table}{\numberline {5}{\ignorespaces 体素分辨率迁移，IoU 单位为\%，时间为 15 轮目标分辨率训练与逐轮验证的日志墙钟小时数，不包含 $0.2\,\mathrm  {m}$ 源训练。所有行均输出 $150\times 150\times 25$。}}{12}{table.5}\protected@file@percent }
 \newlabel{tab:resolution}{{5}{12}{体素分辨率迁移，IoU 单位为\%，时间为 15 轮目标分辨率训练与逐轮验证的日志墙钟小时数，不包含 $0.2\,\mathrm {m}$ 源训练。所有行均输出 $150\times 150\times 25$。}{table.5}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {4.7}讨论与局限}{12}{subsection.4.7}\protected@file@percent }
-\newlabel{sec:discussion}{{4.7}{12}{讨论与局限}{subsection.4.7}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {4.8}内部机制消融（临时占位）}{12}{subsection.4.8}\protected@file@percent }
-\newlabel{sec:temporary}{{4.8}{12}{内部机制消融（临时占位）}{subsection.4.8}{}}
-\@writefile{toc}{\contentsline {section}{\numberline {5}结论与展望}{12}{section.5}\protected@file@percent }
-\newlabel{sec:conclusion}{{5}{12}{结论与展望}{section.5}{}}
-\@writefile{lof}{\contentsline {figure}{\numberline {10}{\ignorespaces $0.1\times 0.1\times 0.2\,\mathrm  {m}$ 预测对比。同一验证帧的 GT、从头训练、冻结查询适配与冻结细化头适配，所有面板都直接渲染高分辨率预测，并使用同一正后上方视角。}}{13}{figure.10}\protected@file@percent }
-\newlabel{fig:resolution}{{10}{13}{$0.1\times 0.1\times 0.2\,\mathrm {m}$ 预测对比。同一验证帧的 GT、从头训练、冻结查询适配与冻结细化头适配，所有面板都直接渲染高分辨率预测，并使用同一正后上方视角。}{figure.10}{}}
-\@writefile{lot}{\contentsline {table}{\numberline {6}{\ignorespaces Agri-AMoE 内部机制消融预留。除最后一行外均为明确标记的临时排版占位，不能作为实验结果引用。}}{13}{table.6}\protected@file@percent }
-\newlabel{tab:temporary}{{6}{13}{Agri-AMoE 内部机制消融预留。除最后一行外均为明确标记的临时排版占位，不能作为实验结果引用。}{table.6}{}}
 \bibstyle{cas-model2-names}
 \bibdata{references}
 \bibcite{baiVisionbasedNavigationGuidance2023}{{1}{2023}{{Bai et~al.}}{{Bai, Zhang, Xu, Zhou, Shi and Diao}}}
@@ -129,42 +124,46 @@
 \bibcite{caesar2020nuscenes}{{3}{2020}{{Caesar et~al.}}{{Caesar, Bankiti, Lang, Vora, Liong, Xu, Krishnan, Pan, Baldan and Beijbom}}}
 \bibcite{cao2022monoscene}{{4}{2022}{{Cao and de~Charette}}{{}}}
 \bibcite{chen2025orad3d}{{5}{2025}{{Chen et~al.}}{{Chen, Mei, Zhai, Wang, Sun, Kong, Li, Mao, Liu, Wang, Nie, Zhu, Xiao, Zhao and Hu}}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.7}讨论与局限}{13}{subsection.4.7}\protected@file@percent }
+\newlabel{sec:discussion}{{4.7}{13}{讨论与局限}{subsection.4.7}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {5}结论与展望}{13}{section.5}\protected@file@percent }
+\newlabel{sec:conclusion}{{5}{13}{结论与展望}{section.5}{}}
 \bibcite{dosovitskiy2017carla}{{6}{2017}{{Dosovitskiy et~al.}}{{Dosovitskiy, Ros, Codevilla, Lopez and Koltun}}}
 \bibcite{geiger2012kitti}{{7}{2012}{{Geiger et~al.}}{{Geiger, Lenz and Urtasun}}}
 \bibcite{hoffman2018cycada}{{8}{2018}{{Hoffman et~al.}}{{Hoffman, Tzeng, Park, Zhu, Isola, Saenko, Efros and Darrell}}}
-\@writefile{lof}{\contentsline {figure}{\numberline {11}{\ignorespaces AgriOcc 的局限性。上行为 GT，下行为预测；各列为相同三帧的正后上方视图。即使主要场景布局正确，植株之间的分离与局部边界仍可能失真。}}{14}{figure.11}\protected@file@percent }
-\newlabel{fig:limitations}{{11}{14}{AgriOcc 的局限性。上行为 GT，下行为预测；各列为相同三帧的正后上方视图。即使主要场景布局正确，植株之间的分离与局部边界仍可能失真。}{figure.11}{}}
 \bibcite{huang2022bevdet4d}{{9}{2022}{{Huang and Huang}}{{}}}
 \bibcite{huang2021bevdet}{{10}{2021}{{Huang et~al.}}{{Huang, Huang, Zhu, Ye and Du}}}
 \bibcite{huang2023tpvformer}{{11}{2023}{{Huang et~al.}}{{Huang, Zheng, Zhang, Zhou and Lu}}}
-\bibcite{jiang2020rellis}{{12}{2020}{{Jiang et~al.}}{{Jiang, Osteen, Wigness and Saripalli}}}
-\bibcite{li2022bevstereo}{{13}{2022a}{{Li et~al.}}{{Li, Bao, Ge, Yang, Sun and Li}}}
-\bibcite{li2022bevdepth}{{14}{2022b}{{Li et~al.}}{{Li, Ge, Yu, Yang, Wang, Shi, Sun and Li}}}
-\bibcite{li2023voxformer}{{15}{2023a}{{Li et~al.}}{{Li, Yu, Choy, Xiao, Alvarez, Fidler, Feng and Anandkumar}}}
-\bibcite{li2022bevformer}{{16}{2022c}{{Li et~al.}}{{Li, Wang, Li, Xie, Sima, Lu, Yu and Dai}}}
-\bibcite{li2023fbbev}{{17}{2023b}{{Li et~al.}}{{Li, Yu, Wang, Anandkumar, Lu and Alvarez}}}
-\bibcite{liu2024sparseocc}{{18}{2024}{{Liu et~al.}}{{Liu, Chen, Wang, Yang, Li, Zeng, Chen, Li and Wang}}}
-\bibcite{li2022petr}{{19}{2022}{{Liu et~al.}}{{Liu, Wang, Zhang and Sun}}}
-\bibcite{liu2023petrv2}{{20}{2023a}{{Liu et~al.}}{{Liu, Yan, Jia, Li, Gao, Wang, Zhang and Sun}}}
-\bibcite{liu2023bevfusion}{{21}{2023b}{{Liu et~al.}}{{Liu, Tang, Amini, Yang, Mao, Rus and Han}}}
-\bibcite{ma2024cotr}{{22}{2024}{{Ma et~al.}}{{Ma, Tan, Qu, Ma, Zhang and Xie}}}
-\bibcite{mei2025irwm}{{23}{2025}{{Mei et~al.}}{{Mei, Yang, Yang, Wen, Lv, Shi and Liu}}}
-\bibcite{mohan2026forecastocc}{{24}{2026}{{Mohan et~al.}}{{Mohan, Hurtado, Mohan and Valada}}}
-\bibcite{nkwochaComprehensiveReviewSensing2025}{{25}{2025}{{Nkwocha et~al.}}{{Nkwocha, Adewumi, Folorunsho, Eze, Jjagwe, Kemeshi and Wang}}}
-\bibcite{pan2024renderocc}{{26}{2024}{{Pan et~al.}}{{Pan, Liu, Zhang, Huang, Li, Wang, Xie, Liu and Zhang}}}
-\bibcite{peng2018sim2real}{{27}{2018}{{Peng et~al.}}{{Peng, Andrychowicz, Zaremba and Abbeel}}}
-\bibcite{philion2020lift}{{28}{2020}{{Philion and Fidler}}{{}}}
-\bibcite{shi2026oneocc}{{29}{2026}{{Shi et~al.}}{{Shi, Wang, Guo, Duan, Wang, Chen, Yang, Wang and Wang}}}
-\bibcite{tang2024sparseocc}{{30}{2024}{{Tang et~al.}}{{Tang, Wang, Wang, Zheng, Ren, Feng and Ma}}}
-\bibcite{tobin2017domainrandomization}{{31}{2017}{{Tobin et~al.}}{{Tobin, Fong, Ray, Schneider, Zaremba and Abbeel}}}
-\bibcite{wang2023openoccupancy}{{32}{2023}{{Wang et~al.}}{{Wang, Zhu, Xu, Zhang, Wei, Chi, Ye, Du, Lu and Wang}}}
-\bibcite{wang2024panoocc}{{33}{2024}{{Wang et~al.}}{{Wang, Chen, Liao, Fan and Zhang}}}
-\bibcite{wang2022detr3d}{{34}{2022}{{Wang et~al.}}{{Wang, Guizilini, Zhang, Wang, Zhao and Solomon}}}
-\bibcite{wei2023surroundocc}{{35}{2023}{{Wei et~al.}}{{Wei, Zhao, Zheng, Zhu, Zhou and Lu}}}
-\bibcite{yangDrivingOccupancyWorld2025}{{36}{2025}{{Yang et~al.}}{{Yang, Mei, Ma, Du, Chen, Qian, Feng and Liu}}}
-\bibcite{yu2023flashocc}{{37}{2023}{{Yu et~al.}}{{Yu, Shu, Deng, Lu, Liu, Yu, Yang, Li and Chen}}}
-\bibcite{zhang2023occformer}{{38}{2023}{{Zhang et~al.}}{{Zhang, Zhu and Du}}}
-\bibcite{zheng2024occworld}{{39}{2024}{{Zheng et~al.}}{{Zheng, Chen, Huang, Zhang, Duan and Lu}}}
-\bibcite{zhou2022matrixvt}{{40}{2022}{{Zhou et~al.}}{{Zhou, Ge, Li and Zhang}}}
-\csxdef{lastpage}{16}
-\gdef \@abspage@last{16}
+\bibcite{jiang2024openocc}{{12}{2024}{{Jiang et~al.}}{{Jiang, Xu, Zeng, Xu, Zhang, Feng and Zhang}}}
+\bibcite{jiang2020rellis}{{13}{2020}{{Jiang et~al.}}{{Jiang, Osteen, Wigness and Saripalli}}}
+\bibcite{li2022bevstereo}{{14}{2022a}{{Li et~al.}}{{Li, Bao, Ge, Yang, Sun and Li}}}
+\bibcite{li2022bevdepth}{{15}{2022b}{{Li et~al.}}{{Li, Ge, Yu, Yang, Wang, Shi, Sun and Li}}}
+\bibcite{li2023voxformer}{{16}{2023a}{{Li et~al.}}{{Li, Yu, Choy, Xiao, Alvarez, Fidler, Feng and Anandkumar}}}
+\bibcite{li2024sscbench}{{17}{2024}{{Li et~al.}}{{}}}
+\bibcite{li2022bevformer}{{18}{2022c}{{Li et~al.}}{{Li, Wang, Li, Xie, Sima, Lu, Yu and Dai}}}
+\bibcite{li2023fbbev}{{19}{2023b}{{Li et~al.}}{{Li, Yu, Wang, Anandkumar, Lu and Alvarez}}}
+\bibcite{liu2024sparseocc}{{20}{2024}{{Liu et~al.}}{{Liu, Chen, Wang, Yang, Li, Zeng, Chen, Li and Wang}}}
+\bibcite{li2022petr}{{21}{2022}{{Liu et~al.}}{{Liu, Wang, Zhang and Sun}}}
+\bibcite{liu2023petrv2}{{22}{2023a}{{Liu et~al.}}{{Liu, Yan, Jia, Li, Gao, Wang, Zhang and Sun}}}
+\bibcite{liu2023bevfusion}{{23}{2023b}{{Liu et~al.}}{{Liu, Tang, Amini, Yang, Mao, Rus and Han}}}
+\bibcite{ma2024cotr}{{24}{2024}{{Ma et~al.}}{{Ma, Tan, Qu, Ma, Zhang and Xie}}}
+\bibcite{mei2025irwm}{{25}{2025}{{Mei et~al.}}{{Mei, Yang, Yang, Wen, Lv, Shi and Liu}}}
+\bibcite{mohan2026forecastocc}{{26}{2026}{{Mohan et~al.}}{{Mohan, Hurtado, Mohan and Valada}}}
+\bibcite{nkwochaComprehensiveReviewSensing2025}{{27}{2025}{{Nkwocha et~al.}}{{Nkwocha, Adewumi, Folorunsho, Eze, Jjagwe, Kemeshi and Wang}}}
+\bibcite{pan2024renderocc}{{28}{2024}{{Pan et~al.}}{{Pan, Liu, Zhang, Huang, Li, Wang, Xie, Liu and Zhang}}}
+\bibcite{peng2018sim2real}{{29}{2018}{{Peng et~al.}}{{Peng, Andrychowicz, Zaremba and Abbeel}}}
+\bibcite{philion2020lift}{{30}{2020}{{Philion and Fidler}}{{}}}
+\bibcite{shi2026oneocc}{{31}{2026}{{Shi et~al.}}{{Shi, Wang, Guo, Duan, Wang, Chen, Yang, Wang and Wang}}}
+\bibcite{tang2024sparseocc}{{32}{2024}{{Tang et~al.}}{{Tang, Wang, Wang, Zheng, Ren, Feng and Ma}}}
+\bibcite{tobin2017domainrandomization}{{33}{2017}{{Tobin et~al.}}{{Tobin, Fong, Ray, Schneider, Zaremba and Abbeel}}}
+\bibcite{wang2023openoccupancy}{{34}{2023}{{Wang et~al.}}{{Wang, Zhu, Xu, Zhang, Wei, Chi, Ye, Du, Lu and Wang}}}
+\bibcite{wang2024panoocc}{{35}{2024}{{Wang et~al.}}{{Wang, Chen, Liao, Fan and Zhang}}}
+\bibcite{wang2022detr3d}{{36}{2022}{{Wang et~al.}}{{Wang, Guizilini, Zhang, Wang, Zhao and Solomon}}}
+\bibcite{wei2023surroundocc}{{37}{2023}{{Wei et~al.}}{{Wei, Zhao, Zheng, Zhu, Zhou and Lu}}}
+\bibcite{yangDrivingOccupancyWorld2025}{{38}{2025}{{Yang et~al.}}{{Yang, Mei, Ma, Du, Chen, Qian, Feng and Liu}}}
+\bibcite{yu2023flashocc}{{39}{2023}{{Yu et~al.}}{{Yu, Shu, Deng, Lu, Liu, Yu, Yang, Li and Chen}}}
+\bibcite{zhang2023occformer}{{40}{2023}{{Zhang et~al.}}{{Zhang, Zhu and Du}}}
+\bibcite{zheng2024occworld}{{41}{2024}{{Zheng et~al.}}{{Zheng, Chen, Huang, Zhang, Duan and Lu}}}
+\bibcite{zhou2022matrixvt}{{42}{2022}{{Zhou et~al.}}{{Zhou, Ge, Li and Zhang}}}
+\csxdef{lastpage}{15}
+\gdef \@abspage@last{15}

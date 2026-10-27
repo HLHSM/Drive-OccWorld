@@ -1,4 +1,4 @@
-\begin{thebibliography}{40}
+\begin{thebibliography}{42}
 \expandafter\ifx\csname natexlab\endcsname\relax\def\natexlab#1{#1}\fi
 \providecommand{\url}[1]{\texttt{#1}}
 \providecommand{\href}[2]{#2}
@@ -60,6 +60,11 @@
 \bibitem[{Huang et~al.(2023)Huang, Zheng, Zhang, Zhou and Lu}]{huang2023tpvformer}
 \bibinfo{author}{Huang, Y.}, \bibinfo{author}{Zheng, W.}, \bibinfo{author}{Zhang, Y.}, \bibinfo{author}{Zhou, J.}, \bibinfo{author}{Lu, J.}, \bibinfo{year}{2023}.
 \newblock \bibinfo{title}{Tri-perspective view for vision-based 3d semantic occupancy prediction}, in: \bibinfo{booktitle}{Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition}, pp. \bibinfo{pages}{9223--9232}.
+%Type = Inproceedings
+\bibitem[{Jiang et~al.(2024)Jiang, Xu, Zeng, Xu, Zhang, Feng and Zhang}]{jiang2024openocc}
+\bibinfo{author}{Jiang, H.}, \bibinfo{author}{Xu, Y.}, \bibinfo{author}{Zeng, Y.}, \bibinfo{author}{Xu, H.}, \bibinfo{author}{Zhang, W.}, \bibinfo{author}{Feng, J.}, \bibinfo{author}{Zhang, L.}, \bibinfo{year}{2024}.
+\newblock \bibinfo{title}{Openocc: Open vocabulary 3d scene reconstruction via occupancy representation}, in: \bibinfo{booktitle}{2024 IEEE/RSJ International Conference on Intelligent Robots and Systems (IROS)}, pp. \bibinfo{pages}{1145--1152}.
+\newblock \DOIprefix\doi{10.1109/IROS58592.2024.10801860}.
 %Type = Misc
 \bibitem[{Jiang et~al.(2020)Jiang, Osteen, Wigness and Saripalli}]{jiang2020rellis}
 \bibinfo{author}{Jiang, P.}, \bibinfo{author}{Osteen, P.}, \bibinfo{author}{Wigness, M.}, \bibinfo{author}{Saripalli, S.}, \bibinfo{year}{2020}.
@@ -80,6 +85,10 @@
 \bibinfo{author}{Li, Y.}, \bibinfo{author}{Yu, Z.}, \bibinfo{author}{Choy, C.}, \bibinfo{author}{Xiao, C.}, \bibinfo{author}{Alvarez, J.M.}, \bibinfo{author}{Fidler, S.}, \bibinfo{author}{Feng, C.}, \bibinfo{author}{Anandkumar, A.}, \bibinfo{year}{2023}a.
 \newblock \bibinfo{title}{Voxformer: Sparse voxel transformer for camera-based 3d semantic scene completion}, in: \bibinfo{booktitle}{Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition}, pp. \bibinfo{pages}{9087--9098}.
 \newblock \DOIprefix\doi{10.1109/CVPR52729.2023.00877}.
+%Type = Inproceedings
+\bibitem[{Li et~al.(2024)}]{li2024sscbench}
+\bibinfo{author}{Li, Y.}, et~al., \bibinfo{year}{2024}.
+\newblock \bibinfo{title}{Sscbench: A large-scale 3d semantic scene completion benchmark for autonomous driving}, in: \bibinfo{booktitle}{2024 IEEE/RSJ International Conference on Intelligent Robots and Systems (IROS)}.
 %Type = Inproceedings
 \bibitem[{Li et~al.(2022c)Li, Wang, Li, Xie, Sima, Lu, Yu and Dai}]{li2022bevformer}
 \bibinfo{author}{Li, Z.}, \bibinfo{author}{Wang, W.}, \bibinfo{author}{Li, H.}, \bibinfo{author}{Xie, E.}, \bibinfo{author}{Sima, C.}, \bibinfo{author}{Lu, T.}, \bibinfo{author}{Yu, Q.}, \bibinfo{author}{Dai, J.}, \bibinfo{year}{2022}c.
