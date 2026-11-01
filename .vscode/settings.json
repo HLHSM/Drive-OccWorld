@@ -3,10 +3,15 @@
   "latex-workshop.latex.recipe.default": "first",
   "latex-workshop.latex.outDir": "%DIR%",
   "latex-workshop.view.pdf.viewer": "tab",
+  "latex-workshop.kpsewhich.path": "/data/HL/texlive/2026/bin/x86_64-linux/kpsewhich",
+  "latex-workshop.latex.clean.command": "/data/HL/texlive/2026/bin/x86_64-linux/latexmk",
   "latex-workshop.latex.tools": [
     {
       "name": "latexmk-xelatex",
-      "command": "latexmk",
+      "command": "/data/HL/texlive/2026/bin/x86_64-linux/latexmk",
+      "env": {
+        "PATH": "/data/HL/texlive/2026/bin/x86_64-linux:/usr/local/bin:/usr/bin:/bin"
+      },
       "args": [
         "-xelatex",
         "-synctex=1",
@@ -19,7 +24,7 @@
   ],
   "latex-workshop.latex.recipes": [
     {
-      "name": "XeLaTeX (WSL TeX Live)",
+      "name": "XeLaTeX (Local TeX Live)",
       "tools": [
         "latexmk-xelatex"
       ]

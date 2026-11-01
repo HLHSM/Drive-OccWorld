@@ -13,7 +13,8 @@ import numpy as np
 
 # Also support `python /path/to/row_det/generate_row_predictions.py ...`.
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from row_det.detector import ALGORITHM_VERSION, RowConfig, config_dict, detect_rows
+from row_det.detector import (ALGORITHM_VERSION, CENTERLINE_VERSION, RowConfig,
+                             config_dict, detect_rows, geometric_centerline)
 
 
 def parse_args():
@@ -24,6 +25,8 @@ def parse_args():
                         help='override task_dir/prediction input directory')
     parser.add_argument('--output-dir', type=Path,
                         help='override task_dir/row_prediction output directory')
+    parser.add_argument('--reuse-row-dir', type=Path,
+                        help='reuse matching fitted rows and retain their evaluation fields in a new output directory')
     parser.add_argument('--count', type=int, default=-1,
                         help='process first N sorted files; -1 processes all')
     parser.add_argument('--overwrite', action='store_true', help='recompute matching cached artifacts')
@@ -129,6 +132,22 @@ def build_artifact(path, cfg):
     return artifact
 
 
+def attach_centerlines(artifact, cfg):
+    """Upgrade cached artifacts without refitting rows or replacing GT metrics."""
+    if (artifact.get('centerline_version') == CENTERLINE_VERSION
+            and all('geometric_centerline' in frame[side]
+                    for frame in [artifact['current']] + artifact.get('future', [])
+                    for side in ('pred', 'gt') if side in frame)):
+        return False
+    for frame in [artifact['current']] + artifact.get('future', []):
+        for side in ('pred', 'gt'):
+            if side in frame:
+                frame[side]['geometric_centerline'] = geometric_centerline(
+                    frame[side]['rows'], artifact['point_cloud_range'], cfg)
+    artifact['centerline_version'] = CENTERLINE_VERSION
+    return True
+
+
 def write_json(path, payload):
     temporary = path.with_suffix(path.suffix + '.tmp')
     temporary.write_text(json.dumps(payload, ensure_ascii=False, indent=2, allow_nan=False) + '\n')
@@ -156,10 +175,13 @@ def render_preview(source, artifact, output):
                 points = np.asarray(row['points'])
                 ax.plot(points[:, 0], points[:, 1], color='#db2589', lw=1.8)
                 ax.text(*points[len(points) // 2, :2], str(row['id']), color='#b5005c')
+            for field, color, label in [('geometric_centerline', '#007dff', 'row centerline'),
+                                        ('reference_path', '#e68a00', 'checked reference')]:
+                reference = result.get(field, {})
+                if reference.get('points'):
+                    points = np.asarray(reference['points'])
+                    ax.plot(points[:, 0], points[:, 1], color=color, lw=2.5, label=label)
             reference = result['reference_path']
-            if reference['points']:
-                points = np.asarray(reference['points'])
-                ax.plot(points[:, 0], points[:, 1], color='#00a8e8', lw=2.5, label='reference')
             ax.plot(0, 0, 'r>', ms=9)
             ax.set(xlabel='forward x (m)', ylabel='right y (m)', xlim=(pc[0], pc[3]),
                    ylim=(pc[1], pc[4]), title=f"{title}: {len(result['rows'])} rows\n{reference['status']}")
@@ -188,17 +210,28 @@ def main():
         destination = output_dir / (path.stem + '.json')
         try:
             artifact = None
-            if destination.exists() and not args.overwrite:
-                try:
-                    cached = json.loads(destination.read_text())
-                    if (cached.get('schema_version') == 1 and cached.get('algorithm_version') == ALGORITHM_VERSION
-                            and cached.get('source') == source_signature(path)
-                            and cached.get('config') == config_dict(cfg)):
-                        artifact = cached
-                except (ValueError, OSError):
-                    pass
+            write_required = True
+            candidates = [destination]
+            if args.reuse_row_dir is not None:
+                candidates.append(args.reuse_row_dir / destination.name)
+            if not args.overwrite:
+                for candidate in candidates:
+                    if not candidate.exists():
+                        continue
+                    try:
+                        cached = json.loads(candidate.read_text())
+                        if (cached.get('schema_version') == 1 and cached.get('algorithm_version') == ALGORITHM_VERSION
+                                and cached.get('source') == source_signature(path)
+                                and cached.get('config') == config_dict(cfg)):
+                            artifact = cached
+                            write_required = candidate != destination
+                            break
+                    except (ValueError, OSError):
+                        pass
             if artifact is None:
                 artifact = build_artifact(path, cfg)
+            upgraded = attach_centerlines(artifact, cfg)
+            if upgraded or write_required or args.overwrite:
                 write_json(destination, artifact)
             if index <= args.preview_count:
                 preview_dir = output_dir / 'previews'
@@ -208,8 +241,10 @@ def main():
             summaries.append(dict(name=path.stem,
                 pred_rows=len(frame['pred']['rows']),
                 pred_reference_status=frame['pred']['reference_path']['status'],
+                pred_centerline_status=frame['pred']['geometric_centerline']['status'],
                 gt_rows=len(frame.get('gt', {}).get('rows', [])),
                 gt_reference_status=frame.get('gt', {}).get('reference_path', {}).get('status'),
+                gt_centerline_status=frame.get('gt', {}).get('geometric_centerline', {}).get('status'),
                 comparison=frame.get('comparison')))
         except (ValueError, OSError, KeyError) as error:
             failures.append(dict(name=path.name, error=str(error)))
@@ -221,10 +256,13 @@ def main():
                    config=config_dict(cfg), processed=len(summaries), failures=failures,
                    elapsed_seconds=round(time.monotonic() - start, 3),
                    pred_reference_status_counts=dict(Counter(s['pred_reference_status'] for s in summaries)),
+                   pred_centerline_status_counts=dict(Counter(s['pred_centerline_status'] for s in summaries)),
+                   gt_centerline_status_counts=dict(Counter(s['gt_centerline_status'] for s in summaries)),
                    gt_reference_status_counts=dict(Counter(s['gt_reference_status'] for s in summaries)),
                    samples=summaries)
     write_json(output_dir / 'summary.json', summary)
     print(f"Saved {len(summaries)} row artifacts to {output_dir}")
+    print('Prediction centerlines:', summary['pred_centerline_status_counts'])
     print('Prediction references:', summary['pred_reference_status_counts'])
     if failures:
         raise SystemExit(1)

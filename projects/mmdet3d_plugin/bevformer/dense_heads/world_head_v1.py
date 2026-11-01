@@ -63,29 +63,57 @@ class _AgriAMoE3D(nn.Module):
     """
 
     def __init__(self, channels, use_gradient_energy=True, use_saliency=True,
-                 gate_temperature=1.0):
+                 gate_temperature=1.0, use_channel_attention=None,
+                 use_spatial_saliency=None, expert_layout='anisotropic',
+                 active_experts=(0, 1, 2), fusion='voxel'):
         super().__init__()
         if gate_temperature <= 0:
             raise ValueError('Agri-AMoE gate_temperature must be positive.')
+        if expert_layout not in ('anisotropic', 'planar'):
+            raise ValueError('Agri-AMoE expert_layout must be anisotropic or planar.')
+        if fusion not in ('voxel', 'mean', 'global'):
+            raise ValueError('Agri-AMoE fusion must be voxel, mean or global.')
+        active_experts = tuple(active_experts)
+        if (not active_experts or len(set(active_experts)) != len(active_experts)
+                or any(index not in (0, 1, 2) for index in active_experts)):
+            raise ValueError('Agri-AMoE active_experts must be a nonempty '
+                             'subset of (0, 1, 2) without duplicates.')
         groups = 8 if channels % 8 == 0 else 1
         self.use_gradient_energy = bool(use_gradient_energy)
+        # Preserve the old joint switch unless independent overrides are set.
         self.use_saliency = bool(use_saliency)
+        self.use_channel_attention = (self.use_saliency if use_channel_attention
+                                      is None else bool(use_channel_attention))
+        self.use_spatial_saliency = (self.use_saliency if use_spatial_saliency
+                                     is None else bool(use_spatial_saliency))
         self.gate_temperature = float(gate_temperature)
+        self.expert_layout = expert_layout
+        self.active_experts = active_experts
+        self.fusion = fusion
+        self.num_experts = len(active_experts)
         hidden = max(channels // 4, 8)
         self.channel_gate = nn.Sequential(
             nn.AdaptiveAvgPool3d(1), nn.Conv3d(channels, hidden, 1),
             nn.ReLU(inplace=True), nn.Conv3d(hidden, channels, 1),
-            nn.Sigmoid())
+            nn.Sigmoid()) if self.use_channel_attention else None
         self.spatial_gate = nn.Sequential(
-            nn.Conv3d(2, 1, 3, padding=1, bias=False), nn.Sigmoid())
+            nn.Conv3d(2, 1, 3, padding=1, bias=False), nn.Sigmoid()
+        ) if self.use_spatial_saliency and fusion == 'voxel' else None
         self.energy_gate = nn.Sequential(
             nn.Conv3d(2, channels, 1, bias=False), nn.GroupNorm(groups, channels),
-            nn.ReLU(inplace=True), nn.Conv3d(channels, 3, 1))
-        self.experts = nn.ModuleList((
-            _AgriAMoEExpert(channels, (1, 3, 3)),
-            _AgriAMoEExpert(channels, (3, 1, 1)),
-            _AgriAMoEExpert(channels, (1, 3, 3), dilation=(1, 2, 2)),
-        ))
+            nn.ReLU(inplace=True), nn.Conv3d(channels, self.num_experts, 1)
+        ) if fusion == 'voxel' else None
+        if fusion == 'global':
+            self.global_logits = nn.Parameter(torch.zeros(self.num_experts))
+        specs = (((1, 3, 3), (1, 1, 1)),
+                 ((3, 1, 1), (1, 1, 1)),
+                 ((1, 3, 3), (1, 2, 2)))
+        if expert_layout == 'planar':
+            specs = (((1, 3, 3), (1, 1, 1)),) * 3
+        # Numeric keys keep existing full-model checkpoint names unchanged.
+        self.experts = nn.ModuleDict({
+            str(index): _AgriAMoEExpert(channels, *specs[index])
+            for index in active_experts})
         self.out_norm = nn.GroupNorm(groups, channels)
 
     @staticmethod
@@ -99,26 +127,34 @@ class _AgriAMoE3D(nn.Module):
             dim=1, keepdim=True)
 
     def forward(self, feature):
-        if self.use_saliency:
+        if self.use_channel_attention:
             feature = feature * self.channel_gate(feature)
-            spatial = self.spatial_gate(torch.cat((
-                feature.mean(dim=1, keepdim=True),
-                feature.amax(dim=1, keepdim=True)), dim=1))
+        if self.fusion == 'voxel':
+            if self.use_spatial_saliency:
+                spatial = self.spatial_gate(torch.cat((
+                    feature.mean(dim=1, keepdim=True),
+                    feature.amax(dim=1, keepdim=True)), dim=1))
+            else:
+                spatial = feature.new_zeros(feature.shape[0], 1, *feature.shape[2:])
+            if self.use_gradient_energy:
+                energy = self._gradient_energy(feature)
+            else:
+                energy = feature.new_zeros(feature.shape[0], 1, *feature.shape[2:])
+            # log1p stabilizes the input scale in early training.
+            gate = torch.softmax(self.energy_gate(torch.cat((
+                torch.log1p(energy), spatial), dim=1)) / self.gate_temperature,
+                dim=1)
+        elif self.fusion == 'mean':
+            gate = feature.new_full((1, self.num_experts, 1, 1, 1),
+                                    1.0 / self.num_experts)
         else:
-            spatial = feature.new_zeros(feature.shape[0], 1, *feature.shape[2:])
-        if self.use_gradient_energy:
-            energy = self._gradient_energy(feature)
-        else:
-            energy = feature.new_zeros(feature.shape[0], 1, *feature.shape[2:])
-        # log1p makes the router stable across early random initializations.
-        gate = torch.softmax(self.energy_gate(torch.cat((
-            torch.log1p(energy), spatial), dim=1)) / self.gate_temperature,
-            dim=1)
+            gate = torch.softmax(self.global_logits / self.gate_temperature,
+                                 dim=0).view(1, self.num_experts, 1, 1, 1)
         # Checkpoint experts during training: the 100x100x25 volume is the
         # whole reason this decoder is sparse in channel width, and retaining
         # three expert activation graphs would needlessly multiply its memory.
         routed = 0
-        for index, expert in enumerate(self.experts):
+        for index, expert in enumerate(self.experts.values()):
             expert_gate = gate[:, index:index + 1]
             if self.training and feature.requires_grad:
                 expert_out = checkpoint(
@@ -154,6 +190,11 @@ class WorldHeadV1(WorldHeadBase):
                  agri_amoe_use_gradient_energy=True,
                  agri_amoe_use_saliency=True,
                  agri_amoe_gate_temperature=1.0,
+                 agri_amoe_use_channel_attention=None,
+                 agri_amoe_use_spatial_saliency=None,
+                 agri_amoe_expert_layout='anisotropic',
+                 agri_amoe_active_experts=(0, 1, 2),
+                 agri_amoe_fusion='voxel',
                  # Keep a 0.2 m BEV encoder and learn only the final 2x
                  # occupancy-grid refinement for 0.1 m supervision.
                  use_occupancy_2x_refiner=False,
@@ -223,6 +264,11 @@ class WorldHeadV1(WorldHeadBase):
             agri_amoe_use_gradient_energy)
         self.agri_amoe_use_saliency = bool(agri_amoe_use_saliency)
         self.agri_amoe_gate_temperature = float(agri_amoe_gate_temperature)
+        self.agri_amoe_use_channel_attention = agri_amoe_use_channel_attention
+        self.agri_amoe_use_spatial_saliency = agri_amoe_use_spatial_saliency
+        self.agri_amoe_expert_layout = agri_amoe_expert_layout
+        self.agri_amoe_active_experts = tuple(agri_amoe_active_experts)
+        self.agri_amoe_fusion = agri_amoe_fusion
         self.use_occupancy_2x_refiner = bool(use_occupancy_2x_refiner)
         self.occupancy_2x_refiner_channels = int(
             occupancy_2x_refiner_channels)
@@ -430,7 +476,12 @@ class WorldHeadV1(WorldHeadBase):
                 self.agri_amoe_channels,
                 use_gradient_energy=self.agri_amoe_use_gradient_energy,
                 use_saliency=self.agri_amoe_use_saliency,
-                gate_temperature=self.agri_amoe_gate_temperature)
+                gate_temperature=self.agri_amoe_gate_temperature,
+                use_channel_attention=self.agri_amoe_use_channel_attention,
+                use_spatial_saliency=self.agri_amoe_use_spatial_saliency,
+                expert_layout=self.agri_amoe_expert_layout,
+                active_experts=self.agri_amoe_active_experts,
+                fusion=self.agri_amoe_fusion)
             self.agri_amoe_out = nn.Conv3d(
                 self.agri_amoe_channels, self.num_classes, 1)
 

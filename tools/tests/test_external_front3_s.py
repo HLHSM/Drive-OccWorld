@@ -33,13 +33,13 @@ class ExternalFront3STests(unittest.TestCase):
             raw = ((x+y+z) % 4).astype(np.uint8)
             valid = np.ones_like(raw)
             valid[2,14,104] = 0
-            raw[3,15,105] = 8  # An unmapped label is ignored, not class 0.
+            raw[3,15,105] = 8  # Person/animal is merged into other_obstacle.
             raw.tofile(seq/'occupancy/000000.bin')
             valid.tofile(seq/'occupancy_valid/000000.bin')
             actual,mask = load_common_occupancy(seq,'000000')
             expected = raw.transpose(2,1,0)[100:175,13:88].copy()
             expected[4,1,2] = 255
-            expected[5,2,3] = 255
+            expected[5,2,3] = 5
             self.assertEqual(actual.shape,(75,75,25))
             np.testing.assert_array_equal(actual,expected)
             np.testing.assert_array_equal(mask,expected!=255)

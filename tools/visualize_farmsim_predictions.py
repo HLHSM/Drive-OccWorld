@@ -143,13 +143,14 @@ select{{min-width:340px}} button{{margin-left:6px}} .hint{{color:#555}} #status{
 <label>Sample <select id="sample"></select></label><button id="previous">Previous</button><button id="next">Next</button>
 <label> Time <select id="time"></select></label>
 <label><input type="checkbox" id="show-rows">Crop row lines</label>
-<label><input type="checkbox" id="show-reference">Navigation reference</label>
+<label><input type="checkbox" id="show-reference">Row centerline</label>
+<label><input type="checkbox" id="show-checked-reference">Checked reference</label>
 <span class="hint">Each panel is capped at {max_points:,} valid non-free voxels. All samples are preloaded.</span><span id="status"></span><span id="preload-status" class="hint"></span>
 <div id="row-status" class="hint"></div>
-<div id="line-hint" class="hint" hidden>Lines are displayed above the crop canopy for visibility; saved coordinates are unchanged.</div>
+<div id="line-hint" class="hint" hidden>Blue centerlines show row geometry without traversability checks; orange references passed corridor checks. Lines are displayed above the crop canopy; saved coordinates are unchanged.</div>
 <div id="plot"></div><div id="class-legend"><strong>Semantic colours:</strong>{class_legend}</div><script>
 const sampleSelect=document.querySelector('#sample'), timeSelect=document.querySelector('#time'), status=document.querySelector('#status'), preloadStatus=document.querySelector('#preload-status');
-const showRows=document.querySelector('#show-rows'), showReference=document.querySelector('#show-reference'), rowStatus=document.querySelector('#row-status');
+const showRows=document.querySelector('#show-rows'), showReference=document.querySelector('#show-reference'), showCheckedReference=document.querySelector('#show-checked-reference'), rowStatus=document.querySelector('#row-status');
 let samples=[], current=null; const sampleCache=new Map();
 function trace(points,name,scene) {{ return {{type:'scatter3d',mode:'markers',name:name,scene:scene,x:points.x,y:points.y,z:points.z,marker:{{size:2,color:points.color,opacity:.78}}}}; }}
 function trajectory(points,name,scene,color) {{ return {{type:'scatter3d',mode:'lines+markers',name:name,scene:scene,x:points.map(p=>p[0]),y:points.map(p=>p[1]),z:points.map(_=>0),line:{{color:color,width:6}},marker:{{size:3}}}}; }}
@@ -163,20 +164,21 @@ function highlightedLine(traces,points,name,scene,color,width,group,showlegend,h
 }}
 function addRows(traces,result,scene,prefix,canopyTop) {{ if(!result) return;
  if(showRows.checked) (result.rows||[]).forEach((row,index)=>highlightedLine(traces,row.points,prefix+' crop rows',scene,'#f0009b',7,prefix+'-rows',index===0,`Row ${{row.id}}; fit RMSE ${{row.fit_rmse_m}} m; ${{row.support_cells}} crop cells`,canopyTop));
- const reference=result.reference_path;
- if(showReference.checked && reference?.points?.length) highlightedLine(traces,reference.points,prefix+' navigation reference',scene,'#007dff',10,prefix+'-reference',true,reference.status+'; rows '+reference.row_ids.join(', '),canopyTop);
+ const centerline=result.geometric_centerline, reference=result.reference_path;
+ if(showReference.checked && centerline?.points?.length) highlightedLine(traces,centerline.points,prefix+' row centerline',scene,'#007dff',10,prefix+'-centerline',true,'Row geometry only; traversability not checked; rows '+centerline.row_ids.join(', '),canopyTop);
+ if(showCheckedReference.checked && reference?.points?.length) highlightedLine(traces,reference.points,prefix+' checked reference',scene,'#e68a00',8,prefix+'-reference',true,reference.status+'; rows '+reference.row_ids.join(', '),canopyTop);
 }}
 function render() {{ if(!current) return; const t=+timeSelect.value, frame=t===0?current.current:current.future[t-1]; const label=[trace(frame.gt,'Label','scene')], pred=[trace(frame.pred,'Prediction','scene2')];
  if(current.trajectory_gt) label.push(trajectory(current.trajectory_gt,'GT trajectory','scene','#111'));
  if(current.trajectory_pred) pred.push(trajectory(current.trajectory_pred,'Predicted trajectory','scene2','#e60000'));
  const rows=frame.row_prediction;
- showRows.disabled=!rows; showReference.disabled=!rows;
+ showRows.disabled=!rows; showReference.disabled=!rows || ![rows.gt,rows.pred].some(side=>side?.geometric_centerline); showCheckedReference.disabled=!rows;
  addRows(label,rows?.gt,'scene','GT',frame.gt.crop_top_z); addRows(pred,rows?.pred,'scene2','Predicted',frame.pred.crop_top_z);
- document.querySelector('#line-hint').hidden=!(rows && (showRows.checked || showReference.checked));
- rowStatus.textContent=rows ? ['gt','pred'].filter(side=>rows[side]).map(side=>`${{side==='gt'?'GT':'Prediction'}}: ${{rows[side].rows.length}} crop rows; reference ${{rows[side].reference_path.status}}`).join(' | ') : (t ? 'No row result for this future frame' : current.row_overlay_status);
+ document.querySelector('#line-hint').hidden=!(rows && (showRows.checked || showReference.checked || showCheckedReference.checked));
+ rowStatus.textContent=rows ? ['gt','pred'].filter(side=>rows[side]).map(side=>`${{side==='gt'?'GT':'Prediction'}}: ${{rows[side].rows.length}} crop rows; centerline ${{rows[side].geometric_centerline?.status??'not generated'}}; checked reference ${{rows[side].reference_path.status}}`).join(' | ') : (t ? 'No row result for this future frame' : current.row_overlay_status);
  const pc=current.point_cloud_range;
  let zTop=Math.max(pc[5],(frame.gt.crop_top_z??pc[2])+.4,(frame.pred.crop_top_z??pc[2])+.4);
- for(const side of [rows?.gt,rows?.pred]) {{ for(const row of side?.rows||[]) {{ for(const p of row.points) zTop=Math.max(zTop,p[2]+.4); }} for(const p of side?.reference_path?.points||[]) zTop=Math.max(zTop,p[2]+.4); }}
+ for(const side of [rows?.gt,rows?.pred]) {{ for(const row of side?.rows||[]) {{ for(const p of row.points) zTop=Math.max(zTop,p[2]+.4); }} for(const path of [side?.geometric_centerline,side?.reference_path]) {{ for(const p of path?.points||[]) zTop=Math.max(zTop,p[2]+.4); }} }}
  const makeScene=(domain)=>({{domain:{{x:domain,y:[0,1]}},xaxis:{{title:'forward x',range:[pc[0],pc[3]]}},yaxis:{{title:'right y',range:[pc[1],pc[4]]}},zaxis:{{title:'up z',range:[pc[2],zTop]}},aspectmode:'data',camera:{{eye:{{x:1.4,y:1.4,z:1.4}}}}}});
  status.textContent=` (${{+sampleSelect.value+1}} / ${{samples.length}}; valid non-free: GT ${{frame.gt.total.toLocaleString()}}, Prediction ${{frame.pred.total.toLocaleString()}})`;
  Plotly.react('plot',label.concat(pred),{{title:current.name+(t?' — future '+t:' — current'),uirevision:current.name,scene:makeScene([0,.48]),scene2:makeScene([.52,1]),annotations:[{{text:'<b>Label (GT)</b>',x:.24,y:1.04,xref:'paper',yref:'paper',showarrow:false}},{{text:'<b>Prediction</b>',x:.76,y:1.04,xref:'paper',yref:'paper',showarrow:false}}],margin:{{l:0,r:0,t:80,b:0}},legend:{{orientation:'h'}}}},{{responsive:true}}); }}
@@ -185,7 +187,7 @@ function render() {{ if(!current) return; const t=+timeSelect.value, frame=t===0
  async function loadSample(index) {{ if(index<0 || index>=samples.length) return; sampleSelect.value=index; status.textContent='Loading…'; try {{ current=await getSample(index); setTimes(); }} catch(error) {{ status.textContent='Failed to load sample'; console.error(error); }} }}
  async function preloadSamples() {{ let nextIndex=1, completed=1; const update=()=>preloadStatus.textContent=` Preloading ${{completed}} / ${{samples.length}}…`; update(); async function worker() {{ while(nextIndex<samples.length) {{ const index=nextIndex++; try {{ await getSample(index); }} catch(error) {{ console.error('Failed to preload sample',index,error); }} completed++; update(); }} }} await Promise.all(Array.from({{length:4}},worker)); preloadStatus.textContent=' All samples preloaded.'; }}
  sampleSelect.onchange=()=>loadSample(+sampleSelect.value); timeSelect.onchange=render;
- showRows.onchange=render; showReference.onchange=render;
+ showRows.onchange=render; showReference.onchange=render; showCheckedReference.onchange=render;
  document.querySelector('#previous').onclick=()=>loadSample(+sampleSelect.value-1);
  document.querySelector('#next').onclick=()=>loadSample(+sampleSelect.value+1);
  (async()=>{{ const response=await fetch('/api/samples'); samples=await response.json(); sampleSelect.innerHTML=samples.map((name,i)=>`<option value="${{i}}">${{name}}</option>`).join(''); await loadSample(0); preloadSamples(); }})();

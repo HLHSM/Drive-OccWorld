@@ -56,6 +56,9 @@ def main():
     # Exclude that evaluation-only work while retaining image/BEV/occupancy
     # prediction and the same MMCV batch-one wrapper as tools/test.py.
     model.evaluate_occ = lambda *unused_args, **unused_kwargs: (0, 0, 0, 0)
+    # Forecasting models also calculate planning metrics inside forward_test;
+    # exclude those GT-dependent metrics while keeping the planning head itself.
+    model.evaluate_plan = lambda *unused_args, **unused_kwargs: None
     model = MMDataParallel(model.cuda().eval(), device_ids=[0])
     torch.cuda.synchronize()
     model_allocated_mib = torch.cuda.memory_allocated() / 2**20

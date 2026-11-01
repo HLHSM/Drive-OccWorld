@@ -83,10 +83,20 @@ def main():
         frame_counts = []
         for frame_id in seq['frame_ids']:
             expected = size_x * size_y * size_z
-            occupancy = np.fromfile(seq_path / 'occupancy' / f'{frame_id}.bin',
+            archive_path = seq_path / 'occupancy' / f'{frame_id}.npz'
+            if archive_path.is_file():
+                with np.load(archive_path, allow_pickle=False) as archive:
+                    occupancy = archive['occupancy']
+                    valid = archive['occupancy_valid']
+                expected_shape = (size_z, size_y, size_x)
+                if (occupancy.shape != expected_shape or valid.shape != expected_shape or
+                        occupancy.dtype != np.uint8 or valid.dtype != np.uint8):
+                    raise ValueError(f'{archive_path}: invalid occupancy/mask shape or dtype')
+            else:
+                occupancy = np.fromfile(seq_path / 'occupancy' / f'{frame_id}.bin',
+                                        dtype=np.uint8)
+                valid = np.fromfile(seq_path / 'occupancy_valid' / f'{frame_id}.bin',
                                     dtype=np.uint8)
-            valid = np.fromfile(seq_path / 'occupancy_valid' / f'{frame_id}.bin',
-                                dtype=np.uint8)
             if occupancy.size != expected or valid.size != expected:
                 raise ValueError(f'{seq_path}/{frame_id}: unexpected occupancy size')
             occupancy = occupancy.reshape(size_z, size_y, size_x)

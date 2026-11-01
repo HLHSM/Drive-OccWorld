@@ -9,6 +9,7 @@ from dataclasses import asdict, dataclass
 import numpy as np
 
 ALGORITHM_VERSION = 'projection-ransac-v1'
+CENTERLINE_VERSION = 'adjacent-row-midline-v1'
 
 
 def nearest_cells(mask, pitch=(1.0, 1.0)):
@@ -186,6 +187,48 @@ def _xyz(xy, labels, pc_range, pitch, ground_height):
     return np.column_stack((xy, z)).round(4).tolist()
 
 
+def geometric_centerline(rows, pc_range, cfg):
+    """Finite midpoint of adjacent fitted rows bracketing the vehicle.
+
+    Only row geometry is used: no canopy, obstacle, unknown-space or ground
+    availability gate. Heights interpolate the two saved row heights. This
+    describes row direction, not whether a vehicle can traverse the corridor.
+    """
+    result = dict(status='insufficient_rows' if len(rows) < 2 else 'no_bracketing_rows',
+                  points=[], row_ids=[], traversability_checked=False,
+                  vehicle_clearance_checked=False, height_source='interpolated_row_heights')
+    candidates = []
+    for left, right in zip(rows, rows[1:]):
+        lp, rp = np.asarray(left['points'], dtype=float), np.asarray(right['points'], dtype=float)
+        if any(p.ndim != 2 or p.shape[1] != 3 or len(p) < 2 or not np.isfinite(p).all()
+               or np.any(np.diff(p[:, 0]) <= 0) for p in (lp, rp)):
+            raise ValueError('Centerline requires finite Nx3 forward-monotone fitted rows')
+        start = max(0., pc_range[0], lp[0, 0], rp[0, 0])
+        stop = min(pc_range[3], lp[-1, 0], rp[-1, 0])
+        if stop - start < cfg.min_path_length:
+            continue
+        x = np.linspace(start, stop, max(2, int(np.ceil((stop - start) / cfg.sample_step)) + 1))
+        yl, yr = np.interp(x, lp[:, 0], lp[:, 1]), np.interp(x, rp[:, 0], rp[:, 1])
+        y0_left = yl[0] - (yl[1] - yl[0]) / (x[1] - x[0]) * x[0]
+        y0_right = yr[0] - (yr[1] - yr[0]) / (x[1] - x[0]) * x[0]
+        if not y0_left <= 0 <= y0_right:
+            continue
+        # Preserve only the finite continuous interval before rows cross.
+        bad = np.flatnonzero(yr <= yl)
+        end = int(bad[0]) if len(bad) else len(x)
+        if end < 2 or x[end - 1] - x[0] < cfg.min_path_length:
+            continue
+        x, yl, yr = x[:end], yl[:end], yr[:end]
+        z = (np.interp(x, lp[:, 0], lp[:, 2]) + np.interp(x, rp[:, 0], rp[:, 2])) / 2
+        points = np.column_stack((x, (yl + yr) / 2, z))
+        candidates.append((abs((y0_left + y0_right) / 2), dict(result,
+            status='geometric_centerline', points=points.round(4).tolist(),
+            row_ids=[left['id'], right['id']], support_range_x_m=[float(x[0]), float(x[-1])],
+            length_m=round(float(np.linalg.norm(np.diff(points, axis=0), axis=1).sum()), 4),
+            min_row_separation_m=round(float((yr - yl).min()), 4), truncated=bool(len(bad)))))
+    return min(candidates, key=lambda candidate: candidate[0])[1] if candidates else result
+
+
 def _reference(rows, labels, pc_range, pitch, ground_height, ground_known, cfg):
     result = dict(status='no_bracketing_rows', points=[], row_ids=[],
                   vehicle_clearance_checked=cfg.vehicle_width > 0,
@@ -272,6 +315,7 @@ def detect_rows(labels, point_cloud_range, config=None):
     indices = np.argwhere(density > 0)
     result = dict(rows=[], reference_path=dict(status='insufficient_crop', points=[], row_ids=[],
                   vehicle_clearance_checked=cfg.vehicle_width > 0),
+                  geometric_centerline=geometric_centerline([], pc_range, cfg),
                   diagnostics=dict(crop_voxels=int(crop.sum()), crop_cells=len(indices),
                                    direction_deg=None, status='insufficient_crop'))
     if len(indices) < cfg.min_crop_cells:
@@ -339,6 +383,7 @@ def detect_rows(labels, point_cloud_range, config=None):
     for row_id, row in enumerate(rows):
         row['id'] = row_id
     result['rows'] = rows
+    result['geometric_centerline'] = geometric_centerline(rows, pc_range, cfg)
     result['diagnostics'].update(direction_deg=round(float(np.rad2deg(angle)), 3),
                                  status='ok' if rows else 'no_supported_rows')
     result['reference_path'] = _reference(rows, labels, pc_range, pitch, ground_height, ground_known, cfg)

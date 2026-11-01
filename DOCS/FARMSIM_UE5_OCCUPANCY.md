@@ -30,9 +30,9 @@
 
 ## 坐标、标签和相机
 
-- FarmSim 标注体素存储格式为 `[z,y,x]`，适配器转换为模型使用的 `[x,y,z]`。训练/评估使用聚合后的 6 类 taxonomy：`free`、`crop`、`soil_ground`、`drivable`、`other_vegetation`、`other_obstacle`；原始 `tree_foliage` 合并至 `other_vegetation`，原始 `building`、`fence_barrier`、`vehicle`、`tree_trunk` 合并至 `other_obstacle`，原始 `person_animal` 写为 ignore ID `255`，不参与损失或 IoU。
+- FarmSim 标注体素存储格式为 `[z,y,x]`，适配器转换为模型使用的 `[x,y,z]`。训练/评估使用聚合后的 6 类 taxonomy：`free`、`crop`、`soil_ground`、`drivable`、`other_vegetation`、`other_obstacle`；原始 `tree_foliage` 合并至 `other_vegetation`，原始 `building`、`fence_barrier`、`vehicle`、`person_animal`、`tree_trunk` 合并至 `other_obstacle`。`person_animal` 的有效体素以训练类别 ID `5` 参与损失和 IoU。
 - 该聚合将 semantic occupancy head 从 12 类改为 6 类，旧 12 类 checkpoint 的输出层维度不兼容，必须以新的 `WORK_DIR` 从头训练；新 checkpoint 可用更新后的 `tools/test.py` 正常评估和可视化。
-- 坐标为 `x` 前、`y` 右、`z` 上；体素大小 0.2 m。源语义 ID 为 0--11，读取时重映射为上述 0--5 训练 ID；`occupancy_valid=0`、`person_animal` 和未知源 ID 均写为 ignore ID 255。
+- 坐标为 `x` 前、`y` 右、`z` 上；体素大小 0.2 m。源语义 ID 为 0--11，读取时重映射为上述 0--5 训练 ID；`occupancy_valid=0` 和未知源 ID 均写为 ignore ID 255。
 - 六相机模式输入 `front_left/front/front_right/rear_left/rear/rear_right`，预测 `x∈[-20,20]m, y∈[-10,10]m, z∈[-2,3]m` 的 200×100×25 体素。
 - 前视三相机模式输入前三路相机，仅监督/预测 `x∈[0,20]m` 前半区的 100×100×25 体素；后半区不参与网络输出和损失。
 - 每个样本使用前两帧加当前帧的时序 BEV 输入。UE 相机的 forward/right/up 轴已转换为针孔相机的 right/down/forward 轴，并使用每帧 JSON 中的内外参。
@@ -256,9 +256,65 @@ CUDA_VISIBLE_DEVICES=0 PYTHONPATH="$PWD" \
   --preview-count 6
 ```
 
-脚本按占用文件名保存 JSON，分别提取预测与 GT 的作物行和行间参考路径，并写入 `summary.json`。查看器自动发现同级 `row_prediction/`，通过 **Crop row lines**（粉色）和 **Navigation reference**（蓝色）两个复选框控制叠加，默认关闭。左侧显示 GT 提取结果，右侧显示预测提取结果；状态栏显示无参考路径的原因。行线显示在可见作物冠层上方 0.2 m，并加粗和添加白色描边；保存的原始坐标不受显示抬升影响。输入占用文件更新后需要重跑提取并重启服务，避免使用过期行线。
+脚本按占用文件名保存 JSON，分别提取预测与 GT 的作物行和两种行间参考线，并写入 `summary.json`。查看器自动发现同级 `row_prediction/`，通过 **Crop row lines**（粉色行线）、**Row centerline**（蓝色几何中心线）和 **Checked reference**（橙色通道检查参考线）三个复选框控制叠加，默认关闭。左侧显示 GT 提取结果，右侧显示预测提取结果；状态栏分别显示两种参考线的状态。所有线显示在可见作物冠层上方 0.2 m，并加粗和添加白色描边；保存的原始坐标不受显示抬升影响。输入占用文件更新后需要重跑提取并重启服务，避免使用过期行线。
 
-默认车宽为 0，输出标记为 `geometry_only`；按实际车辆设置 `--vehicle-width`（米）和 `--clearance-margin` 后才启用车宽检查。该模块是逐帧几何基线，尚未包含车辆控制、跨帧跟踪或闭环驾驶验证。参数、输出结构、未来帧支持及使用限制详见 [row_det/README.md](../row_det/README.md)。
+`geometric_centerline` 取包围车辆的相邻拟合行在共同支持范围内的中线，至少支持 2 m，不因冠层、障碍或未知地面而删除，不外推缺失段；它描述行方向，不代表通道可通过。
+原 `reference_path` 继续检查净空、地面与障碍；默认车宽为 0，其成功状态为 `geometry_only`，设置 `--vehicle-width`（米）后启用车辆宽度检查。
+该模块尚未包含车辆控制、跨帧跟踪或闭环驾驶验证。参数与输出结构详见 [row_det/README.md](../row_det/README.md)。
+
+#### 作物行拟合数据集：三维选图
+
+主模型 `front3_s_base_agri_amoe96_cropsample0.1_min500_nohis_b24_ep15_20261012_214738/epoch_15.pth`
+在 `/data/HL/SimData-croprow` 的全部 1,540 帧占用预测已保存至该任务的 `croprow_evaluation_20261020/prediction/`。
+行线与通道检查参考线原结果位于同级 `row_prediction/`。新增几何中心线结果保存至 `row_prediction_centerline/`，复用原拟合行，并保留原几何评价结果；无须重新运行模型推理。
+
+```bash
+cd /data/HL/Drive-OccWorld
+TASK_DIR=work_dirs/front3_s_base_agri_amoe96_cropsample0.1_min500_nohis_b24_ep15_20261012_214738
+EVAL_DIR="$TASK_DIR/croprow_evaluation_20261020"
+PYTHON_BIN=/home/HL/.conda/envs/dow2/bin/python
+
+# 复用原拟合行，在独立目录添加几何中心线。
+"$PYTHON_BIN" row_det/generate_row_predictions.py "$EVAL_DIR" \
+  --reuse-row-dir "$EVAL_DIR/row_prediction" \
+  --output-dir "$EVAL_DIR/row_prediction_centerline"
+"$PYTHON_BIN" row_det/prepare_croprow_browser.py "$EVAL_DIR" \
+  --row-prediction-dir "$EVAL_DIR/row_prediction_centerline"
+
+# 查看全部 1,540 帧。
+"$PYTHON_BIN" tools/visualize_farmsim_predictions.py "$EVAL_DIR/prediction" \
+  --row-prediction-dir "$EVAL_DIR/row_prediction_centerline" --port 8000
+```
+
+打开 `http://127.0.0.1:8000/`，勾选 **Crop row lines** 与 **Row centerline**。
+粉色为作物行线，蓝色为行间几何中心线；需要查看通道检查结果时另外勾选 **Checked reference**（橙色）。
+预测中心线有 1,278 帧、标签中心线有 1,347 帧，其中 1,233 帧两侧都有中心线。
+原通道检查参考线仍为预测 31 帧、标签 185 帧。
+`centerline_reference_index.csv` 逐帧记录中心线状态，`centerline_browser_manifest.json` 记录来源与帧列表。
+
+挑选含预测中心线的图时，可使用只含这 1,278 帧的目录（软链接，不影响完整评价集）：
+
+```bash
+"$PYTHON_BIN" tools/visualize_farmsim_predictions.py \
+  "$EVAL_DIR/centerline_preview/prediction" --port 8000
+```
+
+两个命令选择一个运行；先用 `Ctrl-C` 停止当前服务，再使用新命令并刷新网页。查看器会预加载所选目录的全部数据。
+需要从其他电脑访问时，服务端添加 `--host 0.0.0.0`，浏览器访问 `http://<服务器IP>:8000/`，也可使用 SSH 端口转发。
+本目录按“有预测几何中心线”筛选，仅用于选图；几何中心线数量不代表可通行率。
+
+#### 行间中心线 RMSE 评价
+
+论文第 4.7 节采用蓝色行间几何中心线的横向 RMSE，参考为同一网格坐标系中的种植行几何中线：
+
+```bash
+"$PYTHON_BIN" row_det/evaluate_centerline_rmse.py "$EVAL_DIR" --paper-dir paper_cn_v2
+```
+
+脚本在真值、标签占用及预测占用中心线共同支持的同一 x 区间内采样，不外推、不按距离或角度阈值排除大误差。
+当前主比较覆盖相同的 1,222 帧，标签与预测横向 RMSE 分别为 0.401 m 和 0.609 m；中心线生成率分别为 87.5% 和 83.0%。
+结果保存至 `$EVAL_DIR/centerline_rmse/`，包括全量/逐作物汇总及逐帧数据；可视化样本筛选不改变评价集。
+RMSE 是有效区间上的条件误差，需结合生成率和支持长度理解。历史逐条作物行 F1 与行间中心线 RMSE 的对象不同，不直接作数值比较。
 
 对于带世界坐标作物行真值的新序列，使用 `row_det/prepare_croprow_evaluation.py` 准备完整评估集，用原任务配置和 checkpoint 保存全部占用预测，再用 `row_det/evaluate_croprow.py` 对比几何真值、标签拟合、预测拟合。评估使用每帧 `grid_frame_world_ue` 转换与 XY 裁剪、完整真值行段等距采样、85% 距离覆盖门限及一对一最大匹配，汇总 F1@0.10/0.20/0.30 m。输出独立保存到任务的 `croprow_evaluation_日期/`，并在其中的 `visualization/` 按既有序列均衡规则保存 100 张三列对比图；完整命令和指标定义见 [世界坐标行真值评估](../row_det/README.md#使用世界坐标作物行真值评估)。
 

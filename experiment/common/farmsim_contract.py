@@ -26,7 +26,7 @@ CLASS_NAMES = ('free', 'crop', 'soil_ground', 'drivable',
 _RAW_TO_COMMON = np.full(256, 255, dtype=np.uint8)
 _RAW_TO_COMMON[[0, 1, 2, 3]] = [0, 1, 2, 3]
 _RAW_TO_COMMON[[6, 11]] = 4
-_RAW_TO_COMMON[[4, 5, 7, 9, 10]] = 5
+_RAW_TO_COMMON[[4, 5, 7, 8, 9, 10]] = 5
 
 
 def read_manifest(path: str | Path) -> Dict:

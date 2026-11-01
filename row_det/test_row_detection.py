@@ -3,6 +3,7 @@
 Run: python -m unittest row_det.test_row_detection
 """
 
+import copy
 import json
 from pathlib import Path
 import tempfile
@@ -10,8 +11,8 @@ import unittest
 
 import numpy as np
 
-from row_det.detector import RowConfig, detect_rows, nearest_cells
-from row_det.generate_row_predictions import build_artifact, compare_rows, write_json
+from row_det.detector import RowConfig, detect_rows, geometric_centerline, nearest_cells
+from row_det.generate_row_predictions import attach_centerlines, build_artifact, compare_rows, write_json
 from tools.visualize_farmsim_predictions import load_sample
 
 
@@ -84,6 +85,7 @@ class GeometryTests(unittest.TestCase):
         result = detect_rows(planted_field(offsets=(1, 3)), PC_RANGE)
         self.assertEqual(len(result['rows']), 2)
         self.assertEqual(result['reference_path']['status'], 'no_bracketing_rows')
+        self.assertEqual(result['geometric_centerline']['status'], 'no_bracketing_rows')
 
     def test_wide_vehicle_and_unknown_ground_suppress_reference(self):
         labels = planted_field(offsets=(-.6, .6))
@@ -92,6 +94,38 @@ class GeometryTests(unittest.TestCase):
         self.assertFalse(result['reference_path']['points'])
         labels[labels == 2] = 0
         self.assertFalse(detect_rows(labels, PC_RANGE)['reference_path']['points'])
+
+    def test_geometric_centerline_survives_unknown_ground_and_wide_vehicle(self):
+        labels = planted_field(offsets=(-.6, .6))
+        before = detect_rows(labels, PC_RANGE, RowConfig(vehicle_width=1.2))
+        self.assertFalse(before['reference_path']['points'])
+        self.assertTrue(before['geometric_centerline']['points'])
+        labels[labels == 2] = 0
+        after = detect_rows(labels, PC_RANGE)
+        self.assertFalse(after['reference_path']['points'])
+        self.assertFalse(after['geometric_centerline']['traversability_checked'])
+        np.testing.assert_allclose(np.asarray(before['geometric_centerline']['points'])[:, :2],
+                                   np.asarray(after['geometric_centerline']['points'])[:, :2])
+
+    def test_geometric_centerline_is_not_truncated_by_obstacles(self):
+        labels = planted_field()
+        labels[40:44, 32:43, 10:15] = 5
+        result = detect_rows(labels, PC_RANGE, RowConfig(vehicle_width=.6))
+        self.assertLess(result['reference_path']['points'][-1][0], 8.)
+        self.assertGreater(result['geometric_centerline']['points'][-1][0], 13.)
+
+    def test_geometric_centerline_uses_only_finite_common_support(self):
+        rows = [dict(id=0, points=[[1, -1, .2], [10, -1, .3]]),
+                dict(id=1, points=[[4, 1, .4], [8, 1, .6]])]
+        path = geometric_centerline(rows, PC_RANGE, RowConfig())
+        points = np.asarray(path['points'])
+        np.testing.assert_allclose(points[[0, -1], 0], [4, 8])
+        np.testing.assert_allclose(points[:, 1], 0)
+        np.testing.assert_allclose(points[:, 2],
+            (np.interp(points[:, 0], [1, 10], [.2, .3]) + np.interp(points[:, 0], [4, 8], [.4, .6])) / 2,
+            atol=5e-5)
+        rows[1]['points'][1][0] = 5
+        self.assertFalse(geometric_centerline(rows, PC_RANGE, RowConfig())['points'])
 
     def test_obstacle_truncates_path_without_jumping(self):
         labels = planted_field()
@@ -116,6 +150,20 @@ class GeometryTests(unittest.TestCase):
 
 
 class ArtifactTests(unittest.TestCase):
+    def test_centerline_upgrade_preserves_rows_metrics_and_checked_path(self):
+        result = detect_rows(planted_field(), PC_RANGE)
+        result.pop('geometric_centerline')
+        artifact = dict(point_cloud_range=PC_RANGE.tolist(),
+            current=dict(pred=copy.deepcopy(result), metrics={'tp': 3, 'fp': 5, 'fn': 2}),
+            future=[dict(pred=copy.deepcopy(result))])
+        original = copy.deepcopy(artifact)
+        self.assertTrue(attach_centerlines(artifact, RowConfig()))
+        self.assertEqual(artifact['current']['metrics'], original['current']['metrics'])
+        self.assertEqual(artifact['current']['pred']['rows'], original['current']['pred']['rows'])
+        self.assertEqual(artifact['current']['pred']['reference_path'], original['current']['pred']['reference_path'])
+        self.assertTrue(artifact['future'][0]['pred']['geometric_centerline']['points'])
+        self.assertFalse(attach_centerlines(artifact, RowConfig()))
+
     def test_prediction_independent_of_gt_and_future_viewer_overlay(self):
         with tempfile.TemporaryDirectory() as root:
             prediction = Path(root) / 'prediction'

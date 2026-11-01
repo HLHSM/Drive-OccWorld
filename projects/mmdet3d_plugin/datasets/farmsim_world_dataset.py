@@ -31,12 +31,13 @@ FARMSIM_PALETTE = [
 
 # Original IDs: 0 free, 1 crop, 2 soil, 3 drivable, 4 building, 5 fence,
 # 6 other vegetation, 7 vehicle, 8 person/animal, 9 other obstacle,
-# 10 tree trunk, 11 tree foliage.  Unmapped labels (including 8 and 255)
+# 10 tree trunk, 11 tree foliage. Person/animal joins other_obstacle.
+# Unmapped labels (including 255)
 # are ignored by all occupancy losses and metrics.
 FARMSIM_LABEL_REMAP = np.full(256, 255, dtype=np.uint8)
 FARMSIM_LABEL_REMAP[[0, 1, 2, 3]] = [0, 1, 2, 3]
 FARMSIM_LABEL_REMAP[[6, 11]] = 4
-FARMSIM_LABEL_REMAP[[4, 5, 7, 9, 10]] = 5
+FARMSIM_LABEL_REMAP[[4, 5, 7, 8, 9, 10]] = 5
 
 
 def _rpy_matrix_deg(rpy):
@@ -121,12 +122,17 @@ class FarmSimWorldDataset(torch.utils.data.Dataset):
                  future_pred_frame_num=0, future_traj_frame_num=0,
                  predict_trajectory=False,
                  max_samples=None, occupancy_target_range=None, pipeline=None,
-                 camera_geometry='legacy',
+                 camera_geometry='legacy', sample_stride=1,
                  **kwargs):
         del pipeline, kwargs
         if camera_mode not in ('surround', 'front'):
             raise ValueError("camera_mode must be 'surround' or 'front'")
         self.queue_length = int(queue_length)
+        if isinstance(sample_stride, bool) or not isinstance(sample_stride, int) or sample_stride < 1:
+            raise ValueError('sample_stride must be a positive integer')
+        # Subsample current-frame anchors within each sequence. History and
+        # future labels still refer to the original adjacent frame indices.
+        self.sample_stride = sample_stride
         if camera_geometry not in ('legacy', 'grid_world'):
             raise ValueError("camera_geometry must be legacy or grid_world")
         # This change affects the feature sampling learnt by a checkpoint;
@@ -183,7 +189,7 @@ class FarmSimWorldDataset(torch.utils.data.Dataset):
                                   self.future_traj_frame_num)
             for frame_index in range(
                     self.queue_length,
-                    len(frame_ids) - required_future):
+                    len(frame_ids) - required_future, self.sample_stride):
                 self.samples.append((seq_idx, frame_index))
         if self.max_samples is not None:
             self.samples = self.samples[:self.max_samples]
@@ -387,9 +393,24 @@ class FarmSimWorldDataset(torch.utils.data.Dataset):
 
     def _load_occupancy(self, seq, frame_id):
         seq_path = self._sequence_path(seq)
-        raw = np.fromfile(seq_path / 'occupancy' / f'{frame_id}.bin', dtype=np.uint8)
-        valid = np.fromfile(seq_path / 'occupancy_valid' / f'{frame_id}.bin', dtype=np.uint8)
         size_x, size_y, size_z = self._occupancy_shape(seq_path)
+        archive_path = seq_path / 'occupancy' / f'{frame_id}.npz'
+        if archive_path.is_file():
+            # v13 stores semantic labels and their validity mask together.
+            # Instance IDs are auxiliary annotations, not semantic targets.
+            with np.load(archive_path, allow_pickle=False) as archive:
+                raw = archive['occupancy']
+                valid = archive['occupancy_valid']
+            expected_shape = (size_z, size_y, size_x)
+            if (raw.shape != expected_shape or valid.shape != expected_shape or
+                    raw.dtype != np.uint8 or valid.dtype != np.uint8):
+                raise RuntimeError(
+                    f'{archive_path}: expected uint8 occupancy and occupancy_valid '
+                    f'with shape {expected_shape}, got {raw.shape}/{raw.dtype} '
+                    f'and {valid.shape}/{valid.dtype}')
+        else:
+            raw = np.fromfile(seq_path / 'occupancy' / f'{frame_id}.bin', dtype=np.uint8)
+            valid = np.fromfile(seq_path / 'occupancy_valid' / f'{frame_id}.bin', dtype=np.uint8)
         expected = size_x * size_y * size_z
         if raw.size != expected or valid.size != expected:
             raise RuntimeError(f'{seq_path}: unexpected occupancy byte count for frame {frame_id}')

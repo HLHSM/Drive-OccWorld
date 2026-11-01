@@ -2,6 +2,64 @@
 
 从 `tools/test.py --save-predictions` 保存的完整 NPZ 中提取作物行和局部行间参考路径。脚本只需要 NumPy；可直接使用项目的 `dow2` 环境，无须加载训练模型或 GPU。生成 PNG 预览时还需要 Matplotlib。
 
+## 行间几何中心线 RMSE（当前论文指标）
+
+评价对象是网页中的蓝色 `geometric_centerline`，不是粉色的各条作物行，也不是橙色通道检查参考线。
+`evaluate_centerline_rmse.py` 以同一田块内、包围车辆的相邻种植行中线为几何参考，分别评价标签占用和预测占用的中心线。
+相邻真值行必须具有连续种植行编号，不能跨越无效行或不同田块。真值参考独立于占用结果确定，不按预测接近程度重新挑选通道。
+
+主比较使用三条中心线共同有效的帧和共同有限 x 区间（至少 2 m），以不超过 0.05 m 的间隔在相同 x 上采样（含端点），
+比较 `estimated_y(x) - geometric_y(x)`。全量 RMSE 为 `sqrt(sum(error**2) / total_samples)`，不是逐帧 RMSE 的平均。
+不设置误差距离或角度过滤，不外推短线；缺失中心线不算零误差，同时报告生成率与有效比较长度。
+误差仅评价 XY 平面内的横向位置，不包含高度 Z。
+
+```bash
+TASK_DIR=work_dirs/front3_s_base_agri_amoe96_cropsample0.1_min500_nohis_b24_ep15_20261012_214738
+EVAL_DIR="$TASK_DIR/croprow_evaluation_20261020"
+python row_det/evaluate_centerline_rmse.py "$EVAL_DIR" --paper-dir paper_cn_v2
+python -m unittest row_det.test_centerline_rmse row_det.test_row_detection
+```
+
+该命令读取 `row_prediction_centerline/`，重新核对世界几何标注与网格变换，将结果写入 `centerline_rmse/metrics.json`、`per_frame/*.json` 与 `per_frame_metrics.csv`。
+`--row-prediction-dir` 和 `--output-dir` 可指定其他目录。传入 `--paper-dir` 时直接更新 `main.tex` 中的 RMSE 表格与数值段落（以注释标记定位，保留其余手写正文），同时保存 `data/crop_centerline_rmse.json`；不生成独立表格 TEX 再导入。
+
+当前 1,540 帧中有 1,428 帧能定义有效几何参考，主比较覆盖 1,222 帧、253,497 个相同采样点；逐帧累加的比较长度为 12,585.4 m，是真值支持长度的 74.5%，不表示实际行驶里程。
+标签占用中心线 RMSE 为 0.401 m、MAE 为 0.273 m；预测中心线 RMSE 为 0.609 m、MAE 为 0.412 m。
+两者生成率分别为 87.5%（1,347/1,540）和 83.0%（1,278/1,540）。
+JSON 中另保存各自有效帧的 RMSE 作为诊断，两组各自有效帧不同，论文主表使用共同帧的结果。
+
+## 共同支撑行定位 F1（历史诊断）
+
+以下 F1 衡量逐条作物行的检测与定位，与蓝色行间中心线 RMSE 的评价对象不同；旧结果保留供追溯，不再作为当前第 4.7 节的主指标。
+
+`evaluate_row_localization.py` 从已经保存的世界几何真值、标签拟合与预测拟合中计算新的定位指标，不重新推理、不改变拟合线。
+它沿真值切向取两条有限线的共同支撑区间，要求共同长度至少 2 m、无向夹角不超过 3°，再在共同区间内对双方分别以不超过 0.05 m 的间隔等距采样（含端点）。
+双方各至少 85% 的采样点到对方原始有限线段的距离严格小于阈值才允许匹配，最后做最大基数一对一匹配。
+因此，正确定位的短线可匹配较长真值，但重复行、漏行、无重叠、过短共同支撑及错误方向仍受惩罚；短真值不从分母删除。
+该定义评价共同支撑上的行定位，不评价全长重建或闭环驾驶，不是 RowDetr 图像空间指标的直接复现。
+三个米制阈值统一报告；2 m / 3° 为工程设置，尚未在独立验证集上选定主阈值。
+
+```bash
+TASK_DIR=work_dirs/front3_s_base_agri_amoe96_cropsample0.1_min500_nohis_b24_ep15_20261012_214738
+RESULTS_DIR="$TASK_DIR/croprow_localization_20261028"
+python row_det/evaluate_row_localization.py \
+  "$TASK_DIR/croprow_evaluation_20261020" "$RESULTS_DIR/original"
+python row_det/make_paper_row_experiment.py \
+  --results-root "$RESULTS_DIR" --paper-dir paper_cn_v2 --display-threshold 0.30
+python row_det/verify_row_localization_artifacts.py "$RESULTS_DIR" --paper-dir paper_cn_v2
+python -m unittest row_det.test_row_localization row_det.test_geometric_evaluation
+```
+
+输出包括 `metrics.json`（全量及作物/序列分组计数、源文件摘要、检查点、完整协议）、`per_frame_metrics.csv` 和 `per_frame/*.json`（逐行对应）。
+源目录中历史结果保持原样；新指标文件的 `full_extent` 字段供追溯，论文仅使用 `localization`。
+支撑覆盖率与匹配距离为该确定性匹配下的辅助统计，不是全局最小误差匹配，也不能把仅匹配行上的误差解释为全体行的误差。
+
+论文生成器直接读取全量结果，更新 `figures/crop_row_table.tex` 和 `data/crop_row_experiment.json`；默认不再生成原二维 BEV 图，旧图仅可通过 `--bev-figure` 显式重绘。
+论文图改为在三维占用网页中挑选，数据准备命令见下节及主文档的“作物行拟合数据集：三维选图”。
+表中仍报告 0.10/0.20/0.30 m 三阈值 F1；小麦 #1399 的单帧结果单独列示，不替换全量结果。
+小麦标签拟合的典型横向偏差约 0.23 m，因此在 0.20 m 下无匹配，在 0.30 m 下 15 行全匹配；主模型的预测拟合在 0.30 m 下匹配 8 行。
+主模型在三阈值下的全量 F1 为 6.72% / 20.91% / 35.69%；不同容差的分数不能表述为模型本身的改善。
+
 ## 生成与查看
 
 在项目根目录执行，参数可以是训练任务目录，也可以是该任务的 `prediction` 目录：
@@ -21,7 +79,23 @@
 - `summary.json`：本次处理文件列表、行数量、路径生成状态及逐帧比较指标。
 - `previews/*.png`：`--preview-count N` 指定的前 N 个样本的 BEV 对比图。
 
-服务自动查找与 `prediction` 同级的 `row_prediction`。网页勾选 **Crop row lines** 显示粉色作物行线，勾选 **Navigation reference** 显示蓝色参考线；两项默认关闭。左侧叠加从语义 GT 提取的线，右侧叠加从模型预测提取的线。状态栏说明当前帧提取了几条行线，以及为什么没有参考路径。切换显示时保持相机视角。
+服务自动查找与 `prediction` 同级的 `row_prediction`。网页分别勾选 **Crop row lines**（粉色行线）、**Row centerline**（蓝色几何中心线）和 **Checked reference**（橙色通道检查参考线）；默认关闭。左侧来自语义 GT，右侧来自模型预测。状态栏分别说明两种参考线的状态。切换显示时保持相机视角。
+
+几何中心线由包围车辆的相邻拟合行取中线，只在共同支持范围内采样，最短 2 m；高度由两条行线的高度插值取平均。它不检查冠层、障碍、地面可见性或车辆净空，也不延长没有行线支持的区段。
+原通道检查路径继续保存在 `reference_path`，独立截断或拒绝受阻通道。
+
+为保留既有几何评价文件，可从其缓存升级到独立的可视化目录：
+
+```bash
+python row_det/generate_row_predictions.py "$EVAL_DIR" \
+  --reuse-row-dir "$EVAL_DIR/row_prediction" \
+  --output-dir "$EVAL_DIR/row_prediction_centerline"
+python row_det/prepare_croprow_browser.py "$EVAL_DIR" \
+  --row-prediction-dir "$EVAL_DIR/row_prediction_centerline"
+python tools/visualize_farmsim_predictions.py "$EVAL_DIR/centerline_preview/prediction"
+```
+
+本次 1,540 帧中预测几何中心线为 1,278 帧、标签为 1,347 帧；原通道检查参考线仍为预测 31 帧、标签 185 帧。默认索引选择几何中心线；如需整理旧通道检查目录，向 `prepare_croprow_browser.py` 传入 `--reference-kind checked`。
 
 查看器将行线和参考线抬升到各面板可见作物冠层上方 0.2 m，并加粗、添加白色描边，避免被作物占用点遮挡。冠层高度从点数采样之前的完整可见占用计算。抬升仅用于显示，JSON 中的原始坐标保持不变；两侧坐标范围一致，默认视角适度缩小以显示完整地图。
 
@@ -81,6 +155,7 @@ python row_det/generate_row_predictions.py work_dirs/<训练任务> \
 每个 JSON 的 `current.pred` 和 `current.gt` 均包含：
 
 - `rows`：每条行的 `id`、三维 `points`、旋转坐标系的多项式系数、支持数量、拟合 RMSE、内点比例和估计冠幅半宽。
+- `geometric_centerline`：相邻行有限共同范围内的几何中线；包含 `points`、`row_ids`、`support_range_x_m`，`traversability_checked=false`。有线时状态为 `geometric_centerline`，否则为 `insufficient_rows` 或 `no_bracketing_rows`。
 - `reference_path`：三维 `points`、所依赖的两个 `row_ids`、状态、车宽检查标记和最小净空。
 - `diagnostics`：作物体素/BEV cell 数量、方向和提取状态。
 
@@ -97,7 +172,7 @@ python row_det/generate_row_predictions.py work_dirs/<训练任务> \
 | `no_bracketing_rows` | 没有能包围车辆且具有足够共同长度的相邻行 |
 | `blocked_or_unknown_corridor` | 通道受阻、过窄或缺乏地面/空间标注支持 |
 
-预测分支只读取模型预测，不依赖 GT 有效掩码或 GT 行线；查看器仍保留原有占用点的 GT 有效区域显示约定。GT 地下的 ignore 不作为障碍，地表以上车辆高度范围内的 ignore 和缺失地面会阻止参考路径。作物、其他植被和障碍物采用全高度投影，因此冠层遮盖通道时检查较保守。
+预测分支只读取模型预测，不依赖 GT 有效掩码或 GT 行线；查看器仍保留原有占用点的 GT 有效区域显示约定。GT 地下的 ignore 不作为障碍，地表以上车辆高度范围内的 ignore 和缺失地面会阻止通道检查参考线，但不会删除几何中心线。通道检查对作物、其他植被和障碍物采用全高度投影，因此冠层遮盖通道时检查较保守。
 
 `comparison` 通过共同 x 支持范围上的横向距离和航向差做一对一贪心匹配（横向 ≤0.4 m、航向 ≤10°、重叠 ≥1 m）。它比较的是**同一算法从预测/语义 GT 提取的行**，不能替代真实种植中心线标注或闭环驾驶评价。
 
