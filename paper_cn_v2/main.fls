@@ -2,7 +2,7 @@ PWD /data/HL/Drive-OccWorld/paper_cn_v2
 INPUT /data/HL/texlive/2026/texmf.cnf
 INPUT /data/HL/texlive/2026/texmf-dist/web2c/texmf.cnf
 INPUT /data/HL/texlive/2026/texmf-var/web2c/xetex/xelatex.fmt
-INPUT /data/HL/Drive-OccWorld/paper_cn_v2/main.tex
+INPUT main.tex
 OUTPUT main.log
 INPUT /data/HL/texlive/2026/texmf-dist/tex/latex/fontspec/fontspec.sty
 INPUT ./cas-sc.cls

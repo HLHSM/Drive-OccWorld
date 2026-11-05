@@ -196,7 +196,7 @@ def custom_single_gpu_test(model, data_loader, show=False, out_dir=None,
                                        prediction_indices)
             for key in ('hist_for_iou', 'hist_for_iou_current',
                         'hist_for_iou_future',
-                        'hist_for_iou_future_time_weighting'):
+                        'hist_for_iou_future_time_weighting', 'panoptic_counts'):
                 if key in result:
                     metrics[key] = metrics.get(key, 0) + result[key]
             if 'plan_metric' in result:
@@ -230,6 +230,7 @@ def custom_multi_gpu_test(model, data_loader, tmpdir=None, gpu_collect=False, sh
     model.eval()
     
     # init predictions
+    panoptic_metric = []
     iou_metric = []
     iou_current_metric = []
     iou_future_metric = []
@@ -262,15 +263,29 @@ def custom_multi_gpu_test(model, data_loader, tmpdir=None, gpu_collect=False, sh
     
     time.sleep(2)  # This line can prevent deadlock problem in some cases.
     
+    evaluated_local_samples = 0
     for i, data in enumerate(data_loader):
 
         with torch.no_grad():
             device = next(model.parameters()).device
             data = _prepare_distributed_eval_batch(data, device)
+            # The repository sampler uses contiguous rank chunks. Exclude
+            # padded repetitions while every rank still runs equal DDP forwards.
+            if dataset.__class__.__name__ == 'FarmSimPanopticDataset':
+                from projects.mmdet3d_plugin.datasets.samplers.distributed_sampler import DistributedSampler
+                sampler = data_loader.sampler
+                if not isinstance(sampler, DistributedSampler) or sampler.shuffle:
+                    raise ValueError('Panoptic evaluation requires contiguous unshuffled sampling')
+                local_batch = data['img'].shape[0]
+                begin = rank * sampler.num_samples + evaluated_local_samples
+                data['panoptic_eval_include'] = [begin + j < len(dataset) for j in range(local_batch)]
+                evaluated_local_samples += local_batch
             result = model(return_loss=False, rescale=True, **data)
             _save_prediction_artifacts(result, prediction_dir, prediction_limit,
                                        prediction_indices)
 
+            if 'panoptic_counts' in result:
+                panoptic_metric.append(result['panoptic_counts'])
             if 'hist_for_iou' in result.keys():
                 iou_metric.append(result['hist_for_iou'])
             if 'hist_for_iou_current' in result.keys():
@@ -299,6 +314,9 @@ def custom_multi_gpu_test(model, data_loader, tmpdir=None, gpu_collect=False, sh
     def collect_metric(metric, name):
         metric_tmpdir = osp.join(tmpdir, name) if tmpdir is not None else None
         return collect_results_cpu(metric, len(dataset), metric_tmpdir)
+
+    if panoptic_metric:
+        res['panoptic_counts'] = collect_metric([sum(panoptic_metric)], 'panoptic_counts')
 
     if 'hist_for_iou' in result.keys():
         iou_metric = [sum(iou_metric)]

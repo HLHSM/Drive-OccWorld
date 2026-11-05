@@ -54,6 +54,12 @@ def _with_occupancy_summaries(results, class_names=None):
     ordered = {}
     summary = []
     for key, value in results.items():
+        if key == 'panoptic_counts':
+            from .panoptic_metrics import panoptic_summary
+            scalars = panoptic_summary(value, class_names)
+            ordered.update(scalars)
+            summary.append('panoptic: ' + ', '.join(f'{k}={scalars[k]:.4f}' for k in ('panoptic_PQ', 'panoptic_PQ_th', 'panoptic_PQ_st')))
+            continue
         prefix = _OCCUPANCY_METRIC_PREFIXES.get(key)
         if prefix is None:
             # Preserve non-occupancy results (e.g. planning metrics).

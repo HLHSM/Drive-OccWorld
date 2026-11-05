@@ -1,0 +1,91 @@
+{
+  "labels": {
+    "match": true,
+    "source_count": 38,
+    "english_count": 38,
+    "missing": [],
+    "extra": []
+  },
+  "references": {
+    "match": true,
+    "source_count": 20,
+    "english_count": 20,
+    "missing": [],
+    "extra": []
+  },
+  "citations": {
+    "match": true,
+    "source_count": 36,
+    "english_count": 36,
+    "missing": [],
+    "extra": []
+  },
+  "figures": {
+    "match": true,
+    "source_count": 9,
+    "english_count": 9,
+    "missing": [],
+    "extra": []
+  },
+  "environments": {
+    "match": true,
+    "source_count": 74,
+    "english_count": 74,
+    "missing": [],
+    "extra": []
+  },
+  "equations": {
+    "source_count": 11,
+    "english_count": 11,
+    "differences": [
+      {
+        "index": 1,
+        "source": "\\B=[0,15]\\times[-10,10]\\times[-2,3]~\\mathrm{m}",
+        "english": "\\B=[0,15]\\times[-7.5,7.5]\\times[-2,3]~\\mathrm{m}"
+      }
+    ]
+  },
+  "numeric_table_rows": {
+    "match": true,
+    "source_count": 24,
+    "english_count": 24
+  },
+  "remaining_cjk": 0,
+  "document_validation": {
+    "pages": 19,
+    "undefined_references": 0,
+    "undefined_citations": 0,
+    "remaining_cjk_in_main_tex": 0,
+    "visual_checks": [
+      "first page and abstract",
+      "component/sampling ablation tables",
+      "crop-row fitting equation and table"
+    ],
+    "template_warnings": [
+      "CAS front-matter overfull hbox (117.0831 pt); no visible overflow on inspected first page",
+      "two empty hyperref anchors in front matter",
+      "Latin Modern bold italic substituted with bold slanted"
+    ]
+  },
+  "source_deviations": [
+    {
+      "kind": "ROI lateral interval",
+      "source": "[-10,10] m",
+      "english": "[-7.5,7.5] m",
+      "reason": "15 m lateral extent and 75 cells at 0.2 m"
+    },
+    {
+      "kind": "Agri-AMoE gains over Base + TSA",
+      "source": "0.44 / 1.17 percentage points",
+      "english": "1.44 / 3.17 percentage points",
+      "reason": "64.20 - 62.76 and 38.93 - 35.76"
+    }
+  ],
+  "review_corrections": {
+    "E1": "fixed",
+    "E2": "adopted",
+    "E3": "adopted",
+    "E4": "adopted"
+  },
+  "source_sha256": "05c020ad4a7e7846824e7d94f35628470119ace86cb49bd925d6bf6891b9f411"
+}

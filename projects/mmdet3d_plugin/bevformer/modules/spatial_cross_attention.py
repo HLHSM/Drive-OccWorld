@@ -210,7 +210,8 @@ class MSDeformableAttention3D(BaseModule):
                  dropout=0.1,
                  batch_first=True,
                  norm_cfg=None,
-                 init_cfg=None):
+                 init_cfg=None,
+                 query_chunk_size=0):
         super().__init__(init_cfg)
         if embed_dims % num_heads != 0:
             raise ValueError(f'embed_dims must be divisible by num_heads, '
@@ -237,6 +238,9 @@ class MSDeformableAttention3D(BaseModule):
                 'the dimension of each attention head a power of 2 '
                 'which is more efficient in our CUDA implementation.')
 
+        self.query_chunk_size = int(query_chunk_size)
+        if self.query_chunk_size < 0:
+            raise ValueError("query_chunk_size must be non-negative")
         self.im2col_step = im2col_step
         self.embed_dims = embed_dims
         self.num_levels = num_levels
@@ -391,9 +395,30 @@ class MSDeformableAttention3D(BaseModule):
                 value, spatial_shapes, level_start_index, sampling_locations,
                 attention_weights, self.im2col_step)
         else:
-            output = multi_scale_deformable_attn_pytorch(
-                value, spatial_shapes, sampling_locations, attention_weights)
+            if self.query_chunk_size and num_query > self.query_chunk_size:
+                output = chunked_deformable_attention(
+                    value, spatial_shapes, sampling_locations, attention_weights,
+                    self.query_chunk_size)
+            else:
+                output = multi_scale_deformable_attn_pytorch(
+                    value, spatial_shapes, sampling_locations, attention_weights)
         if not self.batch_first:
             output = output.permute(1, 0, 2)
 
         return output
+
+
+def chunked_deformable_attention(value, spatial_shapes, locations, weights, chunk_size):
+    """Exact query chunks for the PyTorch fallback, checkpointed during training."""
+    from torch.utils.checkpoint import checkpoint
+    def sample(v, loc, weight):
+        return multi_scale_deformable_attn_pytorch(v, spatial_shapes, loc, weight)
+    chunks = []
+    for start in range(0, locations.shape[1], chunk_size):
+        loc = locations[:, start:start + chunk_size]
+        weight = weights[:, start:start + chunk_size]
+        if torch.is_grad_enabled() and (value.requires_grad or loc.requires_grad or weight.requires_grad):
+            chunks.append(checkpoint(sample, value, loc, weight, use_reentrant=False))
+        else:
+            chunks.append(sample(value, loc, weight))
+    return torch.cat(chunks, dim=1)

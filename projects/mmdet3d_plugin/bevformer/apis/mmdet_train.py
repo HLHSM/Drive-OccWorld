@@ -206,7 +206,7 @@ def custom_train_detector(model,
         # detection-result lists.  Keep the stock detection hook for the
         # repository's original nuScenes/3D-detection configurations.
         is_occupancy_dataset = cfg.data.val.get('type') in (
-            'FarmSimWorldDataset', 'ORAD3DWorldDataset')
+            'FarmSimWorldDataset', 'FarmSimPanopticDataset', 'ORAD3DWorldDataset')
         if is_occupancy_dataset:
             eval_hook = CustomDistEvalHook if distributed else CustomEvalHook
         else:

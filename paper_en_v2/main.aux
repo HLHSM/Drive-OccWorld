@@ -1,0 +1,172 @@
+\relax 
+\providecommand\hyper@newdestlabel[2]{}
+\providecommand*\HyPL@Entry[1]{}
+\orcidauthor{0000-0001-7753-7656}{Jing Jin}
+\csgdef{mark@corau2}{1}
+\emailauthor{jinjinghit@hit.edu.cn}{Jing Jin}
+\citation{nkwochaComprehensiveReviewSensing2025,baiVisionbasedNavigationGuidance2023}
+\citation{philion2020lift,huang2021bevdet,li2022bevdepth}
+\citation{wang2022detr3d,li2022petr,li2022bevformer}
+\citation{wei2023surroundocc,wang2023openoccupancy}
+\citation{zheng2024occworld,mei2025irwm}
+\HyPL@Entry{0<</S/D>>}
+\@writefile{toc}{\contentsline {section}{\numberline {1}Introduction}{1}{section.1}\protected@file@percent }
+\newlabel{sec:intro}{{1}{1}{Introduction}{section.1}{}}
+\citation{philion2020lift,huang2021bevdet,li2022bevdepth,li2022bevstereo}
+\citation{zhou2022matrixvt}
+\citation{wang2022detr3d,li2022petr,liu2023petrv2,li2023fbbev}
+\citation{liu2023bevfusion}
+\citation{li2022bevformer}
+\citation{cao2022monoscene,huang2023tpvformer,li2023voxformer}
+\citation{wei2023surroundocc,wang2023openoccupancy}
+\citation{zhang2023occformer,ma2024cotr,wang2024panoocc,liu2024sparseocc,tang2024sparseocc,yu2023flashocc,pan2024renderocc}
+\citation{huang2022bevdet4d,zheng2024occworld,mei2025irwm,mohan2026forecastocc}
+\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces Overview of AgriOcc. The six-layer BEV encoder consists of TSA, spatial cross-attention to image features, and feed-forward updates. The final Agri-AMoE branch predicts occupancy, while auxiliary branches provide training supervision.}}{3}{figure.1}\protected@file@percent }
+\newlabel{fig:overview}{{1}{3}{Overview of AgriOcc. The six-layer BEV encoder consists of TSA, spatial cross-attention to image features, and feed-forward updates. The final Agri-AMoE branch predicts occupancy, while auxiliary branches provide training supervision}{figure.1}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {2}Related Work}{3}{section.2}\protected@file@percent }
+\newlabel{sec:related}{{2}{3}{Related Work}{section.2}{}}
+\@writefile{toc}{\contentsline {paragraph}{Multi-camera BEV perception}{3}{section*.1}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{3D occupancy prediction and efficient representations}{3}{section*.2}\protected@file@percent }
+\citation{geiger2012kitti}
+\citation{behley2019semantickitti}
+\citation{caesar2020nuscenes}
+\citation{jiang2020rellis}
+\citation{dosovitskiy2017carla}
+\citation{tobin2017domainrandomization,peng2018sim2real}
+\citation{hoffman2018cycada}
+\citation{chen2025orad3d}
+\@writefile{toc}{\contentsline {paragraph}{Agricultural and off-road 3D datasets}{4}{section*.3}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {3}Method}{4}{section.3}\protected@file@percent }
+\newlabel{sec:method}{{3}{4}{Method}{section.3}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.1}Task definition}{4}{subsection.3.1}\protected@file@percent }
+\newlabel{sec:task}{{3.1}{4}{Task definition}{subsection.3.1}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.2}Simulation data-acquisition system and AgriOcc-Dataset}{4}{subsection.3.2}\protected@file@percent }
+\newlabel{sec:dataset_construction}{{3.2}{4}{Simulation data-acquisition system and AgriOcc-Dataset}{subsection.3.2}{}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {3.2.1}Farmland simulation data-acquisition system}{4}{subsubsection.3.2.1}\protected@file@percent }
+\newlabel{sec:synthetic}{{3.2.1}{4}{Farmland simulation data-acquisition system}{subsubsection.3.2.1}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces Construction pipeline of the farmland simulation data-acquisition system.}}{5}{figure.2}\protected@file@percent }
+\newlabel{fig:synthetic}{{2}{5}{Construction pipeline of the farmland simulation data-acquisition system}{figure.2}{}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {3.2.2}AgriOcc-Dataset}{5}{subsubsection.3.2.2}\protected@file@percent }
+\newlabel{sec:agriocc_dataset}{{3.2.2}{5}{AgriOcc-Dataset}{subsubsection.3.2.2}{}}
+\citation{li2022bevformer}
+\@writefile{lof}{\contentsline {figure}{\numberline {3}{\ignorespaces Crop composition of AgriOcc-Dataset. Sector area indicates the proportion of each crop.}}{6}{figure.3}\protected@file@percent }
+\newlabel{fig:crop_distribution}{{3}{6}{Crop composition of AgriOcc-Dataset. Sector area indicates the proportion of each crop}{figure.3}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {4}{\ignorespaces Scene examples of the ten crops in AgriOcc-Dataset.}}{6}{figure.4}\protected@file@percent }
+\newlabel{fig:dataset}{{4}{6}{Scene examples of the ten crops in AgriOcc-Dataset}{figure.4}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.3}Overview of AgriOcc}{6}{subsection.3.3}\protected@file@percent }
+\newlabel{sec:architecture}{{3.3}{6}{Overview of AgriOcc}{subsection.3.3}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.4}BEV encoding}{6}{subsection.3.4}\protected@file@percent }
+\newlabel{sec:bev}{{3.4}{6}{BEV encoding}{subsection.3.4}{}}
+\citation{shi2026oneocc}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.5}Agricultural Structure-Adaptive Mixture-of-Experts decoder}{7}{subsection.3.5}\protected@file@percent }
+\newlabel{sec:amoe}{{3.5}{7}{Agricultural Structure-Adaptive Mixture-of-Experts decoder}{subsection.3.5}{}}
+\citation{wei2023surroundocc,wang2023openoccupancy}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.6}Crop-aware sampling aligned with the prediction region}{8}{subsection.3.6}\protected@file@percent }
+\newlabel{sec:cropsample}{{3.6}{8}{Crop-aware sampling aligned with the prediction region}{subsection.3.6}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {5}{\ignorespaces Agri-AMoE 3D occupancy decoder. The 2D BEV tokens are lifted into a 3D volume and first enhanced by channel attention. The enhanced features are fed in parallel to three anisotropic experts and are also used to generate spatial saliency and gradient energy along three directions for voxel-wise routing weights. The three expert outputs are combined by weighted summation and residual fusion before final classification.}}{9}{figure.5}\protected@file@percent }
+\newlabel{fig:agri-amoe}{{5}{9}{Agri-AMoE 3D occupancy decoder. The 2D BEV tokens are lifted into a 3D volume and first enhanced by channel attention. The enhanced features are fed in parallel to three anisotropic experts and are also used to generate spatial saliency and gradient energy along three directions for voxel-wise routing weights. The three expert outputs are combined by weighted summation and residual fusion before final classification}{figure.5}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {3.7}Optimization objective}{9}{subsection.3.7}\protected@file@percent }
+\newlabel{sec:loss}{{3.7}{9}{Optimization objective}{subsection.3.7}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {4}Experiments}{9}{section.4}\protected@file@percent }
+\newlabel{sec:experiments}{{4}{9}{Experiments}{section.4}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.1}Data and evaluation protocol}{9}{subsection.4.1}\protected@file@percent }
+\newlabel{sec:data}{{4.1}{9}{Data and evaluation protocol}{subsection.4.1}{}}
+\citation{wei2023surroundocc}
+\citation{tang2024sparseocc}
+\citation{ma2024cotr}
+\citation{yangDrivingOccupancyWorld2025}
+\citation{mei2025irwm}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.2}Implementation details}{10}{subsection.4.2}\protected@file@percent }
+\newlabel{sec:implementation}{{4.2}{10}{Implementation details}{subsection.4.2}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.3}Comparison with existing methods}{10}{subsection.4.3}\protected@file@percent }
+\newlabel{sec:comparison}{{4.3}{10}{Comparison with existing methods}{subsection.4.3}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {1}{\ignorespaces 3D semantic occupancy performance on AgriOcc-Dataset. IoUs are reported in \%, and inference time in ms/frame.}}{10}{table.1}\protected@file@percent }
+\newlabel{tab:main}{{1}{10}{3D semantic occupancy performance on AgriOcc-Dataset. IoUs are reported in \%, and inference time in ms/frame}{table.1}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {6}{\ignorespaces Qualitative comparison of current-frame occupancy. From left to right: three-view RGB images, GT, SurroundOcc, COTR, and AgriOcc. All occupancy views share the same viewpoint above and directly behind the mobile platform, spatial extent, and valid-voxel mask.}}{11}{figure.6}\protected@file@percent }
+\newlabel{fig:comparison}{{6}{11}{Qualitative comparison of current-frame occupancy. From left to right: three-view RGB images, GT, SurroundOcc, COTR, and AgriOcc. All occupancy views share the same viewpoint above and directly behind the mobile platform, spatial extent, and valid-voxel mask}{figure.6}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {7}{\ignorespaces Qualitative comparison with SparseOcc and IR-WM. Columns show RGB images, GT, SparseOcc, IR-WM, and AgriOcc, using the same viewpoint and semantic colors as Fig.~\ref {fig:comparison}.}}{11}{figure.7}\protected@file@percent }
+\newlabel{fig:comparison_sparse}{{7}{11}{Qualitative comparison with SparseOcc and IR-WM. Columns show RGB images, GT, SparseOcc, IR-WM, and AgriOcc, using the same viewpoint and semantic colors as Fig.~\ref {fig:comparison}}{figure.7}{}}
+\citation{chen2025orad3d}
+\citation{chen2025orad3d}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.4}Ablations of architecture and training strategy}{12}{subsection.4.4}\protected@file@percent }
+\newlabel{sec:ablation}{{4.4}{12}{Ablations of architecture and training strategy}{subsection.4.4}{}}
+\@writefile{toc}{\contentsline {paragraph}{Ablation of main model components}{12}{section*.4}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {2}{\ignorespaces Ablation of main model components. Base excludes TSA, Agri-AMoE, and crop-aware sampling. Subsequent rows successively add TSA, Agri-AMoE, and crop-aware sampling to the preceding configuration.}}{12}{table.2}\protected@file@percent }
+\newlabel{tab:ablation}{{2}{12}{Ablation of main model components. Base excludes TSA, Agri-AMoE, and crop-aware sampling. Subsequent rows successively add TSA, Agri-AMoE, and crop-aware sampling to the preceding configuration}{table.2}{}}
+\@writefile{toc}{\contentsline {paragraph}{Ablation of the sampling strategy}{12}{section*.5}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {3}{\ignorespaces Sampling sensitivity results.}}{12}{table.3}\protected@file@percent }
+\newlabel{tab:sampling}{{3}{12}{Sampling sensitivity results}{table.3}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.5}Real-world transfer and qualitative analysis}{12}{subsection.4.5}\protected@file@percent }
+\newlabel{sec:sim2real}{{4.5}{12}{Real-world transfer and qualitative analysis}{subsection.4.5}{}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {4.5.1}Transfer from simulation to a real-world dataset}{12}{subsubsection.4.5.1}\protected@file@percent }
+\newlabel{sec:orad_transfer}{{4.5.1}{12}{Transfer from simulation to a real-world dataset}{subsubsection.4.5.1}{}}
+\citation{jiang2024openocc}
+\citation{zhang2023occformer}
+\citation{wei2023surroundocc}
+\citation{behley2019semantickitti,li2024sscbench}
+\@writefile{lot}{\contentsline {table}{\numberline {4}{\ignorespaces Sim-to-real transfer results on ORAD-3D (\%). Both AgriOcc models use the complete ORAD-3D training set and only the center forward-facing camera. The transfer model is initialized with weights pretrained on AgriOcc-Dataset and adapted for 2 epochs. \texttt  {Test (w/o Free)} denotes mIoU excluding Free, following the ORAD-3D paper; \texttt  {Test} denotes mIoU over all nine classes; and \texttt  {Test\_farm} denotes mIoU over the classes present in the farmland subset. The OpenOcc, OccFormer, and SurroundOcc results are taken from the ORAD-3D paper.}}{13}{table.4}\protected@file@percent }
+\newlabel{tab:orad}{{4}{13}{Sim-to-real transfer results on ORAD-3D (\%). Both AgriOcc models use the complete ORAD-3D training set and only the center forward-facing camera. The transfer model is initialized with weights pretrained on AgriOcc-Dataset and adapted for 2 epochs. \texttt {Test (w/o Free)} denotes mIoU excluding Free, following the ORAD-3D paper; \texttt {Test} denotes mIoU over all nine classes; and \texttt {Test\_farm} denotes mIoU over the classes present in the farmland subset. The OpenOcc, OccFormer, and SurroundOcc results are taken from the ORAD-3D paper}{table.4}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.6}Voxel-resolution transfer}{13}{subsection.4.6}\protected@file@percent }
+\newlabel{sec:resolution}{{4.6}{13}{Voxel-resolution transfer}{subsection.4.6}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {8}{\ignorespaces Qualitative transfer results on ORAD-3D. Columns show monocular RGB, GT, training from scratch, and transfer from the source domain. Both models use the official target-domain grid and the same viewpoint above and directly behind the mobile platform; free space is hidden.}}{14}{figure.8}\protected@file@percent }
+\newlabel{fig:orad}{{8}{14}{Qualitative transfer results on ORAD-3D. Columns show monocular RGB, GT, training from scratch, and transfer from the source domain. Both models use the official target-domain grid and the same viewpoint above and directly behind the mobile platform; free space is hidden}{figure.8}{}}
+\@writefile{lot}{\contentsline {table}{\numberline {5}{\ignorespaces Voxel-resolution transfer. IoUs are reported in \%, and time denotes logged wall-clock hours for 15 epochs of target-resolution training and per-epoch validation, excluding source training at $0.2\,\mathrm  {m}$. All configurations output $150\times 150\times 25$ voxels.}}{14}{table.5}\protected@file@percent }
+\newlabel{tab:resolution}{{5}{14}{Voxel-resolution transfer. IoUs are reported in \%, and time denotes logged wall-clock hours for 15 epochs of target-resolution training and per-epoch validation, excluding source training at $0.2\,\mathrm {m}$. All configurations output $150\times 150\times 25$ voxels}{table.5}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.7}From semantic occupancy to crop-row fitting}{15}{subsection.4.7}\protected@file@percent }
+\newlabel{sec:crop_row_fitting}{{4.7}{15}{From semantic occupancy to crop-row fitting}{subsection.4.7}{}}
+\@writefile{toc}{\contentsline {paragraph}{Shared post-processing from occupancy to row lines}{15}{section*.6}\protected@file@percent }
+\@writefile{toc}{\contentsline {paragraph}{Navigation-line error evaluation}{15}{section*.7}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {6}{\ignorespaces Errors of the navigation centerline between crop rows. Lower RMSE and MAE are better.}}{15}{table.6}\protected@file@percent }
+\newlabel{tab:crop_centerline_rmse}{{6}{15}{Errors of the navigation centerline between crop rows. Lower RMSE and MAE are better}{table.6}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {4.8}Discussion and limitations}{15}{subsection.4.8}\protected@file@percent }
+\newlabel{sec:discussion}{{4.8}{15}{Discussion and limitations}{subsection.4.8}{}}
+\@writefile{lof}{\contentsline {figure}{\numberline {9}{\ignorespaces 3D visualization of crop-row fitting and navigation centerlines. The three columns show the current forward-facing RGB image, fitting results from semantic occupancy labels, and fitting results from AgriOcc occupancy predictions. Magenta lines denote fitted crop rows, and blue lines denote navigation centerlines between adjacent crop rows. All occupancy views share the same viewpoint, coordinate range, and semantic colors. For visibility, the overlaid lines are displayed above the crop canopy. The blue centerlines serve as inter-row geometric references and have not undergone traversability checks.}}{16}{figure.9}\protected@file@percent }
+\newlabel{fig:crop_row_3d_rgb}{{9}{16}{3D visualization of crop-row fitting and navigation centerlines. The three columns show the current forward-facing RGB image, fitting results from semantic occupancy labels, and fitting results from AgriOcc occupancy predictions. Magenta lines denote fitted crop rows, and blue lines denote navigation centerlines between adjacent crop rows. All occupancy views share the same viewpoint, coordinate range, and semantic colors. For visibility, the overlaid lines are displayed above the crop canopy. The blue centerlines serve as inter-row geometric references and have not undergone traversability checks}{figure.9}{}}
+\@writefile{toc}{\contentsline {section}{\numberline {5}Conclusion and Future Work}{16}{section.5}\protected@file@percent }
+\newlabel{sec:conclusion}{{5}{16}{Conclusion and Future Work}{section.5}{}}
+\bibstyle{cas-model2-names}
+\bibdata{references}
+\bibcite{baiVisionbasedNavigationGuidance2023}{{1}{2023}{{Bai et~al.}}{{Bai, Zhang, Xu, Zhou, Shi and Diao}}}
+\bibcite{behley2019semantickitti}{{2}{2019}{{Behley et~al.}}{{Behley, Garbade, Milioto, Quenzel, Behnke, Stachniss and Gall}}}
+\bibcite{caesar2020nuscenes}{{3}{2020}{{Caesar et~al.}}{{Caesar, Bankiti, Lang, Vora, Liong, Xu, Krishnan, Pan, Baldan and Beijbom}}}
+\bibcite{cao2022monoscene}{{4}{2022}{{Cao and de~Charette}}{{}}}
+\bibcite{chen2025orad3d}{{5}{2025}{{Chen et~al.}}{{Chen, Mei, Zhai, Wang, Sun, Kong, Li, Mao, Liu, Wang, Nie, Zhu, Xiao, Zhao and Hu}}}
+\bibcite{dosovitskiy2017carla}{{6}{2017}{{Dosovitskiy et~al.}}{{Dosovitskiy, Ros, Codevilla, Lopez and Koltun}}}
+\bibcite{geiger2012kitti}{{7}{2012}{{Geiger et~al.}}{{Geiger, Lenz and Urtasun}}}
+\bibcite{hoffman2018cycada}{{8}{2018}{{Hoffman et~al.}}{{Hoffman, Tzeng, Park, Zhu, Isola, Saenko, Efros and Darrell}}}
+\bibcite{huang2022bevdet4d}{{9}{2022}{{Huang and Huang}}{{}}}
+\bibcite{huang2021bevdet}{{10}{2021}{{Huang et~al.}}{{Huang, Huang, Zhu, Ye and Du}}}
+\bibcite{huang2023tpvformer}{{11}{2023}{{Huang et~al.}}{{Huang, Zheng, Zhang, Zhou and Lu}}}
+\bibcite{jiang2024openocc}{{12}{2024}{{Jiang et~al.}}{{Jiang, Xu, Zeng, Xu, Zhang, Feng and Zhang}}}
+\bibcite{jiang2020rellis}{{13}{2020}{{Jiang et~al.}}{{Jiang, Osteen, Wigness and Saripalli}}}
+\bibcite{li2022bevstereo}{{14}{2022a}{{Li et~al.}}{{Li, Bao, Ge, Yang, Sun and Li}}}
+\bibcite{li2022bevdepth}{{15}{2022b}{{Li et~al.}}{{Li, Ge, Yu, Yang, Wang, Shi, Sun and Li}}}
+\bibcite{li2023voxformer}{{16}{2023a}{{Li et~al.}}{{Li, Yu, Choy, Xiao, Alvarez, Fidler, Feng and Anandkumar}}}
+\bibcite{li2024sscbench}{{17}{2024}{{Li et~al.}}{{}}}
+\bibcite{li2022bevformer}{{18}{2022c}{{Li et~al.}}{{Li, Wang, Li, Xie, Sima, Lu, Yu and Dai}}}
+\bibcite{li2023fbbev}{{19}{2023b}{{Li et~al.}}{{Li, Yu, Wang, Anandkumar, Lu and Alvarez}}}
+\bibcite{liu2024sparseocc}{{20}{2024}{{Liu et~al.}}{{Liu, Chen, Wang, Yang, Li, Zeng, Chen, Li and Wang}}}
+\bibcite{li2022petr}{{21}{2022}{{Liu et~al.}}{{Liu, Wang, Zhang and Sun}}}
+\bibcite{liu2023petrv2}{{22}{2023a}{{Liu et~al.}}{{Liu, Yan, Jia, Li, Gao, Wang, Zhang and Sun}}}
+\bibcite{liu2023bevfusion}{{23}{2023b}{{Liu et~al.}}{{Liu, Tang, Amini, Yang, Mao, Rus and Han}}}
+\bibcite{ma2024cotr}{{24}{2024}{{Ma et~al.}}{{Ma, Tan, Qu, Ma, Zhang and Xie}}}
+\bibcite{mei2025irwm}{{25}{2025}{{Mei et~al.}}{{Mei, Yang, Yang, Wen, Lv, Shi and Liu}}}
+\bibcite{mohan2026forecastocc}{{26}{2026}{{Mohan et~al.}}{{Mohan, Hurtado, Mohan and Valada}}}
+\bibcite{nkwochaComprehensiveReviewSensing2025}{{27}{2025}{{Nkwocha et~al.}}{{Nkwocha, Adewumi, Folorunsho, Eze, Jjagwe, Kemeshi and Wang}}}
+\bibcite{pan2024renderocc}{{28}{2024}{{Pan et~al.}}{{Pan, Liu, Zhang, Huang, Li, Wang, Xie, Liu and Zhang}}}
+\bibcite{peng2018sim2real}{{29}{2018}{{Peng et~al.}}{{Peng, Andrychowicz, Zaremba and Abbeel}}}
+\bibcite{philion2020lift}{{30}{2020}{{Philion and Fidler}}{{}}}
+\bibcite{shi2026oneocc}{{31}{2026}{{Shi et~al.}}{{Shi, Wang, Guo, Duan, Wang, Chen, Yang, Wang and Wang}}}
+\bibcite{tang2024sparseocc}{{32}{2024}{{Tang et~al.}}{{Tang, Wang, Wang, Zheng, Ren, Feng and Ma}}}
+\bibcite{tobin2017domainrandomization}{{33}{2017}{{Tobin et~al.}}{{Tobin, Fong, Ray, Schneider, Zaremba and Abbeel}}}
+\bibcite{wang2023openoccupancy}{{34}{2023}{{Wang et~al.}}{{Wang, Zhu, Xu, Zhang, Wei, Chi, Ye, Du, Lu and Wang}}}
+\bibcite{wang2024panoocc}{{35}{2024}{{Wang et~al.}}{{Wang, Chen, Liao, Fan and Zhang}}}
+\bibcite{wang2022detr3d}{{36}{2022}{{Wang et~al.}}{{Wang, Guizilini, Zhang, Wang, Zhao and Solomon}}}
+\bibcite{wei2023surroundocc}{{37}{2023}{{Wei et~al.}}{{Wei, Zhao, Zheng, Zhu, Zhou and Lu}}}
+\bibcite{yangDrivingOccupancyWorld2025}{{38}{2025}{{Yang et~al.}}{{Yang, Mei, Ma, Du, Chen, Qian, Feng and Liu}}}
+\bibcite{yu2023flashocc}{{39}{2023}{{Yu et~al.}}{{Yu, Shu, Deng, Lu, Liu, Yu, Yang, Li and Chen}}}
+\bibcite{zhang2023occformer}{{40}{2023}{{Zhang et~al.}}{{Zhang, Zhu and Du}}}
+\bibcite{zheng2024occworld}{{41}{2024}{{Zheng et~al.}}{{Zheng, Chen, Huang, Zhang, Duan and Lu}}}
+\bibcite{zhou2022matrixvt}{{42}{2022}{{Zhou et~al.}}{{Zhou, Ge, Li and Zhang}}}
+\csxdef{lastpage}{19}
+\gdef \@abspage@last{19}

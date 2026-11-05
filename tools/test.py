@@ -29,6 +29,9 @@ import os.path as osp
 
 def _print_occupancy_metrics(outputs, classes):
     """Print semantic and binary IoU from occupancy confusion matrices."""
+    if 'panoptic_counts' in outputs:
+        from projects.mmdet3d_plugin.core.evaluation.panoptic_metrics import panoptic_summary
+        print('Panoptic metrics:', panoptic_summary(outputs['panoptic_counts'], classes))
     for key in ('hist_for_iou', 'hist_for_iou_current'):
         if key not in outputs:
             continue

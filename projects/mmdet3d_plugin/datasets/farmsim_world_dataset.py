@@ -171,8 +171,7 @@ class FarmSimWorldDataset(torch.utils.data.Dataset):
 
         ann_file = Path(ann_file).expanduser()
         self.ann_file = ann_file.resolve()
-        with ann_file.open('r', encoding='utf-8') as f:
-            manifest = json.load(f)
+        manifest = self._read_manifest(ann_file, data_root)
         # Split manifests contain paths relative to the dataset root.  Keep
         # absolute paths working for old manifests and for users migrating
         # incrementally.  ``data_root`` is intentionally explicit in the
@@ -199,6 +198,10 @@ class FarmSimWorldDataset(torch.utils.data.Dataset):
         # FarmSim images share the same fixed input resolution, so one group
         # is both sufficient and semantically correct.
         self.flag = np.zeros(len(self.samples), dtype=np.uint8)
+
+    def _read_manifest(self, ann_file, data_root=None):
+        with ann_file.open('r', encoding='utf-8') as handle:
+            return json.load(handle)
 
     def __len__(self):
         return len(self.samples)

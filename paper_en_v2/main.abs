@@ -1,0 +1,10 @@
+Agricultural mobile platforms need to understand the 3D spatial relationships among crops, soil, drivable areas, and obstacles, whereas 2D crop-row detection and image segmentation cannot directly provide a unified spatial representation.
+We propose AgriOcc, which predicts six-class semantic occupancy over a $15\times15\times5\,\mathrm{m}$ region in front of the mobile platform from forward, forward-left, and forward-right RGB images.
+To address the anisotropy of plant and ground structures and the uneven distribution of crop supervision across agricultural scenes and samples, AgriOcc retains BEVFormer's deformable self-attention backbone and introduces an Agricultural Structure-Adaptive Mixture-of-Experts decoder (Agri-AMoE).
+The decoder lifts BEV representations into a 3D feature volume, enhances the features with channel attention, and then uses spatial saliency and gradient energy to adaptively route among experts for local planar details, vertical structures, and broader context.
+We also propose a crop-aware sampling strategy that replaces a small quota of training samples to increase exposure to samples containing crops, improving crop perception without increasing the amount of training data.
+To address the scarcity and high acquisition cost of agricultural semantic occupancy data, we develop an Unreal Engine 5-based pipeline for constructing simulated agricultural scenes and build AgriOcc-Dataset, a synthetic 3D semantic occupancy dataset.
+On this dataset, AgriOcc achieves 64.08\% mIoU and 39.38\% crop IoU, substantially outperforming other state-of-the-art 3D semantic occupancy methods.
+AgriOcc also delivers substantial performance gains on the real-world off-road dataset ORAD-3D. In addition, crop-row fitting experiments using the 3D semantic maps predicted by AgriOcc demonstrate its practical utility in agricultural scenes.
+Extensive experiments demonstrate AgriOcc's capabilities in agricultural scene understanding and transfer to real environments, offering an approach to 3D visual navigation for agricultural mobile platforms that balances accuracy and training cost.
+

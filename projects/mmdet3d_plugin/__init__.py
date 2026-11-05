@@ -33,3 +33,7 @@ from .bevformer.losses.planning_loss import PlanningLoss, CollisionLoss
 from .bevformer.detectors.bevformer import BEVFormer
 from .bevformer.detectors.drive_occworldV2 import Drive_OccWorld_V2
 from .bevformer.detectors.farmsim_distiller import FarmSimOccupancyDistiller
+
+from .datasets.farmsim_panoptic_dataset import FarmSimPanopticDataset
+from .bevformer.dense_heads.panoptic_world_head import PanopticWorldHead
+from .bevformer.detectors.farmsim_panoptic import FarmSimPanoptic

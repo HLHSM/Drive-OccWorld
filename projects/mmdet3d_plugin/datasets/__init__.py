@@ -3,4 +3,6 @@ from .orad3d_world_dataset import ORAD3DWorldDataset
 from .builder import custom_build_dataset
 
 __all__ = ['FarmSimWorldDataset', 'ORAD3DWorldDataset',
-           'custom_build_dataset']
+           'custom_build_dataset', 'FarmSimPanopticDataset']
+
+from .farmsim_panoptic_dataset import FarmSimPanopticDataset
